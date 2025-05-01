@@ -191,7 +191,7 @@ class generalLedgerController extends Controller
             // Definisikan kategori akun berdasarkan kode akun
             $accountCategories = [
                 'Pendapatan Penjualan' => ['4.'],
-                'Harga Pokok Penjualan' => ['5.1.01.'],
+                'Harga Pokok Penjualan' => ['5.1.', '5.2.', '5.3.'],
                 'Beban Operasional' => ['6.1.', '6.2.', '6.3.'],
                 'Pendapatan Lain-lain' => ['7.1.'],
                 'Beban Lain-lain' => ['7.2.'],
@@ -355,7 +355,7 @@ class generalLedgerController extends Controller
         // Calculate Net Profit from Income Statement
         $accountCategories = [
             'Pendapatan Penjualan' => ['4.'],
-            'Harga Pokok Penjualan' => ['5.1.01.'],
+            'Harga Pokok Penjualan' => ['5.1.','5.2.','5.3.'],
             'Beban Operasional' => ['6.1.', '6.2.', '6.3.'],
             'Pendapatan Lain-lain' => ['7.1.'],
             'Beban Lain-lain' => ['7.2.'],
