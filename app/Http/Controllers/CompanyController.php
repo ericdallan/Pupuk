@@ -18,6 +18,7 @@ class CompanyController extends Controller
         // Validasi data yang masuk
         $request->validate([
             'company_name' => 'required',
+            'director' => 'required',
             'address' => 'required',
             'phone' => 'required',
             'email' => 'required|email',
@@ -40,6 +41,7 @@ class CompanyController extends Controller
         // Update data perusahaan
         $company->company_name = $request->input('company_name');
         $company->address = $request->input('address');
+        $company->director = $request->input('director');
         $company->phone = $request->input('phone');
         $company->email = $request->input('email');
         $company->save();

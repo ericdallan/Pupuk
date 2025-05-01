@@ -19,7 +19,8 @@ class CompanySeeder extends Seeder
                 'address' => 'Jl. Mariwati no 78 Cibadak - Sukaresmi',
                 'phone' => '0263-514894',
                 'email' => 'SariPratamaMandiri@gmail.com',
-                'logo' => null, // Anda bisa menambahkan path ke logo jika ada
+                'director' => 'Sari Novianti',
+                'logo' => null, // 
                 'created_at' => now(),
                 'updated_at' => now(),
             ],

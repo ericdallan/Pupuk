@@ -123,12 +123,17 @@ class AccountSeeder extends Seeder
                         ['Ikhtisar Laba Rugi', '3.4.00.01'],
                     ],
                 ],
+                'Laba Rugi Ditahan' => [
+                    'Laba Rugi Ditahan' => [
+                        ['Laba Rugi Ditahan', '3.5.00.01'],
+                    ],
+                ],
             ],
             'PENDAPATAN_USAHA' => [
                 'Pendapatan Penjualan Barang Dagangan' => [
                     'Harga Pokok Penjualan Barang Dagangan' => [
                         ['Pendapatan Penjualan Barang Dagangan', '4.1.01.01'],
-                        ['Diskon Penjualan Barang Dagangan', '4.1.01.99'],
+                        ['Diskon Penjualan Barang Dagangan', '4.1.01.02'],
                     ],
                 ],
                 'Pendapatan Penjualan Barang Jadi' => [

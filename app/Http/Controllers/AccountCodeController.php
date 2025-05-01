@@ -8,6 +8,11 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Database\Query\Builder;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\AccountCodeExport;
+use Illuminate\Support\Facades\View;
+use Barryvdh\DomPDF\Facade\Pdf;
+
 
 class AccountCodeController extends Controller
 {
@@ -159,8 +164,9 @@ class AccountCodeController extends Controller
                 'Pengambilan oleh Pemilik' => '2',
                 'Saldo Laba' => '3',
                 'Ikhtisar Laba Rugi' => '4',
+                'Laba Rugi Ditahan' => '5',
             ],
-            'PENDAPATAN USAHA' => [
+            'PENDAPATAN_USAHA' => [
                 'Pendapatan Penjualan Barang Dagangan' => '1',
                 'Pendapatan Penjualan Barang Jadi' => '2',
             ],
@@ -230,7 +236,10 @@ class AccountCodeController extends Controller
                     'Saldo Laba' => '01',
                 ],
                 'Ikhtisar Laba Rugi' => [
-                    'Ikhtisar Laba Rugi' => '02',
+                    'Ikhtisar Laba Rugi' => '01',
+                ],
+                'Laba Rugi Ditahan' => [
+                    'Laba Rugi Ditahan' => '01',
                 ],
             ],
             'PENDAPATAN_USAHA' => [
@@ -397,5 +406,51 @@ class AccountCodeController extends Controller
 
         return redirect()->route('account_page')->with('success', 'Account updated successfully!');
     }
+    public function exportExcel()
+    {
+        // 1. Fetch the data and build the hierarchy
+        $accounts = ChartOfAccount::all();
+        $hierarkiAkun = $this->buildHierarchy($accounts);
 
+        // 2. Export the Excel using the generated hierarchical data
+        return Excel::download(new AccountCodeExport($hierarkiAkun), 'chart_of_accounts.xlsx');
+    }
+    public function generatePdf()
+    {
+        // 1. Fetch the data and build the hierarchy
+        $accounts = ChartOfAccount::all();
+        $hierarkiAkun = $this->buildHierarchy($accounts);
+
+        // 2. Sort the data (same sorting logic as in your view)
+        $sortedHierarkiAkun = collect($hierarkiAkun)
+            ->map(function ($accountSections) {
+                return collect($accountSections)
+                    ->map(function ($accountSubsections) {
+                        if (is_array($accountSubsections)) {
+                            return collect($accountSubsections)
+                                ->map(function ($accountNames) {
+                                    if (is_array($accountNames)) {
+                                        return collect($accountNames)->sortBy(function ($account) {
+                                            if (is_array($account) && isset($account[1])) {
+                                                $parts = explode('.', $account[1]);
+                                                return end($parts) * 1;
+                                            }
+                                            return null;
+                                        })->toArray();
+                                    }
+                                    return $accountNames;
+                                })->toArray();
+                        }
+                        return $accountSubsections;
+                    })->toArray();
+            })->toArray();
+
+        // 3.  Generate the PDF
+        $pdf = Pdf::loadView('AccountCode.accountCode_pdf', [
+            'hierarkiAkun' => $sortedHierarkiAkun,
+        ]);
+
+        // 4.  Download the PDF
+        return $pdf->download('chart_of_accounts.pdf');
+    }
 }

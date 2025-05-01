@@ -1,9 +1,7 @@
 @extends('layouts.app')
 
 @section('content')
-@section('title', 'Chart of Account')
-
-<h2>Chart of Account</h2>
+@section('title', 'Kode Perkiraan')
 
 @if (session('success'))
 <div id="success-message" class="alert alert-success alert-dismissible fade show" role="alert" style="cursor: pointer;">
@@ -23,15 +21,19 @@
 </div>
 @endif
 
-<div class="text-end mb-3">
-    <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#accountModal">
-        Tambah Akun
-    </button>
-    @extends('AccountCode.accountCode_form')
+<div class="d-flex justify-content-between align-items-center">
+    <div class="text-end mb-3">
+        <button type="button" class="btn btn-primary btn-md" data-bs-toggle="modal" data-bs-target="#accountModal">
+            Buat Akun Baru
+        </button>
+        @extends('AccountCode.accountCode_form')
+        <button id="print-pdf" class="btn btn-secondary btn-md ml-2">Print to PDF</button>
+        <button id="export-excel" class="btn btn-success btn-md ml-2">Export to Excel</button>
+    </div>
 </div>
 <div class="mt-4">
     <table class="table table-striped table-bordered">
-        <thead class="thead-light text-center align-middle">
+        <thead class="table-dark text-center align-middle">
             <tr>
                 <th>Account Type</th>
                 <th>Account Section</th>
@@ -175,4 +177,15 @@
         </tbody>
     </table>
 </div>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        document.getElementById('print-pdf').addEventListener('click', function() {
+            window.location.href = "{{ route('account-codes.pdf') }}";
+        });
+
+        document.getElementById('export-excel').addEventListener('click', function() {
+            window.location.href = "{{ route('account-codes.excel') }}";
+        });
+    });
+</script>
 @endsection

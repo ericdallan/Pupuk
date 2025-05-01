@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Voucher extends Model
 {
@@ -17,17 +18,37 @@ class Voucher extends Model
         'voucher_day',
         'prepared_by',
         'approved_by',
-        'description',
+        'given_to',
+        'transaction',
+        'store',
+        'invoice',
         'total_debit',
         'total_credit',
     ];
 
     protected $casts = [
         'voucher_date' => 'date',
+        'total_debit' => 'decimal:2',
+        'total_credit' => 'decimal:2',
     ];
 
-    public function details(): HasMany
+    public function voucherDetails(): HasMany
     {
-        return $this->hasMany(VoucherDetails::class, 'voucher_id');
+        return $this->hasMany(voucherDetails::class, 'voucher_id');
+    }
+
+    public function transactions(): HasMany
+    {
+        return $this->hasMany(Transactions::class, 'voucher_id');
+    }
+
+    public function invoices(): HasOne
+    {
+        return $this->HasOne(Invoice::class, 'voucher_number', 'voucher_number');
+    }
+
+    public function invoice_payments()
+    {
+        return $this->hasMany(InvoicePayment::class, 'voucher_id', 'id');
     }
 }

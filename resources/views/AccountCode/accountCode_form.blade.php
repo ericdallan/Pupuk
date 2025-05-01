@@ -94,8 +94,14 @@
             'Ikhtisar Laba Rugi': ['Ikhtisar Laba Rugi']
         },
         PENDAPATAN_USAHA: {
-            'Pendapatan Penjualan Barang Dagangan': ['Pendapatan Penjualan Barang Dagangan', 'Diskon Penjualan Barang Dagangan'],
-            'Pendapatan Penjualan Barang Jadi': ['Pendapatan Penjualan Barang Jadi', 'Diskon Penjualan Barang Jadi']
+            'Pendapatan Penjualan Barang Dagangan': {
+                'Harga Pokok Penjualan Barang Dagangan': [],
+                'Diskon Penjualan Barang Dagangan': []
+            },
+            'Pendapatan Penjualan Barang Jadi': {
+                'Pendapatan Penjualan Barang Jadi': [],
+                'Diskon Penjualan Barang Dagangan': [] // Perhatikan: Ini mungkin typo, seharusnya 'Diskon Penjualan Barang Jadi'
+            }
         },
         HARGA_POKOK_PRODUKSI_DAN_PENJUALAN: {
             'Harga Pokok Penjualan Barang Dagangan': ['Harga Pokok Penjualan Barang Dagangan'],
@@ -164,12 +170,22 @@
         const tipeAkun = tipeAkunSelect.value;
         const bagianAkun = bagianAkunSelect.value;
         if (bagianAkun && hierarkiAkun[tipeAkun] && hierarkiAkun[tipeAkun][bagianAkun]) {
-            Object.keys(hierarkiAkun[tipeAkun][bagianAkun]).forEach(anakBagianAkun => {
-                const option = document.createElement('option');
-                option.value = anakBagianAkun;
-                option.textContent = anakBagianAkun;
-                anakBagianAkunSelect.appendChild(option);
-            });
+            const anakBagian = hierarkiAkun[tipeAkun][bagianAkun];
+            if (Array.isArray(anakBagian)) {
+                anakBagian.forEach(namaAnakBagian => {
+                    const option = document.createElement('option');
+                    option.value = namaAnakBagian;
+                    option.textContent = namaAnakBagian;
+                    anakBagianAkunSelect.appendChild(option);
+                });
+            } else if (typeof anakBagian === 'object') { // Tambahkan kondisi ini
+                Object.keys(anakBagian).forEach(namaAnakBagian => {
+                    const option = document.createElement('option');
+                    option.value = namaAnakBagian;
+                    option.textContent = namaAnakBagian;
+                    anakBagianAkunSelect.appendChild(option);
+                });
+            }
         }
     });
 </script>

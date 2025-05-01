@@ -14,13 +14,16 @@ return new class extends Migration
     {
         Schema::create('vouchers', function (Blueprint $table) {
             $table->id();
-            $table->string('voucher_number')->nullable();
+            $table->string('voucher_number')->unique(); // Made unique for foreign key
             $table->string('voucher_type');
             $table->date('voucher_date');
             $table->string('voucher_day');
             $table->string('prepared_by');
-            $table->text('description')->nullable();
+            $table->string('given_to');
+            $table->text('transaction')->nullable();
             $table->string('approved_by')->nullable();
+            $table->string('store')->nullable();
+            $table->string('invoice')->nullable();
             $table->decimal('total_debit', 15, 2)->default(0);
             $table->decimal('total_credit', 15, 2)->default(0);
             $table->timestamps();
