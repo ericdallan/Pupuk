@@ -39,10 +39,11 @@
                             <div class="col-sm-3">
                                 <select class="form-select" id="voucherType" name="voucher_type">
                                     <option value="">Pilih Tipe Voucher</option>
-                                    <option value="JV">JV</option>
-                                    <option value="MP">MP</option>
-                                    <option value="MI">MI</option>
-                                    <option value="CG">CG</option>
+                                    <option value="PJ">PJ</option>
+                                    <option value="PG">PG</option>
+                                    <option value="PM">PM</option>
+                                    <option value="PB">PB</option>
+                                    <option value="LN">LN</option>
                                 </select>
                             </div>
                             <label for="voucherDate" class="col-sm-2 col-form-label">Tanggal:</label>
@@ -107,6 +108,12 @@
                                     <input class="form-check-input" type="radio" id="useExistingInvoiceNo" name="use_existing_invoice" value="no" disabled>
                                     <label class="form-check-label" for="useExistingInvoiceNo">Tidak</label>
                                 </div>
+                            </div>
+                        </div>
+                        <div class="row mb-3" id="dueDateContainer">
+                            <label for="dueDate" class="col-sm-3 col-form-label">Tanggal Jatuh Tempo:</label>
+                            <div class="col-sm-9">
+                                <input type="date" class="form-control" id="dueDate" name="dueDate" disabled>
                             </div>
                         </div>
                         <div class="row mb-3" id="invoiceFieldContainer">
@@ -186,10 +193,7 @@
                                         <tr data-row-index="0">
                                             <td>
                                                 <input type="text" class="form-control accountCodeInput" name="voucher_details[0][account_code]" list="dynamicAccountCodes" placeholder="Ketik atau pilih kode akun">
-                                                <!-- Dynamic datalist will be populated by JavaScript -->
-                                                <datalist id="dynamicAccountCodes">
-                                                    <!-- Populated dynamically -->
-                                                </datalist>
+                                                <datalist id="dynamicAccountCodes"></datalist>
                                             </td>
                                             <td><input type="text" class="form-control accountName" name="voucher_details[0][account_name]" readonly></td>
                                             <td><input type="number" min="0" class="form-control debitInput" name="voucher_details[0][debit]"></td>
@@ -230,85 +234,106 @@
             </form>
         </div>
     </div>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Existing constants (unchanged)
-            const transactionTableBody = document.querySelector('#transactionTable tbody');
-            const addTransactionRowBtn = document.getElementById('addTransactionRowBtn');
-            const voucherDetailsTableBody = document.querySelector('#voucherDetailsTable tbody');
-            const addVoucherDetailRowBtn = document.getElementById('addVoucherDetailRowBtn');
-            const totalDebitInput = document.getElementById('totalDebit');
-            const totalCreditInput = document.getElementById('totalCredit');
-            const validationInput = document.getElementById('validation');
-            const saveVoucherBtn = document.getElementById('saveVoucherBtn');
-            const totalDebitRawInput = document.getElementById('totalDebitRaw');
-            const totalCreditRawInput = document.getElementById('totalCreditRaw');
-            const totalNominalInput = document.getElementById('totalNominal');
-            const voucherTypeSelect = document.getElementById('voucherType');
-            const deskripsiVoucherTextarea = document.getElementById('deskripsi_voucher');
-            const useInvoiceYes = document.getElementById('useInvoiceYes');
-            const useInvoiceNo = document.getElementById('useInvoiceNo');
-            const invoiceFieldContainer = document.getElementById('invoiceFieldContainer');
-            const storeFieldContainer = document.getElementById('storeFieldContainer');
-            const existingInvoiceContainer = document.getElementById('existingInvoiceContainer');
-            const useExistingInvoiceYes = document.getElementById('useExistingInvoiceYes');
-            const useExistingInvoiceNo = document.getElementById('useExistingInvoiceNo');
-            const existingInvoices = @json($existingInvoices);
-            const storeNames = @json($storeNames);
-            const subsidiaries = @json($subsidiariesData);
-            const accounts = @json($accountsData);
+</div>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const transactionTableBody = document.querySelector('#transactionTable tbody');
+        const addTransactionRowBtn = document.getElementById('addTransactionRowBtn');
+        const voucherDetailsTableBody = document.querySelector('#voucherDetailsTable tbody');
+        const addVoucherDetailRowBtn = document.getElementById('addVoucherDetailRowBtn');
+        const totalDebitInput = document.getElementById('totalDebit');
+        const totalCreditInput = document.getElementById('totalCredit');
+        const validationInput = document.getElementById('validation');
+        const saveVoucherBtn = document.getElementById('saveVoucherBtn');
+        const totalDebitRawInput = document.getElementById('totalDebitRaw');
+        const totalCreditRawInput = document.getElementById('totalCreditRaw');
+        const totalNominalInput = document.getElementById('totalNominal');
+        const voucherTypeSelect = document.getElementById('voucherType');
+        const deskripsiVoucherTextarea = document.getElementById('deskripsi_voucher');
+        const useInvoiceYes = document.getElementById('useInvoiceYes');
+        const useInvoiceNo = document.getElementById('useInvoiceNo');
+        const invoiceFieldContainer = document.getElementById('invoiceFieldContainer');
+        const dueDateContainer = document.getElementById('dueDateContainer');
+        const storeFieldContainer = document.getElementById('storeFieldContainer');
+        const existingInvoiceContainer = document.getElementById('existingInvoiceContainer');
+        const useExistingInvoiceYes = document.getElementById('useExistingInvoiceYes');
+        const useExistingInvoiceNo = document.getElementById('useExistingInvoiceNo');
+        const existingInvoices = @json($existingInvoices);
+        const storeNames = @json($storeNames);
+        const subsidiaries = @json($subsidiariesData);
+        const accounts = @json($accountsData);
 
-            // Function to check if a subsidiary code is used in any row
-            function isSubsidiaryCodeUsed() {
-                const accountCodeInputs = voucherDetailsTableBody.querySelectorAll('.accountCodeInput');
-                for (let input of accountCodeInputs) {
-                    const code = input.value.trim();
-                    if (subsidiaries.some(s => s.subsidiary_code === code)) {
-                        return true;
+        function isSubsidiaryCodeUsed() {
+            const accountCodeInputs = voucherDetailsTableBody.querySelectorAll('.accountCodeInput');
+            for (let input of accountCodeInputs) {
+                const code = input.value.trim();
+                if (subsidiaries.some(s => s.subsidiary_code === code)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        function updateAccountCodeDatalist() {
+            const useInvoice = document.querySelector('input[name="use_invoice"]:checked')?.value || 'no';
+            const datalists = document.querySelectorAll('#dynamicAccountCodes');
+            const subsidiaryUsed = isSubsidiaryCodeUsed();
+
+            datalists.forEach(datalist => {
+                datalist.innerHTML = '';
+                const defaultOption = document.createElement('option');
+                defaultOption.value = '';
+                defaultOption.textContent = 'Pilih Kode Akun';
+                datalist.appendChild(defaultOption);
+
+                if (useInvoice === 'yes' && !subsidiaryUsed) {
+                    subsidiaries.forEach(subsidiary => {
+                        const option = document.createElement('option');
+                        option.value = subsidiary.subsidiary_code;
+                        option.textContent = `${subsidiary.subsidiary_code} - ${subsidiary.account_name}`;
+                        datalist.appendChild(option);
+                    });
+                } else {
+                    accounts.forEach(account => {
+                        const option = document.createElement('option');
+                        option.value = account.account_code;
+                        option.textContent = `${account.account_code} - ${account.account_name}`;
+                        datalist.appendChild(option);
+                    });
+                }
+            });
+
+            voucherDetailsTableBody.querySelectorAll('.accountCodeInput').forEach(input => {
+                const row = input.closest('tr');
+                const accountNameInput = row.querySelector('.accountName');
+                const enteredCode = input.value.trim();
+                accountNameInput.value = '';
+
+                if (useInvoice === 'yes' && subsidiaries.some(s => s.subsidiary_code === enteredCode)) {
+                    const subsidiary = subsidiaries.find(s => s.subsidiary_code === enteredCode);
+                    if (subsidiary) {
+                        accountNameInput.value = subsidiary.account_name;
+                    }
+                } else {
+                    const account = accounts.find(a => a.account_code === enteredCode);
+                    if (account) {
+                        accountNameInput.value = account.account_name;
                     }
                 }
-                return false;
-            }
+            });
+        }
 
-            // Modified function to update the account code datalist
-            function updateAccountCodeDatalist() {
-                const useInvoice = document.querySelector('input[name="use_invoice"]:checked')?.value || 'no';
-                const datalists = document.querySelectorAll('#dynamicAccountCodes');
-                const subsidiaryUsed = isSubsidiaryCodeUsed();
+        function attachVoucherDetailRowEventListeners(row, index) {
+            const accountCodeInput = row.querySelector('.accountCodeInput');
+            const accountNameInput = row.querySelector('.accountName');
+            const debitInput = row.querySelector('.debitInput');
+            const creditInput = row.querySelector('.creditInput');
 
-                datalists.forEach(datalist => {
-                    datalist.innerHTML = ''; // Clear existing options
-
-                    const defaultOption = document.createElement('option');
-                    defaultOption.value = '';
-                    defaultOption.textContent = 'Pilih Kode Akun';
-                    datalist.appendChild(defaultOption);
-
-                    if (useInvoice === 'yes' && !subsidiaryUsed) {
-                        // Populate with subsidiaries if no subsidiary code is used
-                        subsidiaries.forEach(subsidiary => {
-                            const option = document.createElement('option');
-                            option.value = subsidiary.subsidiary_code;
-                            option.textContent = `${subsidiary.subsidiary_code} - ${subsidiary.account_name}`;
-                            datalist.appendChild(option);
-                        });
-                    } else {
-                        // Populate with chart of accounts
-                        accounts.forEach(account => {
-                            const option = document.createElement('option');
-                            option.value = account.account_code;
-                            option.textContent = `${account.account_code} - ${account.account_name}`;
-                            datalist.appendChild(option);
-                        });
-                    }
-                });
-
-                // Update account name inputs based on current account code values
-                voucherDetailsTableBody.querySelectorAll('.accountCodeInput').forEach(input => {
-                    const row = input.closest('tr');
-                    const accountNameInput = row.querySelector('.accountName');
-                    const enteredCode = input.value.trim();
+            if (accountCodeInput) {
+                accountCodeInput.addEventListener('input', function() {
+                    const enteredCode = this.value.trim();
                     accountNameInput.value = '';
+                    const useInvoice = document.querySelector('input[name="use_invoice"]:checked')?.value || 'no';
 
                     if (useInvoice === 'yes' && subsidiaries.some(s => s.subsidiary_code === enteredCode)) {
                         const subsidiary = subsidiaries.find(s => s.subsidiary_code === enteredCode);
@@ -321,449 +346,459 @@
                             accountNameInput.value = account.account_name;
                         }
                     }
+                    updateAccountCodeDatalist();
                 });
+                accountCodeInput.name = `voucher_details[${index}][account_code]`;
             }
 
-            // Modified attachVoucherDetailRowEventListeners to update datalist on code change
-            function attachVoucherDetailRowEventListeners(row, index) {
-                const accountCodeInput = row.querySelector('.accountCodeInput');
-                const accountNameInput = row.querySelector('.accountName');
-                const debitInput = row.querySelector('.debitInput');
-                const creditInput = row.querySelector('.creditInput');
-
-                if (accountCodeInput) {
-                    accountCodeInput.addEventListener('input', function() {
-                        const enteredCode = this.value.trim();
-                        accountNameInput.value = '';
-                        const useInvoice = document.querySelector('input[name="use_invoice"]:checked')?.value || 'no';
-
-                        if (useInvoice === 'yes' && subsidiaries.some(s => s.subsidiary_code === enteredCode)) {
-                            const subsidiary = subsidiaries.find(s => s.subsidiary_code === enteredCode);
-                            if (subsidiary) {
-                                accountNameInput.value = subsidiary.account_name;
-                            }
-                        } else {
-                            const account = accounts.find(a => a.account_code === enteredCode);
-                            if (account) {
-                                accountNameInput.value = account.account_name;
-                            }
-                        }
-                        updateAccountCodeDatalist(); // Update datalist for all rows when code changes
-                    });
-                    accountCodeInput.name = `voucher_details[${index}][account_code]`;
-                }
-
-                if (debitInput) {
-                    debitInput.addEventListener('input', function() {
-                        creditInput.value = this.value ? '' : creditInput.value;
-                        creditInput.disabled = !!this.value;
-                        updateAllCalculationsAndValidations();
-                    });
-                    debitInput.name = `voucher_details[${index}][debit]`;
-                }
-
-                if (creditInput) {
-                    creditInput.addEventListener('input', function() {
-                        debitInput.value = this.value ? '' : debitInput.value;
-                        debitInput.disabled = !!this.value;
-                        updateAllCalculationsAndValidations();
-                    });
-                    creditInput.name = `voucher_details[${index}][credit]`;
-                }
-
-                if (accountNameInput) {
-                    accountNameInput.name = `voucher_details[${index}][account_name]`;
-                }
-            }
-
-            // Modified reindexVoucherDetailRows to update datalist
-            function reindexVoucherDetailRows() {
-                voucherDetailsTableBody.querySelectorAll('tr').forEach((row, index) => {
-                    row.dataset.rowIndex = index;
-                    row.querySelectorAll('[name^="voucher_details"]').forEach(input => {
-                        const nameParts = input.name.split('[');
-                        input.name = `voucher_details[${index}]${nameParts[1]}`;
-                    });
-                    attachVoucherDetailRowEventListeners(row, index);
+            if (debitInput) {
+                debitInput.addEventListener('input', function() {
+                    creditInput.value = this.value ? '' : creditInput.value;
+                    creditInput.disabled = !!this.value;
+                    updateAllCalculationsAndValidations();
                 });
-                updateAccountCodeDatalist();
+                debitInput.name = `voucher_details[${index}][debit]`;
             }
 
-            // Modified addVoucherDetailRowBtn listener to update datalist
-            addVoucherDetailRowBtn.addEventListener('click', function() {
-                const firstRow = voucherDetailsTableBody.querySelector('tr');
-                if (!firstRow) return;
-
-                const newRow = firstRow.cloneNode(true);
-                const inputs = newRow.querySelectorAll('input[type="text"], input[type="number"]');
-                inputs.forEach(input => {
-                    input.value = '';
-                    input.disabled = false;
+            if (creditInput) {
+                creditInput.addEventListener('input', function() {
+                    debitInput.value = this.value ? '' : debitInput.value;
+                    debitInput.disabled = !!this.value;
+                    updateAllCalculationsAndValidations();
                 });
-                const newIndex = voucherDetailsTableBody.querySelectorAll('tr').length;
-                newRow.querySelectorAll('[name]').forEach(element => {
-                    if (element.name.includes('[')) {
-                        element.name = element.name.replace(/\[\d+\]/, `[${newIndex}]`);
-                    }
-                });
-                voucherDetailsTableBody.appendChild(newRow);
-                attachVoucherDetailRowEventListeners(newRow, newIndex);
-                attachVoucherDetailRemoveButtonListeners();
-                updateAccountCodeDatalist();
-                updateAllCalculationsAndValidations();
-            });
-
-            // Modified attachVoucherDetailRemoveButtonListeners to update datalist
-            function attachVoucherDetailRemoveButtonListeners() {
-                voucherDetailsTableBody.querySelectorAll('.removeVoucherDetailRowBtn').forEach(button => {
-                    button.addEventListener('click', function() {
-                        if (voucherDetailsTableBody.querySelectorAll('tr').length > 1) {
-                            this.closest('tr').remove();
-                            reindexVoucherDetailRows();
-                            updateAllCalculationsAndValidations();
-                        } else {
-                            alert("Tidak dapat menghapus baris detail voucher terakhir.");
-                        }
-                    });
-                });
+                creditInput.name = `voucher_details[${index}][credit]`;
             }
 
-            // Existing functions (unchanged)
-            function createStoreDropdown() {
-                const select = document.createElement('select');
-                select.className = 'form-control';
-                select.id = 'store';
-                select.name = 'store';
-
-                const defaultOption = document.createElement('option');
-                defaultOption.value = '';
-                defaultOption.textContent = 'Pilih Nama Toko';
-                select.appendChild(defaultOption);
-
-                storeNames.forEach(store => {
-                    const option = document.createElement('option');
-                    option.value = store;
-                    option.textContent = store;
-                    select.appendChild(option);
-                });
-
-                return select;
+            if (accountNameInput) {
+                accountNameInput.name = `voucher_details[${index}][account_name]`;
             }
+        }
 
-            function createStoreInput() {
-                const input = document.createElement('input');
-                input.type = 'text';
-                input.className = 'form-control';
-                input.id = 'store';
-                input.name = 'store';
-                return input;
-            }
-
-            function createInvoiceDropdown() {
-                const select = document.createElement('select');
-                select.className = 'form-control';
-                select.id = 'invoice';
-                select.name = 'invoice';
-
-                const defaultOption = document.createElement('option');
-                defaultOption.value = '';
-                defaultOption.textContent = 'Pilih Nomor Invoice';
-                select.appendChild(defaultOption);
-
-                existingInvoices.forEach(invoice => {
-                    if (invoice) {
-                        const option = document.createElement('option');
-                        option.value = invoice;
-                        option.textContent = invoice;
-                        select.appendChild(option);
-                    }
-                });
-
-                return select;
-            }
-
-            function createInvoiceInput() {
-                const input = document.createElement('input');
-                input.type = 'text';
-                input.className = 'form-control';
-                input.id = 'invoice';
-                input.name = 'invoice';
-                return input;
-            }
-
-            function updateInvoiceField() {
-                const useInvoice = document.querySelector('input[name="use_invoice"]:checked')?.value || 'no';
-                if (useInvoice === 'yes') {
-                    const useExistingInvoice = document.querySelector('input[name="use_existing_invoice"]:checked')?.value || 'no';
-                    invoiceFieldContainer.innerHTML = '';
-                    const invoiceLabel = document.createElement('label');
-                    invoiceLabel.htmlFor = 'invoice';
-                    invoiceLabel.className = 'col-sm-3 col-form-label';
-                    invoiceLabel.textContent = 'Nomor Invoice:';
-                    const invoiceInputDiv = document.createElement('div');
-                    invoiceInputDiv.className = 'col-sm-9';
-                    let invoiceInput;
-                    if (useExistingInvoice === 'yes') {
-                        invoiceInput = createInvoiceDropdown();
-                    } else {
-                        invoiceInput = createInvoiceInput();
-                    }
-                    invoiceInput.disabled = false;
-                    invoiceInputDiv.appendChild(invoiceInput);
-                    invoiceFieldContainer.appendChild(invoiceLabel);
-                    invoiceFieldContainer.appendChild(invoiceInputDiv);
-                }
-                updateAccountCodeDatalist();
-            }
-
-            function updateInvoiceAndStoreFields() {
-                const useInvoice = document.querySelector('input[name="use_invoice"]:checked')?.value || 'no';
-                storeFieldContainer.innerHTML = '';
-
-                useExistingInvoiceYes.disabled = useInvoice !== 'yes';
-                useExistingInvoiceNo.disabled = useInvoice !== 'yes';
-
-                if (useInvoice === 'yes') {
-                    storeFieldContainer.appendChild(createStoreDropdown());
-                    updateInvoiceField();
-                } else {
-                    storeFieldContainer.appendChild(createStoreInput());
-                    invoiceFieldContainer.innerHTML = '';
-                    const invoiceLabel = document.createElement('label');
-                    invoiceLabel.htmlFor = 'invoice';
-                    invoiceLabel.className = 'col-sm-3 col-form-label';
-                    invoiceLabel.textContent = 'Nomor Invoice:';
-                    const invoiceInputDiv = document.createElement('div');
-                    invoiceInputDiv.className = 'col-sm-9';
-                    const invoiceInput = createInvoiceInput();
-                    invoiceInput.disabled = true;
-                    invoiceInputDiv.appendChild(invoiceInput);
-                    invoiceFieldContainer.appendChild(invoiceLabel);
-                    invoiceFieldContainer.appendChild(invoiceInputDiv);
-                    useExistingInvoiceYes.checked = false;
-                    useExistingInvoiceNo.checked = false;
-                }
-                updateAccountCodeDatalist();
-            }
-
-            useInvoiceYes.addEventListener('change', updateInvoiceAndStoreFields);
-            useInvoiceNo.addEventListener('change', updateInvoiceAndStoreFields);
-            useExistingInvoiceYes.addEventListener('change', updateInvoiceField);
-            useExistingInvoiceNo.addEventListener('change', updateInvoiceField);
-
-            function generateTransactionTableRow(index) {
-                const row = document.createElement('tr');
+        function reindexVoucherDetailRows() {
+            voucherDetailsTableBody.querySelectorAll('tr').forEach((row, index) => {
                 row.dataset.rowIndex = index;
-
-                const descriptionCell = document.createElement('td');
-                const descriptionInput = document.createElement('input');
-                descriptionInput.type = 'text';
-                descriptionInput.className = 'form-control';
-                descriptionInput.name = `transactions[${index}][description]`;
-                descriptionCell.appendChild(descriptionInput);
-                row.appendChild(descriptionCell);
-
-                const quantityCell = document.createElement('td');
-                const quantityInput = document.createElement('input');
-                quantityInput.type = 'number';
-                quantityInput.min = '1';
-                quantityInput.className = 'form-control quantityInput';
-                quantityInput.name = `transactions[${index}][quantity]`;
-                quantityInput.value = '1';
-                quantityCell.appendChild(quantityInput);
-                row.appendChild(quantityCell);
-
-                const nominalCell = document.createElement('td');
-                const nominalInput = document.createElement('input');
-                nominalInput.type = 'number';
-                nominalInput.min = '0';
-                nominalInput.className = 'form-control nominalInput';
-                nominalInput.name = `transactions[${index}][nominal]`;
-                nominalCell.appendChild(nominalInput);
-                row.appendChild(nominalCell);
-
-                const actionCell = document.createElement('td');
-                actionCell.className = 'text-center';
-                const deleteButton = document.createElement('button');
-                deleteButton.type = 'button';
-                deleteButton.className = 'btn btn-danger removeTransactionRowBtn';
-                deleteButton.textContent = 'Hapus';
-                actionCell.appendChild(deleteButton);
-                row.appendChild(actionCell);
-
-                return row;
-            }
-
-            function updateTransactionRowIndices() {
-                transactionTableBody.querySelectorAll('tr').forEach((row, index) => {
-                    row.dataset.rowIndex = index;
-                    row.querySelectorAll('[name*="transactions["]').forEach(input => {
-                        input.name = input.name.replace(/transactions\[\d+\]/, `transactions[${index}]`);
-                    });
+                row.querySelectorAll('[name^="voucher_details"]').forEach(input => {
+                    const nameParts = input.name.split('[');
+                    input.name = `voucher_details[${index}]${nameParts[1]}`;
                 });
-                attachTransactionRemoveButtonListeners();
-                attachTransactionInputListeners();
-            }
+                attachVoucherDetailRowEventListeners(row, index);
+            });
+            updateAccountCodeDatalist();
+        }
 
-            function attachTransactionRemoveButtonListeners() {
-                transactionTableBody.querySelectorAll('.removeTransactionRowBtn').forEach(button => {
-                    button.addEventListener('click', function() {
-                        if (transactionTableBody.querySelectorAll('tr').length > 1) {
-                            this.closest('tr').remove();
-                            updateTransactionRowIndices();
-                            updateAllCalculationsAndValidations();
-                        } else {
-                            alert("Tidak dapat menghapus baris transaksi terakhir.");
-                        }
-                    });
+        addVoucherDetailRowBtn.addEventListener('click', function() {
+            const firstRow = voucherDetailsTableBody.querySelector('tr');
+            if (!firstRow) return;
+
+            const newRow = firstRow.cloneNode(true);
+            const inputs = newRow.querySelectorAll('input[type="text"], input[type="number"]');
+            inputs.forEach(input => {
+                input.value = '';
+                input.disabled = false;
+            });
+            const newIndex = voucherDetailsTableBody.querySelectorAll('tr').length;
+            newRow.querySelectorAll('[name]').forEach(element => {
+                if (element.name.includes('[')) {
+                    element.name = element.name.replace(/\[\d+\]/, `[${newIndex}]`);
+                }
+            });
+            voucherDetailsTableBody.appendChild(newRow);
+            attachVoucherDetailRowEventListeners(newRow, newIndex);
+            attachVoucherDetailRemoveButtonListeners();
+            updateAccountCodeDatalist();
+            updateAllCalculationsAndValidations();
+        });
+
+        function attachVoucherDetailRemoveButtonListeners() {
+            voucherDetailsTableBody.querySelectorAll('.removeVoucherDetailRowBtn').forEach(button => {
+                button.addEventListener('click', function() {
+                    if (voucherDetailsTableBody.querySelectorAll('tr').length > 1) {
+                        this.closest('tr').remove();
+                        reindexVoucherDetailRows();
+                        updateAllCalculationsAndValidations();
+                    } else {
+                        alert("Tidak dapat menghapus baris detail voucher terakhir.");
+                    }
                 });
-            }
+            });
+        }
 
-            function attachTransactionInputListeners() {
-                const transactionInputs = transactionTableBody.querySelectorAll('.quantityInput, .nominalInput, .descriptionInput');
-                transactionInputs.forEach(input => {
-                    input.removeEventListener('input', updateAllCalculationsAndValidations);
-                    input.addEventListener('input', updateAllCalculationsAndValidations);
-                });
-            }
+        function createStoreDropdown() {
+            const select = document.createElement('select');
+            select.className = 'form-control';
+            select.id = 'store';
+            select.name = 'store';
 
-            addTransactionRowBtn.addEventListener('click', function() {
-                const newIndex = transactionTableBody.querySelectorAll('tr').length;
-                const newRow = generateTransactionTableRow(newIndex);
-                transactionTableBody.appendChild(newRow);
-                attachTransactionRemoveButtonListeners();
-                attachTransactionInputListeners();
-                updateAllCalculationsAndValidations();
+            const defaultOption = document.createElement('option');
+            defaultOption.value = '';
+            defaultOption.textContent = 'Pilih Nama Toko';
+            select.appendChild(defaultOption);
+
+            storeNames.forEach(store => {
+                const option = document.createElement('option');
+                option.value = store;
+                option.textContent = store;
+                select.appendChild(option);
             });
 
-            function calculateTotalNominal() {
-                let totalNominalRaw = 0;
-                transactionTableBody.querySelectorAll('tr').forEach(row => {
-                    const quantity = parseFloat(row.querySelector('.quantityInput')?.value) || 0;
-                    const nominal = parseFloat(row.querySelector('.nominalInput')?.value) || 0;
-                    totalNominalRaw += quantity * nominal;
-                });
-                totalNominalInput.value = totalNominalRaw.toLocaleString('en-US', {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2
-                });
-                return totalNominalRaw;
-            }
+            return select;
+        }
 
-            function calculateTotalsAndValidate() {
-                let totalDebit = 0;
-                let totalCredit = 0;
+        function createStoreInput() {
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.className = 'form-control';
+            input.id = 'store';
+            input.name = 'store';
+            return input;
+        }
 
-                voucherDetailsTableBody.querySelectorAll('.debitInput').forEach(input => {
-                    totalDebit += parseFloat(input.value.replace(/[^0-9.-]/g, '')) || 0;
-                });
+        function createInvoiceDropdown() {
+            const select = document.createElement('select');
+            select.className = 'form-control';
+            select.id = 'invoice';
+            select.name = 'invoice';
 
-                voucherDetailsTableBody.querySelectorAll('.creditInput').forEach(input => {
-                    totalCredit += parseFloat(input.value.replace(/[^0-9.-]/g, '')) || 0;
-                });
+            const defaultOption = document.createElement('option');
+            defaultOption.value = '';
+            defaultOption.textContent = 'Pilih Nomor Invoice';
+            select.appendChild(defaultOption);
 
-                totalDebitInput.value = totalDebit.toLocaleString('en-US', {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2
-                });
-                totalCreditInput.value = totalCredit.toLocaleString('en-US', {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2
-                });
-
-                if (totalDebitRawInput) totalDebitRawInput.value = totalDebit.toFixed(2);
-                if (totalCreditRawInput) totalCreditRawInput.value = totalCredit.toFixed(2);
-
-                return {
-                    totalDebitRaw: totalDebit,
-                    totalCreditRaw: totalCredit
-                };
-            }
-
-            function validateTotals() {
-                const totalNominalRaw = calculateTotalNominal();
-                const {
-                    totalDebitRaw,
-                    totalCreditRaw
-                } = calculateTotalsAndValidate();
-
-                if (totalNominalRaw !== totalDebitRaw || totalNominalRaw !== totalCreditRaw) {
-                    validationInput.value = "Total Nominal pada Rincian Transaksi harus sama dengan Total Debit dan Total Kredit pada Rincian Voucher.";
-                    saveVoucherBtn.disabled = true;
-                } else if (totalDebitRaw !== totalCreditRaw) {
-                    validationInput.value = "Total Debit harus sama dengan Total Kredit.";
-                    saveVoucherBtn.disabled = true;
-                } else {
-                    validationInput.value = "Totalnya seimbang dan valid.";
-                    saveVoucherBtn.disabled = false;
+            existingInvoices.forEach(invoice => {
+                if (invoice) {
+                    const option = document.createElement('option');
+                    option.value = invoice;
+                    option.textContent = invoice;
+                    select.appendChild(option);
                 }
-            }
+            });
 
-            function updateAllCalculationsAndValidations() {
-                validateTotals();
-            }
+            return select;
+        }
 
-            function updateVoucherDay() {
-                const voucherDate = document.getElementById('voucherDate').value;
-                if (voucherDate) {
-                    const date = new Date(voucherDate);
-                    const days = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
-                    document.getElementById('voucherDay').value = days[date.getDay()];
+        function createInvoiceInput() {
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.className = 'form-control';
+            input.id = 'invoice';
+            input.name = 'invoice';
+            return input;
+        }
+
+        function updateInvoiceField() {
+            const useInvoice = document.querySelector('input[name="use_invoice"]:checked')?.value || 'no';
+            if (useInvoice === 'yes') {
+                const useExistingInvoice = document.querySelector('input[name="use_existing_invoice"]:checked')?.value || 'no';
+                invoiceFieldContainer.innerHTML = '';
+                const invoiceLabel = document.createElement('label');
+                invoiceLabel.htmlFor = 'invoice';
+                invoiceLabel.className = 'col-sm-3 col-form-label';
+                invoiceLabel.textContent = 'Nomor Invoice:';
+                const invoiceInputDiv = document.createElement('div');
+                invoiceInputDiv.className = 'col-sm-9';
+                let invoiceInput;
+                if (useExistingInvoice === 'yes') {
+                    invoiceInput = createInvoiceDropdown();
                 } else {
-                    document.getElementById('voucherDay').value = "";
+                    invoiceInput = createInvoiceInput();
                 }
+                invoiceInput.disabled = false;
+                invoiceInputDiv.appendChild(invoiceInput);
+                invoiceFieldContainer.appendChild(invoiceLabel);
+                invoiceFieldContainer.appendChild(invoiceInputDiv);
             }
-            document.getElementById('voucherDate').addEventListener('change', updateVoucherDay);
-
-            function setTodayVoucherDate() {
-                const today = new Date();
-                const year = today.getFullYear();
-                const month = String(today.getMonth() + 1).padStart(2, '0');
-                const day = String(today.getDate()).padStart(2, '0');
-                document.getElementById('voucherDate').value = `${year}-${month}-${day}`;
-                updateVoucherDay();
-            }
-            setTodayVoucherDate();
-
-            if (voucherTypeSelect && deskripsiVoucherTextarea) {
-                voucherTypeSelect.addEventListener('change', function() {
-                    const selectedValue = this.value;
-                    let defaultDescription = '';
-
-                    switch (selectedValue) {
-                        case 'JV':
-                            defaultDescription = 'Jurnal Voucher - Formulir atau dokumen internal perusahaan yang digunakan untuk mencatat transaksi-transaksi yang tidak dapat dicatat dalam jenis voucher lainnya.';
-                            break;
-                        case 'MP':
-                            defaultDescription = 'Material Purchase - Dokumen yang digunakan untuk mencatat transaksi pembelian material atau persediaan. Voucher ini berfungsi sebagai bukti otorisasi pembelian dan penerimaan material.';
-                            break;
-                        case 'MI':
-                            defaultDescription = 'Material Issuance - Formulir atau dokumen internal perusahaan yang digunakan untuk mencatat pengeluaran atau pemakaian material (bahan baku, bahan penolong, suku cadang, dll.) dari gudang untuk keperluan produksi, proyek, atau departemen lain dalam perusahaan.';
-                            break;
-                        case 'CG':
-                            defaultDescription = 'Cash/Bank General - Dokumen yang digunakan untuk mencatat transaksi pemindahan dana (transfer) antara akun kas dan akun bank, atau antar beberapa akun bank yang dimiliki perusahaan.';
-                            break;
-                        default:
-                            defaultDescription = '';
-                            break;
-                    }
-
-                    deskripsiVoucherTextarea.value = defaultDescription;
-                });
-            } else {
-                console.error("Elemen dengan ID 'voucherType' atau 'deskripsi_voucher' tidak ditemukan.");
-            }
-
-            attachTransactionInputListeners();
-            attachTransactionRemoveButtonListeners();
-            attachVoucherDetailRemoveButtonListeners();
-            const initialVoucherDetailRow = voucherDetailsTableBody.querySelector('tr');
-            if (initialVoucherDetailRow) {
-                attachVoucherDetailRowEventListeners(initialVoucherDetailRow, 0);
-            }
-            updateAllCalculationsAndValidations();
-            updateInvoiceAndStoreFields();
             updateAccountCodeDatalist();
+        }
+
+        function updateDueDateField() {
+            const useInvoice = document.querySelector('input[name="use_invoice"]:checked')?.value || 'no';
+            const useExistingInvoice = document.querySelector('input[name="use_existing_invoice"]:checked')?.value || 'no';
+            dueDateContainer.innerHTML = '';
+            const dueDateLabel = document.createElement('label');
+            dueDateLabel.htmlFor = 'dueDate';
+            dueDateLabel.className = 'col-sm-3 col-form-label';
+            dueDateLabel.textContent = 'Tanggal Jatuh Tempo:';
+            const dueDateInputDiv = document.createElement('div');
+            dueDateInputDiv.className = 'col-sm-9';
+            const dueDateInput = document.createElement('input');
+            dueDateInput.type = 'date';
+            dueDateInput.className = 'form-control';
+            dueDateInput.id = 'dueDate';
+            dueDateInput.name = 'dueDate';
+            dueDateInput.disabled = useInvoice !== 'yes' || useExistingInvoice === 'yes';
+            dueDateInputDiv.appendChild(dueDateInput);
+            dueDateContainer.appendChild(dueDateLabel);
+            dueDateContainer.appendChild(dueDateInputDiv);
+            if (useInvoice === 'yes' && useExistingInvoice === 'no') {
+                setTodayDueDate();
+            }
+        }
+
+        function updateInvoiceAndStoreFields() {
+            const useInvoice = document.querySelector('input[name="use_invoice"]:checked')?.value || 'no';
+            storeFieldContainer.innerHTML = '';
+
+            useExistingInvoiceYes.disabled = useInvoice !== 'yes';
+            useExistingInvoiceNo.disabled = useInvoice !== 'yes';
+
+            if (useInvoice === 'yes') {
+                storeFieldContainer.appendChild(createStoreDropdown());
+                updateInvoiceField();
+            } else {
+                storeFieldContainer.appendChild(createStoreInput());
+                invoiceFieldContainer.innerHTML = '';
+                const invoiceLabel = document.createElement('label');
+                invoiceLabel.htmlFor = 'invoice';
+                invoiceLabel.className = 'col-sm-3 col-form-label';
+                invoiceLabel.textContent = 'Nomor Invoice:';
+                const invoiceInputDiv = document.createElement('div');
+                invoiceInputDiv.className = 'col-sm-9';
+                const invoiceInput = createInvoiceInput();
+                invoiceInput.disabled = true;
+                invoiceInputDiv.appendChild(invoiceInput);
+                invoiceFieldContainer.appendChild(invoiceLabel);
+                invoiceFieldContainer.appendChild(invoiceInputDiv);
+                useExistingInvoiceYes.checked = false;
+                useExistingInvoiceNo.checked = false;
+            }
+            updateDueDateField();
+            updateAccountCodeDatalist();
+        }
+
+        useInvoiceYes.addEventListener('change', updateInvoiceAndStoreFields);
+        useInvoiceNo.addEventListener('change', updateInvoiceAndStoreFields);
+        useExistingInvoiceYes.addEventListener('change', function() {
+            updateInvoiceField();
+            updateDueDateField();
         });
-    </script>
-</div>
+        useExistingInvoiceNo.addEventListener('change', function() {
+            updateInvoiceField();
+            updateDueDateField();
+        });
+
+        function generateTransactionTableRow(index) {
+            const row = document.createElement('tr');
+            row.dataset.rowIndex = index;
+
+            const descriptionCell = document.createElement('td');
+            const descriptionInput = document.createElement('input');
+            descriptionInput.type = 'text';
+            descriptionInput.className = 'form-control';
+            descriptionInput.name = `transactions[${index}][description]`;
+            descriptionCell.appendChild(descriptionInput);
+            row.appendChild(descriptionCell);
+
+            const quantityCell = document.createElement('td');
+            const quantityInput = document.createElement('input');
+            quantityInput.type = 'number';
+            quantityInput.min = '1';
+            quantityInput.className = 'form-control quantityInput';
+            quantityInput.name = `transactions[${index}][quantity]`;
+            quantityInput.value = '1';
+            quantityCell.appendChild(quantityInput);
+            row.appendChild(quantityCell);
+
+            const nominalCell = document.createElement('td');
+            const nominalInput = document.createElement('input');
+            nominalInput.type = 'number';
+            nominalInput.min = '0';
+            nominalInput.className = 'form-control nominalInput';
+            nominalInput.name = `transactions[${index}][nominal]`;
+            nominalCell.appendChild(nominalInput);
+            row.appendChild(nominalCell);
+
+            const actionCell = document.createElement('td');
+            actionCell.className = 'text-center';
+            const deleteButton = document.createElement('button');
+            deleteButton.type = 'button';
+            deleteButton.className = 'btn btn-danger removeTransactionRowBtn';
+            deleteButton.textContent = 'Hapus';
+            actionCell.appendChild(deleteButton);
+            row.appendChild(actionCell);
+
+            return row;
+        }
+
+        function updateTransactionRowIndices() {
+            transactionTableBody.querySelectorAll('tr').forEach((row, index) => {
+                row.dataset.rowIndex = index;
+                row.querySelectorAll('[name*="transactions["]').forEach(input => {
+                    input.name = input.name.replace(/transactions\[\d+\]/, `transactions[${index}]`);
+                });
+            });
+            attachTransactionRemoveButtonListeners();
+            attachTransactionInputListeners();
+        }
+
+        function attachTransactionRemoveButtonListeners() {
+            transactionTableBody.querySelectorAll('.removeTransactionRowBtn').forEach(button => {
+                button.addEventListener('click', function() {
+                    if (transactionTableBody.querySelectorAll('tr').length > 1) {
+                        this.closest('tr').remove();
+                        updateTransactionRowIndices();
+                        updateAllCalculationsAndValidations();
+                    } else {
+                        alert("Tidak dapat menghapus baris transaksi terakhir.");
+                    }
+                });
+            });
+        }
+
+        function attachTransactionInputListeners() {
+            const transactionInputs = transactionTableBody.querySelectorAll('.quantityInput, .nominalInput, .descriptionInput');
+            transactionInputs.forEach(input => {
+                input.removeEventListener('input', updateAllCalculationsAndValidations);
+                input.addEventListener('input', updateAllCalculationsAndValidations);
+            });
+        }
+
+        addTransactionRowBtn.addEventListener('click', function() {
+            const newIndex = transactionTableBody.querySelectorAll('tr').length;
+            const newRow = generateTransactionTableRow(newIndex);
+            transactionTableBody.appendChild(newRow);
+            attachTransactionRemoveButtonListeners();
+            attachTransactionInputListeners();
+            updateAllCalculationsAndValidations();
+        });
+
+        function calculateTotalNominal() {
+            let totalNominalRaw = 0;
+            transactionTableBody.querySelectorAll('tr').forEach(row => {
+                const quantity = parseFloat(row.querySelector('.quantityInput')?.value) || 0;
+                const nominal = parseFloat(row.querySelector('.nominalInput')?.value) || 0;
+                totalNominalRaw += quantity * nominal;
+            });
+            totalNominalInput.value = totalNominalRaw.toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+            return totalNominalRaw;
+        }
+
+        function calculateTotalsAndValidate() {
+            let totalDebit = 0;
+            let totalCredit = 0;
+
+            voucherDetailsTableBody.querySelectorAll('.debitInput').forEach(input => {
+                totalDebit += parseFloat(input.value.replace(/[^0-9.-]/g, '')) || 0;
+            });
+
+            voucherDetailsTableBody.querySelectorAll('.creditInput').forEach(input => {
+                totalCredit += parseFloat(input.value.replace(/[^0-9.-]/g, '')) || 0;
+            });
+
+            totalDebitInput.value = totalDebit.toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+            totalCreditInput.value = totalCredit.toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+
+            if (totalDebitRawInput) totalDebitRawInput.value = totalDebit.toFixed(2);
+            if (totalCreditRawInput) totalCreditRawInput.value = totalCredit.toFixed(2);
+
+            return {
+                totalDebitRaw: totalDebit,
+                totalCreditRaw: totalCredit
+            };
+        }
+
+        function validateTotals() {
+            const totalNominalRaw = calculateTotalNominal();
+            const {
+                totalDebitRaw,
+                totalCreditRaw
+            } = calculateTotalsAndValidate();
+
+            if (totalNominalRaw !== totalDebitRaw || totalNominalRaw !== totalCreditRaw) {
+                validationInput.value = "Total Nominal pada Rincian Transaksi harus sama dengan Total Debit dan Total Kredit pada Rincian Voucher.";
+                saveVoucherBtn.disabled = true;
+            } else if (totalDebitRaw !== totalCreditRaw) {
+                validationInput.value = "Total Debit harus sama dengan Total Kredit.";
+                saveVoucherBtn.disabled = true;
+            } else {
+                validationInput.value = "Totalnya seimbang dan valid.";
+                saveVoucherBtn.disabled = false;
+            }
+        }
+
+        function updateAllCalculationsAndValidations() {
+            validateTotals();
+        }
+
+        function updateVoucherDay() {
+            const voucherDate = document.getElementById('voucherDate').value;
+            if (voucherDate) {
+                const date = new Date(voucherDate);
+                const days = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
+                document.getElementById('voucherDay').value = days[date.getDay()];
+            } else {
+                document.getElementById('voucherDay').value = "";
+            }
+        }
+        document.getElementById('voucherDate').addEventListener('change', updateVoucherDay);
+
+        function setTodayVoucherDate() {
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+            document.getElementById('voucherDate').value = `${year}-${month}-${day}`;
+            updateVoucherDay();
+        }
+
+        function setTodayDueDate() {
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+            document.getElementById('dueDate').value = `${year}-${month}-${day}`;
+        }
+
+        if (voucherTypeSelect && deskripsiVoucherTextarea) {
+            voucherTypeSelect.addEventListener('change', function() {
+                const selectedValue = this.value;
+                let defaultDescription = '';
+
+                switch (selectedValue) {
+                    case 'PJ':
+                        defaultDescription = 'Voucher Penjualan - Dokumen internal perusahaan untuk mencatat transaksi penjualan barang atau jasa yang tidak dapat dicatat pada voucher lain.';
+                        break;
+                    case 'PG':
+                        defaultDescription = 'Voucher Pengeluaran - Dokumen untuk mencatat pengeluaran dana perusahaan, seperti pembayaran tagihan, pembelian material, atau biaya operasional, sebagai bukti otorisasi transaksi.';
+                        break;
+                    case 'PM':
+                        defaultDescription = 'Voucher Pemasukan - Dokumen internal perusahaan untuk mencatat penerimaan dana, seperti pembayaran dari pelanggan, setoran tunai, atau penerimaan lain yang masuk ke kas atau bank perusahaan.';
+                        break;
+                    case 'PB':
+                        defaultDescription = 'Voucher Pembelian - Dokumen untuk mencatat transaksi pembelian barang atau jasa, seperti pembelian material, peralatan, atau layanan dari pemasok.';
+                        break;
+                    case 'LN':
+                        defaultDescription = 'Voucher Lainnya - Dokumen untuk mencatat transaksi yang tidak termasuk dalam kategori voucher lain, seperti koreksi jurnal atau transaksi khusus lainnya.';
+                        break;
+                    default:
+                        defaultDescription = '';
+                        break;
+                }
+
+                deskripsiVoucherTextarea.value = defaultDescription;
+            });
+        } else {
+            console.error("Elemen dengan ID 'voucherType' atau 'deskripsi_voucher' tidak ditemukan.");
+        }
+
+        attachTransactionInputListeners();
+        attachTransactionRemoveButtonListeners();
+        attachVoucherDetailRemoveButtonListeners();
+        const initialVoucherDetailRow = voucherDetailsTableBody.querySelector('tr');
+        if (initialVoucherDetailRow) {
+            attachVoucherDetailRowEventListeners(initialVoucherDetailRow, 0);
+        }
+        updateAllCalculationsAndValidations();
+        setTodayVoucherDate();
+        updateInvoiceAndStoreFields();
+        updateAccountCodeDatalist();
+    });
+</script>

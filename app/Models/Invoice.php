@@ -18,6 +18,7 @@ class Invoice extends Model
         'voucher_number',
         'subsidiary_code',
         'status',
+        'due_date',
         'total_amount',
         'remaining_amount',
     ];

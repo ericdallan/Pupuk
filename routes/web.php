@@ -7,6 +7,7 @@ use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\ExportController;
 use App\Http\Controllers\generalLedgerController;
+use App\Http\Controllers\StockController;
 use App\Http\Controllers\VoucherController;
 use App\Http\Controllers\SubsidiaryController;
 use Illuminate\Support\Facades\Route;
@@ -21,6 +22,9 @@ Route::middleware(['auth:admin'])->group(function () {
     //LandingPage
     Route::get('/dashboard', [AdminController::class, 'dashboard_page'])->name('dashboard_page');
     Route::get('/logout', [AuthController::class, 'logout'])->name('logout');
+    //AdminPage
+    Route::get('/admin_profile', [AdminController::class, 'admin_profile'])->name('admin_profile');
+    Route::put('/admin_profile/update', [AdminController::class, 'admin_update'])->name('admin_update');
     //Pegawai
     Route::get('/employee_page', [EmployeeController::class, 'employee_page'])->name('employee_page');
     //Voucher
@@ -31,6 +35,8 @@ Route::middleware(['auth:admin'])->group(function () {
     Route::delete('/voucher/{id}', [VoucherController::class, 'voucher_delete'])->name('voucher.delete');
     Route::put('/voucher/update/{id}', [VoucherController::class, 'voucher_update'])->name('voucher.update');
     Route::get('/voucher/{id}/pdf', [VoucherController::class, 'generatePdf'])->name('voucher_pdf');
+    //Stock
+    Route::get('/stock_page', [StockController::class, 'stock_page'])->name('stock_page');
     //Buku Besar
     Route::get('/generalLedger_page', [generalLedgerController::class, 'generalledger_page'])->name('generalledger_page');
     Route::get('/general-ledger/print', [ExportController::class, 'generalledger_print'])->name('generalledger_print');

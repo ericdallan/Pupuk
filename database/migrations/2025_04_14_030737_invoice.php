@@ -17,6 +17,7 @@ return new class extends Migration
             $table->string('voucher_number');
             $table->string('subsidiary_code');
             $table->enum('status', ['pending', 'paid'])->default('pending');
+            $table->date('due_date')->nullable();
             $table->decimal('total_amount', 15, 2);
             $table->decimal('remaining_amount', 15, 2);
             $table->timestamps();

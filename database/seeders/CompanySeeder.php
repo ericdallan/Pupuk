@@ -15,9 +15,9 @@ class CompanySeeder extends Seeder
     {
         DB::table('companies')->insert([
             [
-                'company_name' => 'CV. Sari Pratama Mandiri',
-                'address' => 'Jl. Mariwati no 78 Cibadak - Sukaresmi',
-                'phone' => '0263-514894',
+                'company_name' => 'Candra Meubel',
+                'address' => 'Jl. Raya Puncak - Cianjur No.8, Palasari, Kec. Cipanas, Kabupaten Cianjur, Jawa Barat 43253',
+                'phone' => '0818-771-406',
                 'email' => 'SariPratamaMandiri@gmail.com',
                 'director' => 'Sari Novianti',
                 'logo' => null, // 

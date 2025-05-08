@@ -9,6 +9,7 @@ use App\Models\Company;
 use App\Models\Invoice;
 use App\Models\Transactions;
 use App\Models\InvoicePayment;
+use App\Models\Stock;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\DB;
@@ -128,6 +129,7 @@ class VoucherController extends Controller
                 'given_to' => 'nullable|string|max:255',
                 'approved_by' => 'nullable|string|max:255',
                 'transaction' => 'nullable|string|max:255',
+                'due_date' => 'nullable|date|required_if:use_existing_invoice,yes',
                 'store' => 'nullable|string|max:255',
                 'invoice' => 'nullable|string|max:255|required_if:use_invoice,yes',
                 'total_debit' => 'required|numeric|min:0',
@@ -181,6 +183,7 @@ class VoucherController extends Controller
                 'voucher_details.min' => 'Rincian Voucher minimal harus memiliki satu baris dengan Kode Akun.',
                 'voucher_details.*.account_code.required' => 'Kode Akun wajib diisi pada setiap baris Rincian Voucher.',
                 'invoice.required_if' => 'Nomor Invoice wajib diisi jika menggunakan invoice.',
+                'dueDate.required_if' => 'Tanggal Jatuh Tempo wajib diisi jika menggunakan invoice.',
             ]
         );
 
@@ -224,6 +227,43 @@ class VoucherController extends Controller
                 }
             }
 
+            // Save Stock Updates
+            if ($request->has('transactions') && is_array($request->transactions)) {
+                foreach ($request->transactions as $transaction) {
+                    if (!empty($transaction['description']) && isset($transaction['quantity'])) {
+                        $item = $transaction['description'];
+                        $quantity = $transaction['quantity'] ?? 1;
+
+                        // Determine if it's a sale (PJ) or purchase (PB)
+                        $isSale = $request->voucher_type === 'PJ';
+                        $isPurchase = $request->voucher_type === 'PB';
+
+                        // Find existing stock record
+                        $stock = Stock::where('item', $item)->first();
+
+                        if (!$stock) {
+                            // Create new stock record if item doesn't exist
+                            Stock::create([
+                                'item' => $item,
+                                'quantity' => $isPurchase ? $quantity : ($isSale ? -$quantity : 0),
+                            ]);
+                        } else {
+                            // Update existing stock record
+                            if ($isPurchase) {
+                                $stock->quantity += $quantity;
+                            } elseif ($isSale) {
+                                $stock->quantity -= $quantity;
+                            }
+                            $stock->save();
+
+                            // Check if quantity goes negative
+                            if ($stock->quantity < 0) {
+                                throw new \Exception("Stock untuk item {$item} tidak mencukupi.");
+                            }
+                        }
+                    }
+                }
+            }
             // Save Voucher Details
             foreach ($voucherDetailsData as $detail) {
                 VoucherDetails::create([
@@ -260,6 +300,7 @@ class VoucherController extends Controller
                         'voucher_number' => $voucher->voucher_number,
                         'subsidiary_code' => $subsidiaryCode,
                         'status' => 'pending',
+                        'due_date' => $request->dueDate,
                         'total_amount' => $totalAmount,
                         'remaining_amount' => $totalAmount,
                     ]);
@@ -376,7 +417,7 @@ class VoucherController extends Controller
         // Validate request
         $validated = $request->validate([
             'voucher_number' => 'required|string|max:255',
-            'voucher_type' => 'required|in:JV,MP,MI,CG',
+            'voucher_type' => 'required|in:PJ,PG,PM,PB,LN',
             'voucher_date' => 'required|date',
             'voucher_day' => 'nullable|string|max:50',
             'prepared_by' => 'required|string|max:255',
@@ -685,14 +726,16 @@ class VoucherController extends Controller
     private function getVoucherHeading($voucherType)
     {
         switch ($voucherType) {
-            case 'JV':
-                return 'Journal';
-            case 'MP':
-                return 'Material Purchase';
-            case 'MI':
-                return 'Material Issuance';
-            case 'CG':
-                return 'Cash/Bank Transfer';
+            case 'PJ':
+                return 'Penjualan';
+            case 'PG':
+                return 'Pengeluaran';
+            case 'PM':
+                return 'Pemasukan';
+            case 'PB':
+                return 'Pembelian';
+            case 'LN':
+                return 'Lainnya';
             default:
                 return 'Voucher';
         }

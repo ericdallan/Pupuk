@@ -20,20 +20,22 @@
         .sidebar {
             background-color: #343a40;
             color: white;
-            min-height: 100vh;
+            height: 100vh;
+            /* Full viewport height */
             padding-top: 20px;
             width: 200px;
             position: fixed;
             left: 0;
             display: flex;
             flex-direction: column;
+            overflow-y: auto;
+            /* Enable vertical scrolling for the entire sidebar */
         }
 
         .sidebar .admin-info {
             padding: 20px;
             text-align: center;
             margin-bottom: 20px;
-            /* Add margin below admin info */
         }
 
         .sidebar .admin-info i {
@@ -113,10 +115,13 @@
                 top: 0;
                 left: -200px;
                 width: 200px;
-                height: 100%;
+                height: 100vh;
+                /* Full height in mobile */
                 z-index: 1000;
                 transition: left 0.3s ease;
                 flex-direction: column;
+                overflow-y: auto;
+                /* Maintain scrolling in mobile */
             }
 
             .sidebar.active {
@@ -167,8 +172,10 @@
             @endphp
             @if ($admin)
             <div class="text-center admin-info">
-                <i class="fas fa-user-circle"></i>
-                <div>{{ $admin->name }}</div>
+                <a class="nav-link {{ request()->routeIs('admin_profile') ? 'active' : '' }}" href="{{ route('admin_profile') }}">
+                    <i class="fas fa-user-circle"></i>
+                    <div>{{ $admin->name }}</div>
+                </a>
             </div>
             @else
             <div class="text-center admin-info">
@@ -195,7 +202,12 @@
                 </li>
                 <li class="nav-item">
                     <a class="nav-link {{ request()->routeIs('voucher_page') ? 'active' : '' }}" href="{{ route('voucher_page') }}">
-                        <i class="fas fa-file-invoice-dollar"></i> Voucher
+                        <i class="fas fa-file-invoice-dollar"></i> Transaksi
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {{ request()->routeIs('stock_page') ? 'active' : '' }}" href="{{ route('stock_page') }}">
+                        <i class="fas fa-file-invoice-dollar"></i> Stock
                     </a>
                 </li>
                 <li class="nav-item">
