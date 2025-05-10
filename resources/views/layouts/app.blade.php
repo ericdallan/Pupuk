@@ -239,6 +239,10 @@
                     <a class="nav-link {{ request()->routeIs('balanceSheet_page') ? 'active' : '' }}" href="{{ route('balanceSheet_page') }}">
                         <i class="fas fa-file-alt"></i> Neraca Keuangan
                     </a>
+                </li> <li class="nav-item">
+                    <a class="nav-link {{ request()->routeIs('zakat_page') ? 'active' : '' }}" href="{{ route('zakat_page') }}">
+                        <i class="fas fa-file-alt"></i> Zakat
+                    </a>
                 </li>
                 <li class="nav-item" hidden>
                     <a class="nav-link {{ request()->routeIs('employee_page') ? 'active' : '' }}" href="{{ route('employee_page') }}">

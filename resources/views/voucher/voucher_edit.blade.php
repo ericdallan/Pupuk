@@ -56,10 +56,11 @@
                 <label for="voucherType" class="col-sm-3 col-form-label">Tipe Voucher:</label>
                 <div class="col-sm-3">
                     <select class="form-select" id="voucherType" name="voucher_type">
-                        <option value="JV" {{ $voucher->voucher_type == 'JV' ? 'selected' : '' }}>JV</option>
-                        <option value="MP" {{ $voucher->voucher_type == 'MP' ? 'selected' : '' }}>MP</option>
-                        <option value="MI" {{ $voucher->voucher_type == 'MI' ? 'selected' : '' }}>MI</option>
-                        <option value="CG" {{ $voucher->voucher_type == 'CG' ? 'selected' : '' }}>CG</option>
+                        <option value="PJ" {{ $voucher->voucher_type == 'PJ' ? 'selected' : '' }}>PJ</option>
+                        <option value="PG" {{ $voucher->voucher_type == 'PG' ? 'selected' : '' }}>PG</option>
+                        <option value="PM" {{ $voucher->voucher_type == 'PM' ? 'selected' : '' }}>PM</option>
+                        <option value="PB" {{ $voucher->voucher_type == 'PB' ? 'selected' : '' }}>PB</option>
+                        <option value="LN" {{ $voucher->voucher_type == 'LN' ? 'selected' : '' }}>LN</option>
                     </select>
                 </div>
                 <label for="voucherDate" class="col-sm-2 col-form-label">Tanggal:</label>
@@ -308,7 +309,7 @@
             const storeNames = @json($storeNames);
             const subsidiaries = @json($subsidiariesData);
             const accounts = @json($accountsData);
-            const hasInvoice = @json((bool) $voucher->invoice);
+            const hasInvoice = @json((bool) $voucher - > invoice);
 
             // --- Voucher Description Logic ---
             function updateVoucherDescription() {
@@ -316,17 +317,20 @@
                     const selectedValue = voucherTypeSelect.value;
                     let defaultDescription = '';
                     switch (selectedValue) {
-                        case 'JV':
-                            defaultDescription = 'Jurnal Voucher - Formulir atau dokumen internal perusahaan yang digunakan untuk mencatat transaksi-transaksi yang tidak dapat dicatat dalam jenis voucher lainnya.';
+                        case 'PJ':
+                            defaultDescription = 'Voucher Penjualan - Dokumen internal perusahaan untuk mencatat transaksi penjualan barang atau jasa yang tidak dapat dicatat pada voucher lain.';
                             break;
-                        case 'MP':
-                            defaultDescription = 'Material Purchase - Dokumen yang digunakan untuk mencatat transaksi pembelian material atau persediaan. Voucher ini berfungsi sebagai bukti otorisasi pembelian dan penerimaan material.';
+                        case 'PG':
+                            defaultDescription = 'Voucher Pengeluaran - Dokumen untuk mencatat pengeluaran dana perusahaan, seperti pembayaran tagihan, pembelian material, atau biaya operasional, sebagai bukti otorisasi transaksi.';
                             break;
-                        case 'MI':
-                            defaultDescription = 'Material Issuance - Formulir atau dokumen internal perusahaan yang digunakan untuk mencatat pengeluaran atau pemakaian material (bahan baku, bahan penolong, suku cadang, dll.) dari gudang untuk keperluan produksi, proyek, atau departemen lain dalam perusahaan.';
+                        case 'PM':
+                            defaultDescription = 'Voucher Pemasukan - Dokumen internal perusahaan untuk mencatat penerimaan dana, seperti pembayaran dari pelanggan, setoran tunai, atau penerimaan lain yang masuk ke kas atau bank perusahaan.';
                             break;
-                        case 'CG':
-                            defaultDescription = 'Cash/Bank General - Dokumen yang digunakan untuk mencatat transaksi pemindahan dana (transfer) antara akun kas dan akun bank, atau antar beberapa akun bank yang dimiliki perusahaan.';
+                        case 'PB':
+                            defaultDescription = 'Voucher Pembelian - Dokumen untuk mencatat transaksi pembelian barang atau jasa, seperti pembelian material, peralatan, atau layanan dari pemasok.';
+                            break;
+                        case 'LN':
+                            defaultDescription = 'Voucher Lainnya - Dokumen untuk mencatat transaksi yang tidak termasuk dalam kategori voucher lain, seperti koreksi jurnal atau transaksi khusus lainnya.';
                             break;
                         default:
                             defaultDescription = '';

@@ -10,6 +10,7 @@ use App\Http\Controllers\generalLedgerController;
 use App\Http\Controllers\StockController;
 use App\Http\Controllers\VoucherController;
 use App\Http\Controllers\SubsidiaryController;
+use App\Http\Controllers\ZakatController;
 use Illuminate\Support\Facades\Route;
 
 // Landing Page (Guest Middleware)
@@ -37,6 +38,8 @@ Route::middleware(['auth:admin'])->group(function () {
     Route::get('/voucher/{id}/pdf', [VoucherController::class, 'generatePdf'])->name('voucher_pdf');
     //Stock
     Route::get('/stock_page', [StockController::class, 'stock_page'])->name('stock_page');
+    Route::get('/stock/transactions/{stockId}', [StockController::class, 'get_transactions'])->name('stock.transactions');
+    Route::get('/stock/export', [StockController::class, 'export'])->name('stock.export');
     //Buku Besar
     Route::get('/generalLedger_page', [generalLedgerController::class, 'generalledger_page'])->name('generalledger_page');
     Route::get('/general-ledger/print', [ExportController::class, 'generalledger_print'])->name('generalledger_print');
@@ -68,6 +71,10 @@ Route::middleware(['auth:admin'])->group(function () {
     Route::put('subsidiary/piutang/update/{id}', [SubsidiaryController::class, 'piutang_update'])->name('subsidiary_piutang.update');
     Route::put('subsidiary/utang/update/{id}', [SubsidiaryController::class, 'utang_update'])->name('subsidiary_utang.update');
     Route::delete('/subsidiary/{id}', [SubsidiaryController::class, 'subsidiary_delete'])->name('subsidiary.delete');
+    //Zakat
+    Route::get('/zakat_page', [ZakatController::class, 'zakat_page'])->name('zakat_page');
+    Route::post('/zakat.calculate', [ZakatController::class, 'calculateZakat'])->name('zakat.calculate');
+    Route::get('/zakat/export', [ZakatController::class, 'export'])->name('zakat.export');
     //Companys
     Route::get('/company_page', [CompanyController::class, 'company_page'])->name('company_page');
     Route::get('/company_page/edit', [CompanyController::class, 'edit'])->name('company.edit');

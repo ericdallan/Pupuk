@@ -129,7 +129,7 @@ class VoucherController extends Controller
                 'given_to' => 'nullable|string|max:255',
                 'approved_by' => 'nullable|string|max:255',
                 'transaction' => 'nullable|string|max:255',
-                'due_date' => 'nullable|date|required_if:use_existing_invoice,yes',
+                'due_date' => 'nullable|date',
                 'store' => 'nullable|string|max:255',
                 'invoice' => 'nullable|string|max:255|required_if:use_invoice,yes',
                 'total_debit' => 'required|numeric|min:0',
@@ -234,31 +234,33 @@ class VoucherController extends Controller
                         $item = $transaction['description'];
                         $quantity = $transaction['quantity'] ?? 1;
 
-                        // Determine if it's a sale (PJ) or purchase (PB)
-                        $isSale = $request->voucher_type === 'PJ';
-                        $isPurchase = $request->voucher_type === 'PB';
+                        // Only process stock updates for PJ (sale) or PB (purchase) voucher types
+                        if ($request->voucher_type === 'PJ' || $request->voucher_type === 'PB') {
+                            $isSale = $request->voucher_type === 'PJ';
+                            $isPurchase = $request->voucher_type === 'PB';
 
-                        // Find existing stock record
-                        $stock = Stock::where('item', $item)->first();
+                            // Find existing stock record
+                            $stock = Stock::where('item', $item)->first();
 
-                        if (!$stock) {
-                            // Create new stock record if item doesn't exist
-                            Stock::create([
-                                'item' => $item,
-                                'quantity' => $isPurchase ? $quantity : ($isSale ? -$quantity : 0),
-                            ]);
-                        } else {
-                            // Update existing stock record
-                            if ($isPurchase) {
-                                $stock->quantity += $quantity;
-                            } elseif ($isSale) {
-                                $stock->quantity -= $quantity;
-                            }
-                            $stock->save();
+                            if (!$stock) {
+                                // Create new stock record if item doesn't exist
+                                Stock::create([
+                                    'item' => $item,
+                                    'quantity' => $isPurchase ? $quantity : ($isSale ? -$quantity : 0),
+                                ]);
+                            } else {
+                                // Update existing stock record
+                                if ($isPurchase) {
+                                    $stock->quantity += $quantity;
+                                } elseif ($isSale) {
+                                    $stock->quantity -= $quantity;
+                                }
+                                $stock->save();
 
-                            // Check if quantity goes negative
-                            if ($stock->quantity < 0) {
-                                throw new \Exception("Stock untuk item {$item} tidak mencukupi.");
+                                // Check if quantity goes negative
+                                if ($stock->quantity < 0) {
+                                    throw new \Exception("Stock untuk item {$item} tidak mencukupi.");
+                                }
                             }
                         }
                     }
