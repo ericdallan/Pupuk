@@ -39,11 +39,11 @@
                             <div class="col-sm-3">
                                 <select class="form-select" id="voucherType" name="voucher_type">
                                     <option value="">Pilih Tipe Voucher</option>
-                                    <option value="PJ">PJ</option>
-                                    <option value="PG">PG</option>
-                                    <option value="PM">PM</option>
-                                    <option value="PB">PB</option>
-                                    <option value="LN">LN</option>
+                                    <option value="PJ">Penjualan</option>
+                                    <option value="PG">Pengeluaran</option>
+                                    <option value="PM">Pemasukan</option>
+                                    <option value="PB">Pembelian</option>
+                                    <option value="LN">Lainnya</option>
                                 </select>
                             </div>
                             <label for="voucherDate" class="col-sm-2 col-form-label">Tanggal:</label>

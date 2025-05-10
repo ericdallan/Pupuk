@@ -636,7 +636,6 @@ class VoucherController extends Controller
         }
     }
 
-
     public function voucher_delete($id)
     {
         try {
@@ -648,32 +647,53 @@ class VoucherController extends Controller
             // 2. Delete related voucher details
             $voucherToDelete->voucherDetails()->delete();
 
-            // 3. Delete related transactions
+            // 3. Get related transactions before deleting them
+            $transactions = $voucherToDelete->transactions()->get();
+
+            // 4. Delete stock transactions and related stock records
+            foreach ($transactions as $transaction) {
+                // Find stock records where stocks.item matches transactions.description
+                $stock = Stock::where('item', $transaction->description)->first();
+
+                if ($stock) {
+                    // Delete stock transactions linked to this stock (assuming stock_transactions table exists)
+                    Stock::where('stock_id', $stock->id)->delete();
+
+                    // Check if the stock has any remaining stock transactions
+                    $remainingStockTransactions = Stock::where('stock_id', $stock->id)->count();
+                    if ($remainingStockTransactions === 0) {
+                        // Delete the stock record if no stock transactions remain
+                        $stock->delete();
+                    }
+                }
+            }
+
+            // 5. Delete related transactions
             $voucherToDelete->transactions()->delete();
 
-            // 4. Handle invoice payments deletion and related vouchers
+            // 6. Handle invoice payments deletion and related vouchers
             if ($voucherToDelete->invoice) {
                 $invoice = Invoice::where('invoice', $voucherToDelete->invoice)->first();
 
                 if ($invoice) {
-                    // 4.1 Delete invoice payments related to the voucher being deleted
+                    // 6.1 Delete invoice payments related to the voucher being deleted
                     $invoice->payment_vouchers()->where('voucher_id', $voucherToDelete->id)->delete();
 
-                    // 4.2 Find other vouchers that have invoice_payments related to the same invoice
+                    // 6.2 Find other vouchers that have invoice_payments related to the same invoice
                     $relatedVouchersToDelete = Voucher::whereHas('invoice_payments', function ($query) use ($invoice) {
                         $query->where('invoice_id', $invoice->id);
                     })
                         ->where('id', '!=', $voucherToDelete->id) // Exclude the voucher being deleted
                         ->get();
 
-                    // 4.3 Delete the related vouchers
+                    // 6.3 Delete the related vouchers
                     foreach ($relatedVouchersToDelete as $relatedVoucher) {
                         // Delete invoice payments associated with the related voucher
                         InvoicePayment::where('voucher_id', $relatedVoucher->id)->delete();
                         $relatedVoucher->delete();
                     }
 
-                    // 4.4 Check if the invoice has any remaining payments. If not, delete the invoice (optional)
+                    // 6.4 Check if the invoice has any remaining payments. If not, delete the invoice
                     $remainingPayments = InvoicePayment::where('invoice_id', $invoice->id)->count();
                     if ($remainingPayments === 0) {
                         $invoice->delete();
@@ -681,7 +701,7 @@ class VoucherController extends Controller
                 }
             }
 
-            // 5. Delete the voucher itself
+            // 7. Delete the voucher itself
             $voucherToDelete->delete();
 
             DB::commit();

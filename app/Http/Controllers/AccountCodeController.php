@@ -171,8 +171,8 @@ class AccountCodeController extends Controller
                 'Pendapatan Penjualan Barang Jadi' => '2',
             ],
             'HARGA_POKOK_PRODUKSI_DAN_PENJUALAN' => [
-                'Harga Pokok Penjualan Barang Dagangan' => '1',
-                'Harga Pokok Penjualan Barang Jadi' => '2',
+                'Harga Pokok Pembelian Barang Dagangan' => '1',
+                'Harga Pokok Pembelian Barang Jadi' => '2',
                 'Harga Pokok Produksi' => '3',
             ],
             'BEBAN_BEBAN_USAHA' => [
@@ -253,11 +253,11 @@ class AccountCodeController extends Controller
                 ],
             ],
             'HARGA_POKOK_PRODUKSI_DAN_PENJUALAN' => [
-                'Harga Pokok Penjualan Barang Dagangan' => [
-                    'Harga Pokok Penjualan Barang Dagangan' => '01',
+                'Harga Pokok Pembelian Barang Dagangan' => [
+                    'Harga Pokok Pembelian Barang Dagangan' => '01',
                 ],
-                'Harga Pokok Penjualan Barang Jadi' => [
-                    'Harga Pokok Penjualan Barang Jadi' => '01',
+                'Harga Pokok Pembelian Barang Jadi' => [
+                    'Harga Pokok Pembelian Barang Jadi' => '01',
                 ],
                 'Harga Pokok Produksi' => [
                     'Biaya Bahan Baku' => '01',

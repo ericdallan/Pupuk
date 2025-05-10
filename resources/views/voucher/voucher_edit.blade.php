@@ -309,7 +309,7 @@
             const storeNames = @json($storeNames);
             const subsidiaries = @json($subsidiariesData);
             const accounts = @json($accountsData);
-            const hasInvoice = @json((bool) $voucher - > invoice);
+            const hasInvoice = @json((bool) $voucher -> invoice);
 
             // --- Voucher Description Logic ---
             function updateVoucherDescription() {
