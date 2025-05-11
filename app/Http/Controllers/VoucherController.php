@@ -650,20 +650,41 @@ class VoucherController extends Controller
             // 3. Get related transactions before deleting them
             $transactions = $voucherToDelete->transactions()->get();
 
-            // 4. Delete stock transactions and related stock records
-            foreach ($transactions as $transaction) {
-                // Find stock records where stocks.item matches transactions.description
-                $stock = Stock::where('item', $transaction->description)->first();
+            // 4. Update stock quantities and delete stock if quantity = 0 and no related transactions
+            // Group transactions by description to accumulate quantities
+            $transactionQuantities = $transactions->groupBy('description')->map(function ($group) {
+                return $group->sum('quantity');
+            });
 
-                if ($stock) {
-                    // Delete stock transactions linked to this stock (assuming stock_transactions table exists)
-                    Stock::where('stock_id', $stock->id)->delete();
+            // Update stock quantities for each unique description
+            foreach ($transactionQuantities as $description => $totalQuantity) {
+                // Find stock record where stocks.item matches transactions.description
+                $stock = Stock::where('item', $description)->first();
 
-                    // Check if the stock has any remaining stock transactions
-                    $remainingStockTransactions = Stock::where('stock_id', $stock->id)->count();
-                    if ($remainingStockTransactions === 0) {
-                        // Delete the stock record if no stock transactions remain
-                        $stock->delete();
+                if ($stock && $totalQuantity > 0) {
+                    // Adjust stock quantity based on voucher type
+                    if ($voucherToDelete->voucher_type === 'PJ') {
+                        // Increase stock quantity for sales (undo stock reduction)
+                        $stock->quantity += $totalQuantity;
+                    } elseif ($voucherToDelete->voucher_type === 'PB') {
+                        // Decrease stock quantity for purchases (undo stock addition)
+                        $stock->quantity -= $totalQuantity;
+                        // Ensure quantity doesn't go negative
+                        if ($stock->quantity < 0) {
+                            $stock->quantity = 0;
+                        }
+                    }
+                    $stock->save();
+
+                    // Check if stock quantity is 0 and no other transactions exist for this item
+                    if ($stock->quantity == 0) {
+                        $remainingTransactions = DB::table('transactions')
+                            ->where('description', $description)
+                            ->where('voucher_id', '!=', $voucherToDelete->id) // Exclude current voucher's transactions
+                            ->count();
+                        if ($remainingTransactions == 0) {
+                            $stock->delete();
+                        }
                     }
                 }
             }
@@ -695,12 +716,11 @@ class VoucherController extends Controller
 
                     // 6.4 Check if the invoice has any remaining payments. If not, delete the invoice
                     $remainingPayments = InvoicePayment::where('invoice_id', $invoice->id)->count();
-                    if ($remainingPayments === 0) {
+                    if ($remainingPayments == 0) {
                         $invoice->delete();
                     }
                 }
             }
-
             // 7. Delete the voucher itself
             $voucherToDelete->delete();
 
