@@ -262,6 +262,8 @@
         const storeNames = @json($storeNames);
         const subsidiaries = @json($subsidiariesData);
         const accounts = @json($accountsData);
+        const stocks = @json($stocksData);
+        const transactions = @json($transactionsData);
 
         function isSubsidiaryCodeUsed() {
             const accountCodeInputs = voucherDetailsTableBody.querySelectorAll('.accountCodeInput');
@@ -576,16 +578,182 @@
             updateDueDateField();
         });
 
+        function createStockDropdown(index) {
+            const select = document.createElement('select');
+            select.className = 'form-control descriptionInput';
+            select.name = `transactions[${index}][description]`;
+            select.dataset.listenerAttached = 'false';
+
+            const defaultOption = document.createElement('option');
+            defaultOption.value = '';
+            defaultOption.textContent = 'Pilih Nama Stock';
+            select.appendChild(defaultOption);
+
+            stocks.forEach(stock => {
+                const option = document.createElement('option');
+                option.value = stock.item;
+                option.textContent = stock.item;
+                select.appendChild(option);
+            });
+
+            return select;
+        }
+
+        function createDescriptionInput(index) {
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.className = 'form-control descriptionInput';
+            input.name = `transactions[${index}][description]`;
+            return input;
+        }
+
+        function calculateAverageHpp(item) {
+            if (!transactions || !Array.isArray(transactions) || transactions.length === 0) {
+                console.log('No transactions data available, returning 0');
+                return 0;
+            }
+
+            const matchingTransactions = transactions.filter(t => t.description === item);
+            if (matchingTransactions.length === 0) {
+                console.log(`No matching transactions for ${item}, returning 0`);
+                return 0;
+            }
+
+            // Calculate average nominal across transactions, ignoring quantity
+            const totalNominal = matchingTransactions.reduce((sum, t) => sum + (parseFloat(t.nominal) || 0), 0);
+            const transactionCount = matchingTransactions.length;
+            const averageHpp = transactionCount > 0 ? totalNominal / transactionCount : 0;
+            console.log(`Matching transactions for ${item}:`, matchingTransactions);
+            console.log(`Total Nominal: ${totalNominal}, Transaction Count: ${transactionCount}`);
+            console.log(`Calculated average HPP for ${item}: ${averageHpp}`);
+            return averageHpp;
+        }
+
+        function addHppRow(currentIndex, selectedItem, quantity) {
+            if (!selectedItem) return;
+
+            const currentRow = transactionTableBody.querySelector(`tr[data-row-index="${currentIndex}"]`);
+            const nextRow = currentRow.nextSibling;
+            if (nextRow && nextRow.querySelector('.descriptionInput')?.value === `HPP ${selectedItem}`) {
+                console.log('HPP row already exists for', selectedItem, 'updating it');
+                const existingHppRow = nextRow;
+                existingHppRow.querySelector('.quantityInput').value = quantity;
+                // Nominal remains the average HPP, no need to update it here
+                updateAllCalculationsAndValidations();
+                return;
+            }
+
+            const newIndex = transactionTableBody.querySelectorAll('tr').length;
+            const hppRow = document.createElement('tr');
+            hppRow.dataset.rowIndex = newIndex;
+            hppRow.dataset.isHppRow = 'true';
+
+            const descriptionCell = document.createElement('td');
+            const descriptionInput = createDescriptionInput(newIndex);
+            descriptionInput.value = `HPP ${selectedItem}`;
+            descriptionInput.readOnly = true;
+            descriptionCell.appendChild(descriptionInput);
+            hppRow.appendChild(descriptionCell);
+
+            const quantityCell = document.createElement('td');
+            const quantityInput = document.createElement('input');
+            quantityInput.type = 'number';
+            quantityInput.min = '1';
+            quantityInput.className = 'form-control quantityInput';
+            quantityInput.name = `transactions[${newIndex}][quantity]`;
+            quantityInput.value = quantity;
+            quantityInput.addEventListener('input', function() {
+                updateAllCalculationsAndValidations(); // Only update total nominal
+            });
+            quantityCell.appendChild(quantityInput);
+            hppRow.appendChild(quantityCell);
+
+            const nominalCell = document.createElement('td');
+            const nominalInput = document.createElement('input');
+            nominalInput.type = 'number';
+            nominalInput.min = '0';
+            nominalInput.className = 'form-control nominalInput';
+            nominalInput.name = `transactions[${newIndex}][nominal]`;
+            const averageHpp = calculateAverageHpp(selectedItem);
+            nominalInput.value = averageHpp; // Set to average HPP, not multiplied by quantity
+            nominalInput.readOnly = true;
+            console.log('Set HPP nominal to:', nominalInput.value, 'for item:', selectedItem);
+            nominalCell.appendChild(nominalInput);
+            hppRow.appendChild(nominalCell);
+
+            const actionCell = document.createElement('td');
+            actionCell.className = 'text-center';
+            const deleteButton = document.createElement('button');
+            deleteButton.type = 'button';
+            deleteButton.className = 'btn btn-danger removeTransactionRowBtn';
+            deleteButton.textContent = 'Hapus';
+            actionCell.appendChild(deleteButton);
+            hppRow.appendChild(actionCell);
+
+            if (currentRow.nextSibling) {
+                transactionTableBody.insertBefore(hppRow, currentRow.nextSibling);
+            } else {
+                transactionTableBody.appendChild(hppRow);
+            }
+
+            updateTransactionRowIndices();
+            updateAllCalculationsAndValidations();
+        }
+
+        function handleStockChange(index, event) {
+            const selectedItem = event.target.value;
+            console.log('Dropdown changed to:', selectedItem, 'at index:', index);
+            if (selectedItem) {
+                const row = event.target.closest('tr');
+                const quantity = parseFloat(row.querySelector('.quantityInput')?.value) || 1;
+                addHppRow(index, selectedItem, quantity);
+            }
+            updateAllCalculationsAndValidations();
+        }
+
         function generateTransactionTableRow(index) {
             const row = document.createElement('tr');
             row.dataset.rowIndex = index;
 
             const descriptionCell = document.createElement('td');
-            const descriptionInput = document.createElement('input');
-            descriptionInput.type = 'text';
-            descriptionInput.className = 'form-control';
-            descriptionInput.name = `transactions[${index}][description]`;
-            descriptionCell.appendChild(descriptionInput);
+            let descriptionElement;
+            const voucherType = voucherTypeSelect.value;
+
+            if (voucherType === 'PJ') {
+                descriptionElement = createStockDropdown(index);
+                if (descriptionElement.dataset.listenerAttached === 'false') {
+                    descriptionElement.addEventListener('change', handleStockChange.bind(null, index));
+                    descriptionElement.dataset.listenerAttached = 'true';
+                }
+            } else if (voucherType === 'PB') {
+                descriptionElement = document.createElement('div');
+                descriptionElement.className = 'input-group';
+
+                const select = createStockDropdown(index);
+                select.className = 'form-control';
+                select.style.width = '50%';
+
+                const input = createDescriptionInput(index);
+                input.className = 'form-control';
+                input.style.width = '50%';
+
+                select.addEventListener('change', function() {
+                    input.value = this.value;
+                    updateAllCalculationsAndValidations();
+                });
+
+                input.addEventListener('input', function() {
+                    select.value = '';
+                    updateAllCalculationsAndValidations();
+                });
+
+                descriptionElement.appendChild(select);
+                descriptionElement.appendChild(input);
+            } else {
+                descriptionElement = createDescriptionInput(index);
+            }
+
+            descriptionCell.appendChild(descriptionElement);
             row.appendChild(descriptionCell);
 
             const quantityCell = document.createElement('td');
@@ -622,8 +790,8 @@
         function updateTransactionRowIndices() {
             transactionTableBody.querySelectorAll('tr').forEach((row, index) => {
                 row.dataset.rowIndex = index;
-                row.querySelectorAll('[name*="transactions["]').forEach(input => {
-                    input.name = input.name.replace(/transactions\[\d+\]/, `transactions[${index}]`);
+                row.querySelectorAll('[name*="transactions["]').forEach(element => {
+                    element.name = element.name.replace(/transactions\[\d+\]/, `transactions[${index}]`);
                 });
             });
             attachTransactionRemoveButtonListeners();
@@ -634,7 +802,14 @@
             transactionTableBody.querySelectorAll('.removeTransactionRowBtn').forEach(button => {
                 button.addEventListener('click', function() {
                     if (transactionTableBody.querySelectorAll('tr').length > 1) {
-                        this.closest('tr').remove();
+                        const row = this.closest('tr');
+                        const rowIndex = parseInt(row.dataset.rowIndex);
+                        const nextRow = row.nextSibling;
+                        const description = row.querySelector('.descriptionInput:not([type="text"])')?.value || '';
+                        if (nextRow && nextRow.dataset.isHppRow === 'true' && nextRow.querySelector('.descriptionInput')?.value === `HPP ${description}`) {
+                            nextRow.remove();
+                        }
+                        row.remove();
                         updateTransactionRowIndices();
                         updateAllCalculationsAndValidations();
                     } else {
@@ -652,6 +827,34 @@
             });
         }
 
+        function refreshTransactionTable() {
+            const rows = transactionTableBody.querySelectorAll('tr');
+            const descriptions = Array.from(rows).map(row => {
+                const descriptionInput = row.querySelector('.descriptionInput[type="text"]');
+                const descriptionSelect = row.querySelector('.descriptionInput:not([type="text"])');
+                return descriptionInput?.value || descriptionSelect?.value || '';
+            });
+
+            transactionTableBody.innerHTML = '';
+            descriptions.forEach((description, index) => {
+                if (description.startsWith('HPP ')) return;
+                const newRow = generateTransactionTableRow(index);
+                transactionTableBody.appendChild(newRow);
+                const rowDescriptionInput = newRow.querySelector('.descriptionInput[type="text"]');
+                const rowDescriptionSelect = newRow.querySelector('.descriptionInput:not([type="text"])');
+                if (rowDescriptionInput) rowDescriptionInput.value = description;
+                if (rowDescriptionSelect) rowDescriptionSelect.value = description;
+            });
+
+            if (transactionTableBody.querySelectorAll('tr').length === 0) {
+                const newRow = generateTransactionTableRow(0);
+                transactionTableBody.appendChild(newRow);
+            }
+
+            attachTransactionRemoveButtonListeners();
+            attachTransactionInputListeners();
+        }
+
         addTransactionRowBtn.addEventListener('click', function() {
             const newIndex = transactionTableBody.querySelectorAll('tr').length;
             const newRow = generateTransactionTableRow(newIndex);
@@ -661,17 +864,48 @@
             updateAllCalculationsAndValidations();
         });
 
+        voucherTypeSelect.addEventListener('change', function() {
+            refreshTransactionTable();
+            const selectedValue = this.value;
+            let defaultDescription = '';
+
+            switch (selectedValue) {
+                case 'PJ':
+                    defaultDescription = 'Voucher Penjualan - Dokumen internal perusahaan untuk mencatat transaksi penjualan barang atau jasa yang tidak dapat dicatat pada voucher lain.';
+                    break;
+                case 'PG':
+                    defaultDescription = 'Voucher Pengeluaran - Dokumen untuk mencatat pengeluaran dana perusahaan, seperti pembayaran tagihan, pembelian material, atau biaya operasional, sebagai bukti otorisasi transaksi.';
+                    break;
+                case 'PM':
+                    defaultDescription = 'Voucher Pemasukan - Dokumen internal perusahaan untuk mencatat penerimaan dana, seperti pembayaran dari pelanggan, setoran tunai, atau penerimaan lain yang masuk ke kas atau bank perusahaan.';
+                    break;
+                case 'PB':
+                    defaultDescription = 'Voucher Pembelian - Dokumen untuk mencatat transaksi pembelian barang atau jasa, seperti pembelian material, peralatan, atau layanan dari pemasok.';
+                    break;
+                case 'LN':
+                    defaultDescription = 'Voucher Lainnya - Dokumen untuk mencatat transaksi yang tidak termasuk dalam kategori voucher lain, seperti koreksi jurnal atau transaksi khusus lainnya.';
+                    break;
+                default:
+                    defaultDescription = '';
+                    break;
+            }
+
+            deskripsiVoucherTextarea.value = defaultDescription;
+        });
+
         function calculateTotalNominal() {
             let totalNominalRaw = 0;
             transactionTableBody.querySelectorAll('tr').forEach(row => {
                 const quantity = parseFloat(row.querySelector('.quantityInput')?.value) || 0;
                 const nominal = parseFloat(row.querySelector('.nominalInput')?.value) || 0;
-                totalNominalRaw += quantity * nominal;
+                totalNominalRaw += quantity * nominal; // Multiply quantity by nominal for total
+                console.log(`Row: ${row.querySelector('.descriptionInput')?.value}, Quantity: ${quantity}, Nominal: ${nominal}, Contribution to Total: ${quantity * nominal}`);
             });
             totalNominalInput.value = totalNominalRaw.toLocaleString('en-US', {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2
             });
+            console.log('Total Nominal Calculated:', totalNominalRaw);
             return totalNominalRaw;
         }
 
@@ -757,38 +991,6 @@
             document.getElementById('dueDate').value = `${year}-${month}-${day}`;
         }
 
-        if (voucherTypeSelect && deskripsiVoucherTextarea) {
-            voucherTypeSelect.addEventListener('change', function() {
-                const selectedValue = this.value;
-                let defaultDescription = '';
-
-                switch (selectedValue) {
-                    case 'PJ':
-                        defaultDescription = 'Voucher Penjualan - Dokumen internal perusahaan untuk mencatat transaksi penjualan barang atau jasa yang tidak dapat dicatat pada voucher lain.';
-                        break;
-                    case 'PG':
-                        defaultDescription = 'Voucher Pengeluaran - Dokumen untuk mencatat pengeluaran dana perusahaan, seperti pembayaran tagihan, pembelian material, atau biaya operasional, sebagai bukti otorisasi transaksi.';
-                        break;
-                    case 'PM':
-                        defaultDescription = 'Voucher Pemasukan - Dokumen internal perusahaan untuk mencatat penerimaan dana, seperti pembayaran dari pelanggan, setoran tunai, atau penerimaan lain yang masuk ke kas atau bank perusahaan.';
-                        break;
-                    case 'PB':
-                        defaultDescription = 'Voucher Pembelian - Dokumen untuk mencatat transaksi pembelian barang atau jasa, seperti pembelian material, peralatan, atau layanan dari pemasok.';
-                        break;
-                    case 'LN':
-                        defaultDescription = 'Voucher Lainnya - Dokumen untuk mencatat transaksi yang tidak termasuk dalam kategori voucher lain, seperti koreksi jurnal atau transaksi khusus lainnya.';
-                        break;
-                    default:
-                        defaultDescription = '';
-                        break;
-                }
-
-                deskripsiVoucherTextarea.value = defaultDescription;
-            });
-        } else {
-            console.error("Elemen dengan ID 'voucherType' atau 'deskripsi_voucher' tidak ditemukan.");
-        }
-
         attachTransactionInputListeners();
         attachTransactionRemoveButtonListeners();
         attachVoucherDetailRemoveButtonListeners();
@@ -800,5 +1002,6 @@
         setTodayVoucherDate();
         updateInvoiceAndStoreFields();
         updateAccountCodeDatalist();
+        refreshTransactionTable();
     });
 </script>

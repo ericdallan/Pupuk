@@ -23,4 +23,9 @@ class Transactions extends Model
     {
         return $this->belongsTo(Voucher::class, 'voucher_id');
     }
+
+    public function stock()
+    {
+        return $this->hasOne(Stock::class, 'item', 'description');
+    }
 }

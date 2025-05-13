@@ -38,8 +38,29 @@ class VoucherController extends Controller
             $query->whereYear('voucher_date', $request->year);
         }
 
-        // Eager-load invoices and invoice_payments
-        $voucher = $query->with(['invoices', 'invoice_payments'])->get();
+        // Eager-load invoices, invoice_payments, and transactions
+        $vouchers = $query->with(['invoices', 'invoice_payments', 'transactions'])->get();
+
+        // Check for stock-related transactions
+        $vouchers = $vouchers->map(function ($voucher) {
+            $hasStock = $voucher->transactions()->whereHas('stock', function ($query) {
+                $query->whereColumn('transactions.description', 'stocks.item');
+            })->exists();
+            $voucher->has_stock = $hasStock; // Add a flag to indicate if voucher has stock-related transactions
+            return $voucher;
+        });
+
+        $transactionsData = $vouchers->filter(function ($voucher) {
+            return $voucher->voucher_type === 'PB';
+        })->flatMap(function ($voucher) {
+            return $voucher->transactions->map(function ($transaction) {
+                return [
+                    'description' => $transaction->description,
+                    'quantity' => $transaction->quantity,
+                    'nominal' => $transaction->nominal,
+                ];
+            });
+        })->values()->all();
 
         $accounts = ChartOfAccount::orderBy('account_type')
             ->orderBy('account_section')
@@ -82,6 +103,8 @@ class VoucherController extends Controller
             ->toArray();
         $subsidiaries = Subsidiary::all();
 
+        $stocksData = Stock::all();
+
         $subsidiariesData = $subsidiaries->map(function ($subsidiary) {
             return [
                 'subsidiary_code' => $subsidiary->subsidiary_code,
@@ -98,7 +121,7 @@ class VoucherController extends Controller
         })->values()->toArray();
 
         return view('voucher.voucher_page', compact(
-            'voucher',
+            'vouchers',
             'accounts',
             'company',
             'admin',
@@ -106,7 +129,9 @@ class VoucherController extends Controller
             'existingInvoices',
             'subsidiaries',
             'subsidiariesData',
-            'accountsData'
+            'accountsData',
+            'stocksData',
+            'transactionsData'
         ));
     }
     public function voucher_form(Request $request)
@@ -257,8 +282,8 @@ class VoucherController extends Controller
                                 }
                                 $stock->save();
 
-                                // Check if quantity goes negative
-                                if ($stock->quantity < 0) {
+                                // Check if quantity goes negative, but allow for items starting with "HPP ..."
+                                if ($stock->quantity < 0 && !str_starts_with($item, 'HPP ')) {
                                     throw new \Exception("Stock untuk item {$item} tidak mencukupi.");
                                 }
                             }
@@ -266,6 +291,7 @@ class VoucherController extends Controller
                     }
                 }
             }
+
             // Save Voucher Details
             foreach ($voucherDetailsData as $detail) {
                 VoucherDetails::create([

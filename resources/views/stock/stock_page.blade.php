@@ -28,11 +28,25 @@
                     <th>No</th>
                     <th>Nama Barang</th>
                     <th>Satuan</th>
-                    <th>Stok Tersedia</th>
-                    <th>Masuk Barang</th>
-                    <th>Keluar Barang</th>
-                    <th>Akhir</th>
+                    <th colspan="2">Stok Tersedia</th>
+                    <th colspan="2">Masuk Barang</th>
+                    <th colspan="2">Keluar Barang</th>
+                    <th colspan="2">Akhir</th>
                     <th>Detail</th>
+                </tr>
+                <tr>
+                    <th></th>
+                    <th></th>
+                    <th></th>
+                    <th>Qty</th>
+                    <th>HPP</th>
+                    <th>Qty</th>
+                    <th>HPP</th>
+                    <th>Qty</th>
+                    <th>HPP</th>
+                    <th>Qty</th>
+                    <th>HPP</th>
+                    <th></th>
                 </tr>
             </thead>
             <tbody>
@@ -42,9 +56,13 @@
                     <td>{{ $stock->item }}</td>
                     <td>{{ $stock->unit }}</td>
                     <td>{{ $stock->quantity }}</td>
-                    <td>{{ $stock->incoming }}</td>
-                    <td>{{ $stock->outgoing }}</td>
-                    <td>{{ $stock->final_stock }}</td>
+                    <td>{{ number_format($stock->average_hpp ?? 0, 2) }}</td>
+                    <td>{{ $stock->incoming_qty }}</td>
+                    <td>{{ number_format($stock->average_hpp ?? 0, 2) }}</td>
+                    <td>{{ $stock->outgoing_qty }}</td>
+                    <td>{{ number_format($stock->average_hpp ?? 0, 2) }}</td>
+                    <td>{{ $stock->final_stock_qty }}</td>
+                    <td>{{ number_format($stock->average_hpp ?? 0, 2) }}</td>
                     <td>
                         <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#detailModal{{ $stock->id }}">Detail</button>
                     </td>
@@ -82,18 +100,22 @@
                                         <th>Deskripsi</th>
                                         <th>Tipe Voucher</th>
                                         <th>Kuantitas</th>
+                                        <th>HPP</th>
                                         <th>Tanggal</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     @foreach ($stock->transactions as $transaction)
+                                    @if (!str_starts_with($transaction->description, 'HPP '))
                                     <tr>
                                         <td>{{ $loop->iteration }}</td>
                                         <td>{{ $transaction->description }}</td>
                                         <td>{{ $transaction->voucher_type }}</td>
                                         <td>{{ $transaction->quantity }}</td>
+                                        <td>{{ number_format($transaction->nominal ?? 0, 2) }}</td>
                                         <td>{{ \Carbon\Carbon::parse($transaction->created_at)->format('d-m-Y') }}</td>
                                     </tr>
+                                    @endif
                                     @endforeach
                                 </tbody>
                             </table>
@@ -125,8 +147,10 @@
                 fetch(`/stock/transactions/${stockId}?filter=${filter}`)
                     .then(response => response.json())
                     .then(data => {
+                        // Filter out transactions starting with "HPP ..." (redundancy)
+                        const filteredTransactions = data.transactions.filter(transaction => !transaction.description.startsWith('HPP '));
                         let html = '';
-                        if (data.transactions.length > 0) {
+                        if (filteredTransactions.length > 0) {
                             html = `
                             <div class="table-responsive">
                                 <table class="table table-striped table-bordered table-hover text-center">
@@ -136,18 +160,20 @@
                                             <th>Deskripsi</th>
                                             <th>Tipe Voucher</th>
                                             <th>Kuantitas</th>
+                                            <th>HPP</th>
                                             <th>Tanggal</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                             `;
-                            data.transactions.forEach((transaction, index) => {
+                            filteredTransactions.forEach((transaction, index) => {
                                 html += `
                                 <tr>
                                     <td>${index + 1}</td>
                                     <td>${transaction.description}</td>
                                     <td>${transaction.voucher_type}</td>
                                     <td>${transaction.quantity}</td>
+                                    <td>${number_format(transaction.nominal ?? 0, 2)}</td>
                                     <td>${transaction.created_at}</td>
                                 </tr>
                                 `;
@@ -164,6 +190,31 @@
                     });
             });
         });
+
+        // Add number_format function if not available
+        if (typeof number_format === 'undefined') {
+            number_format = function(number, decimals, dec_point, thousands_sep) {
+                number = (number + '').replace(/[^0-9+\-Ee.]/g, '');
+                var n = !isFinite(+number) ? 0 : +number,
+                    prec = !isFinite(+decimals) ? 2 : Math.abs(decimals),
+                    sep = (typeof thousands_sep === 'undefined') ? ',' : thousands_sep,
+                    dec = (typeof dec_point === 'undefined') ? '.' : dec_point,
+                    s = '',
+                    toFixedFix = function(n, prec) {
+                        var k = Math.pow(10, prec);
+                        return '' + Math.round(n * k) / k;
+                    };
+                s = (prec ? toFixedFix(n, prec) : '' + Math.round(n)).split('.');
+                if (s[0].length > 3) {
+                    s[0] = s[0].replace(/\B(?=(?:\d{3})+(?!\d))/g, sep);
+                }
+                if ((s[1] || '').length < prec) {
+                    s[1] = s[1] || '';
+                    s[1] += new Array(prec - s[1].length + 1).join('0');
+                }
+                return s.join(dec);
+            };
+        }
     });
 </script>
 @endsection

@@ -24,8 +24,9 @@
                 <label for="month" class="form-label">Bulan:</label>
                 <select name="month" id="month" class="form-select">
                     <option value="">Semua</option>
-                    @for ($i = 1; $i <= 12; $i++) <option value="{{ $i }}" {{ $month == $i ? 'selected' : '' }}>{{ \Carbon\Carbon::create()->month($i)->format('F') }}</option>
-                        @endfor
+                    @for ($i = 1; $i <= 12; $i++)
+                    <option value="{{ $i }}" {{ $month == $i ? 'selected' : '' }}>{{ \Carbon\Carbon::create()->month($i)->format('F') }}</option>
+                    @endfor
                 </select>
             </div>
 
@@ -58,13 +59,25 @@
                 <p><strong>Aktiva Lancar:</strong> {{ number_format($totalAktivaLancar, 2) }}</p>
                 <p><strong>Hutang Lancar:</strong> {{ number_format($totalHutangLancar, 2) }}</p>
                 <p><strong>Selisih (Aktiva Lancar - Hutang Lancar):</strong> {{ number_format($selisih, 2) }}</p>
+                @if ($zakatWajibCara1)
+                <p><strong>Status Zakat:</strong> Wajib (Selisih ≥ Rp 85,000,000)</p>
                 <p><strong>Zakat (2.5% x Selisih):</strong> {{ number_format($zakatCara1, 2) }}</p>
+                @else
+                <p><strong>Status Zakat:</strong> Tidak Wajib (Selisih < Rp 85,000,000)</p>
+                <p><strong>Zakat:</strong> Rp 0,00</p>
+                @endif
             </div>
             @elseif ($calculation_method == 'cara2')
             <!-- Tampilkan hasil Cara 2 -->
             <div class="space-y-2">
                 <p><strong>Laba Bersih:</strong> {{ number_format($labaBersih, 2) }}</p>
+                @if ($zakatWajibCara2)
+                <p><strong>Status Zakat:</strong> Wajib (Laba Bersih ≥ Rp 85,000,000)</p>
                 <p><strong>Zakat (2.5% x Laba Bersih):</strong> {{ number_format($zakatCara2, 2) }}</p>
+                @else
+                <p><strong>Status Zakat:</strong> Tidak Wajib (Laba Bersih < Rp 85,000,000)</p>
+                <p><strong>Zakat:</strong> Rp 0,00</p>
+                @endif
             </div>
             @endif
         </div>

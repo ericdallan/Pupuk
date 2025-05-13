@@ -51,8 +51,10 @@ class ZakatController extends Controller
             $totalHutangLancar = 0;
             $selisih = 0;
             $zakatCara1 = 0;
+            $zakatWajibCara1 = false; // Status kewajiban zakat Cara 1
             $labaBersih = 0;
             $zakatCara2 = 0;
+            $zakatWajibCara2 = false; // Status kewajiban zakat Cara 2
 
             // === Cara 1: Perhitungan Zakat Berdasarkan Neraca Keuangan ===
             if ($calculation_method === 'cara1' || $calculation_method === 'both') {
@@ -88,8 +90,14 @@ class ZakatController extends Controller
                 // Hitung Selisih (Aktiva Lancar - Hutang Lancar)
                 $selisih = $totalAktivaLancar - $totalHutangLancar;
 
-                // Hitung Zakat (2.5% x Selisih)
-                $zakatCara1 = $selisih * 0.025;
+                // Periksa kewajiban zakat berdasarkan nisab (Rp 85,000,000)
+                if ($selisih >= 85000000) {
+                    $zakatWajibCara1 = true;
+                    $zakatCara1 = $selisih * 0.025; // Hitung zakat jika wajib
+                } else {
+                    $zakatWajibCara1 = false;
+                    $zakatCara1 = 0; // Tidak ada zakat jika tidak wajib
+                }
             }
 
             // === Cara 2: Perhitungan Zakat Berdasarkan Laba Rugi ===
@@ -160,8 +168,14 @@ class ZakatController extends Controller
                 $labaSebelumPajak = $labaOperasi + $totalPendapatanLain - $totalBebanLain;
                 $labaBersih = $labaSebelumPajak - $totalBebanPajak;
 
-                // Hitung Zakat (2.5% x Laba Bersih)
-                $zakatCara2 = $labaBersih * 0.025;
+                // Periksa kewajiban zakat berdasarkan laba bersih
+                if ($labaBersih >= 85000000) {
+                    $zakatWajibCara2 = true;
+                    $zakatCara2 = $labaBersih * 0.025; // Hitung zakat jika wajib
+                } else {
+                    $zakatWajibCara2 = false;
+                    $zakatCara2 = 0; // Tidak ada zakat jika tidak wajib
+                }
             }
 
             // Kirim data ke view (kembali ke halaman zakat_page)
@@ -170,8 +184,10 @@ class ZakatController extends Controller
                 'totalHutangLancar',
                 'selisih',
                 'zakatCara1',
+                'zakatWajibCara1',
                 'labaBersih',
                 'zakatCara2',
+                'zakatWajibCara2',
                 'year',
                 'month',
                 'calculation_method'

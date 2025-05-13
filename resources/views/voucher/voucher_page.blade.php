@@ -101,7 +101,7 @@
             </div>
         </div>
     </form>
-    @if (count($voucher) > 0)
+    @if (count($vouchers) > 0)
     <div class="table-responsive">
         <table class="table table-striped table-bordered table-hover text-center">
             <thead class="table-dark">
@@ -116,7 +116,7 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach ($voucher as $voucher_item)
+                @foreach ($vouchers as $voucher_item)
                 <tr>
                     <td>{{ $voucher_item->voucher_number }}</td>
                     <td>{{ $voucher_item->voucher_type }}</td>
@@ -141,7 +141,10 @@
                         <form action="{{ route('voucher.delete', $voucher_item->id) }}" method="POST" style="display: inline-block;">
                             @csrf
                             @method('DELETE')
-                            @if ($voucher_item->invoices()->exists() && $voucher_item->invoice_payments()->exists())
+                            @if ($voucher_item->has_stock)
+                            <!-- Kondisi: Voucher memiliki data stock, tombol Hapus dinonaktifkan -->
+                            <button type="button" class="btn btn-danger btn-sm btn-disabled" disabled title="Tidak dapat menghapus karena voucher memiliki data stock">Hapus</button>
+                            @elseif ($voucher_item->invoices()->exists() && $voucher_item->invoice_payments()->exists())
                             <!-- Kondisi 1: Ada invoices dan invoice_payments, tombol Hapus diaktifkan -->
                             <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Apakah Anda yakin ingin menghapus voucher ini? Pastikan semua invoice payments telah dihapus terlebih dahulu.')">Hapus</button>
                             @elseif ($voucher_item->invoices()->exists() && !$voucher_item->invoice_payments()->exists())
@@ -157,7 +160,7 @@
                         <a href="{{ route('voucher_pdf', $voucher_item->id) }}" class="btn btn-secondary btn-sm" target="_blank">PDF</a>
                     </td>
                 </tr>
-                @endforeach 
+                @endforeach
             </tbody>
         </table>
     </div>
