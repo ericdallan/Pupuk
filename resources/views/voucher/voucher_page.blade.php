@@ -60,7 +60,6 @@
 </div>
 @endif
 
-
 <div class="mt-4">
     <form action="{{ route('voucher_page') }}" method="GET" class="mb-3">
         <div class="row">
@@ -109,6 +108,7 @@
                     <th>Nomor Voucher</th>
                     <th>Tipe Voucher</th>
                     <th>Nomor Invoice</th>
+                    <th>Stock</th>
                     <th>Tanggal Voucher</th>
                     <th>Transaksi</th>
                     <th>Total Nominal</th>
@@ -121,6 +121,13 @@
                     <td>{{ $voucher_item->voucher_number }}</td>
                     <td>{{ $voucher_item->voucher_type }}</td>
                     <td>{{ !empty($voucher_item->invoice) ? $voucher_item->invoice : '-' }}</td>
+                    <td>
+                        @if (!empty($voucher_item->is_opening_stock))
+                        Saldo Awal Stock: {{ implode(', ', $voucher_item->is_opening_stock) }}
+                        @else
+                        -
+                        @endif
+                    </td>
                     <td>{{ \Carbon\Carbon::parse($voucher_item->voucher_date)->isoFormat('dddd, DD MMMM') }}</td>
                     <td>{{ $voucher_item->transaction }}</td>
                     <td>{{ number_format($voucher_item->total_debit, 2) }}</td>

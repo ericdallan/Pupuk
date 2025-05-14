@@ -41,12 +41,44 @@ class VoucherController extends Controller
         // Eager-load invoices, invoice_payments, and transactions
         $vouchers = $query->with(['invoices', 'invoice_payments', 'transactions'])->get();
 
-        // Check for stock-related transactions
-        $vouchers = $vouchers->map(function ($voucher) {
+        // Fetch the earliest transaction for each stock item
+        $openingStockTransactions = DB::table('transactions')
+            ->select('t1.description as item', 't1.voucher_id', 't1.created_at')
+            ->from('transactions as t1')
+            ->join(DB::raw('(
+            SELECT description, MIN(created_at) as min_created_at
+            FROM transactions
+            WHERE description NOT LIKE "HPP %"
+            GROUP BY description
+        ) as t2'), function ($join) {
+                $join->on('t1.description', '=', 't2.description')
+                    ->whereColumn('t1.created_at', 't2.min_created_at');
+            })
+            ->where('t1.description', 'NOT LIKE', 'HPP %')
+            ->whereExists(function ($query) {
+                $query->select(DB::raw(1))
+                    ->from('stocks')
+                    ->whereColumn('stocks.item', 't1.description');
+            })
+            ->get()
+            ->groupBy('voucher_id')
+            ->mapWithKeys(function ($group, $voucher_id) {
+                return [$voucher_id => $group->pluck('item')->toArray()];
+            });
+
+        // Map vouchers to include stock-related flags
+        $vouchers = $vouchers->map(function ($voucher) use ($openingStockTransactions) {
+            // Check for stock-related transactions
             $hasStock = $voucher->transactions()->whereHas('stock', function ($query) {
                 $query->whereColumn('transactions.description', 'stocks.item');
             })->exists();
-            $voucher->has_stock = $hasStock; // Add a flag to indicate if voucher has stock-related transactions
+            $voucher->has_stock = $hasStock;
+
+            // Check if voucher contains the earliest transaction for any stock item
+            $voucher->is_opening_stock = isset($openingStockTransactions[$voucher->id])
+                ? $openingStockTransactions[$voucher->id]
+                : [];
+
             return $voucher;
         });
 
