@@ -9,12 +9,16 @@
 <form method="GET" action="{{ route('stock_page') }}" class="mb-4">
     <div class="row">
         <div class="col-md-4">
-            <label for="filter_date" class="form-label">Pilih Tanggal</label>
-            <input type="date" name="filter_date" id="filter_date" class="form-control" value="{{ request('filter_date', now()->toDateString()) }}">
+            <label for="start_date" class="form-label">Start Date</label>
+            <input type="date" name="start_date" id="start_date" class="form-control" value="{{ request('start_date', now()->startOfYear()->toDateString()) }}" min="{{ now()->subYears(5)->startOfYear()->toDateString() }}" max="{{ now()->toDateString() }}">
+        </div>
+        <div class="col-md-4">
+            <label for="end_date" class="form-label">End Date</label>
+            <input type="date" name="end_date" id="end_date" class="form-control" value="{{ request('end_date', now()->toDateString()) }}" min="{{ request('start_date', now()->startOfYear()->toDateString()) }}" max="{{ now()->toDateString() }}">
         </div>
         <div class="col-md-4 align-self-end">
             <button type="submit" class="btn btn-primary">Filter</button>
-            <a href="{{ route('stock.export') . '?filter_date=' . request('filter_date', now()->toDateString()) }}" class="btn btn-success">Export to Excel</a>
+            <a href="{{ route('stock.export') . '?start_date=' . request('start_date', now()->startOfYear()->toDateString()) . '&end_date=' . request('end_date', now()->toDateString()) }}" class="btn btn-success">Export to Excel</a>
         </div>
     </div>
 </form>
@@ -104,7 +108,7 @@
                                 <tr>
                                     <th>No</th>
                                     <th>Deskripsi</th>
-                                    <th>Tipe Voucher</th>
+                                    <th>Tipe Transaksi</th>
                                     <th>Kuantitas</th>
                                     <th>HPP</th>
                                     <th>Tanggal</th>
@@ -116,7 +120,15 @@
                                 <tr>
                                     <td>{{ $loop->iteration }}</td>
                                     <td>{{ $transaction->description }}</td>
-                                    <td>{{ $transaction->voucher_type }}</td>
+                                    <td>
+                                        @if ($transaction->voucher_type == 'PJ')
+                                        Penjualan
+                                        @elseif ($transaction->voucher_type == 'PB')
+                                        Pembelian
+                                        @else
+                                        {{ $transaction->voucher_type }} {{-- Tampilkan nilai aslinya jika bukan PJ atau PB --}}
+                                        @endif
+                                    </td>
                                     <td>{{ $transaction->quantity }}</td>
                                     <td>{{ number_format($transaction->nominal ?? 0, 2) }}</td>
                                     <td>{{ \Carbon\Carbon::parse($transaction->created_at)->format('d-m-Y') }}</td>
@@ -165,7 +177,7 @@
                                             <th>Deskripsi</th>
                                             <th>Tipe Voucher</th>
                                             <th>Kuantitas</th>
-                                            <th>HPP</th>
+                                            <th>Nominal</th>
                                             <th>Tanggal</th>
                                         </tr>
                                     </thead>

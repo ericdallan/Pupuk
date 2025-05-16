@@ -405,7 +405,6 @@ class VoucherController extends Controller
         // Fetch company with required fields
         $company = Company::select('company_name', 'director')->first();
         if (!$company) {
-            // Handle case where no company is found
             return redirect()->back()->withErrors(['message' => 'No company found.']);
         }
 
@@ -414,14 +413,26 @@ class VoucherController extends Controller
 
         // Fetch chart of accounts
         $accounts = ChartOfAccount::orderBy('account_code')->get();
+        if ($accounts->isEmpty()) {
+            return redirect()->back()->withErrors(['message' => 'No chart of accounts found.']);
+        }
+        $accountsData = $accounts->map(function ($account) {
+            return [
+                'account_code' => $account->account_code,
+                'account_name' => $account->account_name,
+            ];
+        })->values()->toArray();
 
-        // Fetch existing invoices (adjust query based on your Invoice model)
+        // Fetch existing invoices
         $existingInvoices = Invoice::pluck('invoice')->unique()->values()->toArray();
 
-        // Fetch store names (adjust query based on your Store model)
+        // Fetch store names
         $storeNames = Subsidiary::pluck('store_name')->unique()->values()->toArray();
+        if (empty($storeNames)) {
+            $storeNames = [];
+        }
 
-        // Fetch subsidiaries (adjust query based on your Subsidiary model)
+        // Fetch subsidiaries
         $subsidiariesData = Subsidiary::select('subsidiary_code', 'account_name')
             ->orderBy('subsidiary_code')
             ->get()
@@ -431,34 +442,39 @@ class VoucherController extends Controller
                     'account_name' => $subsidiary->account_name,
                 ];
             })->toArray();
+        if (empty($subsidiariesData)) {
+            $subsidiariesData = [];
+        }
+
+        // Fetch stock data
+        $stocks = Stock::select('item')
+            ->orderBy('item')
+            ->get()
+            ->map(function ($stock) {
+                return [
+                    'item' => $stock->item,
+                ];
+            })->values()->toArray();
+        if (empty($stocks)) {
+            $stocks = [];
+        }
+
+        // Fetch transaction data for HPP calculation (for PB vouchers)
+        $transactionsData = Transactions::whereHas('voucher', function ($query) {
+            $query->where('voucher_type', 'PB');
+        })
+            ->where('description', 'NOT LIKE', 'HPP %')
+            ->get()
+            ->map(function ($transaction) {
+                return [
+                    'description' => $transaction->description,
+                    'quantity' => $transaction->quantity,
+                    'nominal' => $transaction->nominal,
+                ];
+            })->values()->toArray();
 
         // Get heading text for voucher type
         $headingText = $this->getVoucherHeading($voucher->voucher_type);
-
-        // Get user_id from the sessions table
-        $sessionService = app('session');
-        $sessionId = $sessionService->getId() ?? '';
-        // Get user_id from the sessions table
-        $sessionService = app('session');
-        $sessionId = $sessionService->getId() ?? '';
-        $userId = $sessionService->get('user_id');
-        $sessionData = \Illuminate\Support\Facades\DB::table('sessions')
-            ->where('id', $sessionId)
-            ->first();
-
-        $userId = null;
-        $admin = null;
-        if ($sessionData && isset($sessionData->user_id)) {
-            $userId = $sessionData->user_id;
-            // Fetch the admin based on the user_id
-            $admin = \App\Models\Admin::where('id', $userId)->first();
-        }
-        $accountsData = $accounts->map(function ($account) {
-            return [
-                'account_code' => $account->account_code,
-                'account_name' => $account->account_name,
-            ];
-        })->values()->toArray();
 
         return view('voucher.voucher_edit', compact(
             'voucher',
@@ -468,173 +484,311 @@ class VoucherController extends Controller
             'existingInvoices',
             'storeNames',
             'subsidiariesData',
-            'admin',
             'accountsData',
+            'stocks',
+            'transactionsData'
         ));
     }
     public function voucher_update(Request $request, $id)
     {
+        // Filter voucher_details to remove rows without account_code
+        $voucherDetailsData = collect($request->voucher_details ?? [])
+            ->filter(function ($detail) {
+                return !empty($detail['account_code']);
+            })
+            ->values()
+            ->toArray();
+
+        // Filter transactions to remove invalid entries (empty description or zero values, unless HPP)
+        $transactionsData = collect($request->transactions ?? [])
+            ->filter(function ($transaction) {
+                $hasDescription = !empty($transaction['description']);
+                $isHpp = str_starts_with($transaction['description'], 'HPP ');
+                $hasQuantity = isset($transaction['quantity']) && floatval($transaction['quantity']) > 0;
+                $hasNominal = isset($transaction['nominal']) && floatval($transaction['nominal']) >= 0;
+                return $hasDescription && ($isHpp || ($hasQuantity && $hasNominal));
+            })
+            ->values()
+            ->toArray();
+
         // Validate request
-        $validated = $request->validate([
-            'voucher_number' => 'required|string|max:255',
-            'voucher_type' => 'required|in:PJ,PG,PM,PB,LN',
-            'voucher_date' => 'required|date',
-            'voucher_day' => 'nullable|string|max:50',
-            'prepared_by' => 'required|string|max:255',
-            'given_to' => 'nullable|string|max:255',
-            'approved_by' => 'nullable|string|max:255',
-            'transaction' => 'nullable|string|max:255',
-            'use_invoice' => 'required|in:yes,no',
-            'use_existing_invoice' => 'nullable|in:yes,no',
-            'invoice' => 'nullable|string|max:255',
-            'store' => 'nullable|string|max:255',
-            'transactions' => 'required|array|min:1',
-            'transactions.*.description' => 'nullable|string|max:255',
-            'transactions.*.quantity' => 'nullable|numeric|min:1',
-            'transactions.*.nominal' => 'nullable|numeric|min:0',
-            'voucher_details' => 'required|array|min:1',
-            'voucher_details.*.account_code' => 'required|string|max:50',
-            'voucher_details.*.account_name' => 'required|string|max:255',
-            'voucher_details.*.debit' => 'nullable|numeric|min:0',
-            'voucher_details.*.credit' => 'nullable|numeric|min:0',
-        ]);
+        $validator = Validator::make(
+            array_merge($request->all(), [
+                'voucher_details' => $voucherDetailsData,
+                'transactions' => $transactionsData,
+            ]),
+            [
+                'voucher_number' => 'required|string|max:255',
+                'voucher_type' => 'required|in:PJ,PG,PM,PB,LN',
+                'voucher_date' => 'required|date',
+                'voucher_day' => 'nullable|string|max:50',
+                'prepared_by' => 'required|string|max:255',
+                'given_to' => 'nullable|string|max:255',
+                'approved_by' => 'nullable|string|max:255',
+                'transaction' => 'nullable|string|max:255',
+                'use_invoice' => 'required|in:yes,no',
+                'use_existing_invoice' => 'nullable|in:yes,no',
+                'invoice' => [
+                    'nullable',
+                    'string',
+                    'max:255',
+                    'required_if:use_invoice,yes',
+                    function ($attribute, $value, $fail) use ($request) {
+                        if ($request->use_invoice === 'yes' && $request->use_existing_invoice !== 'yes') {
+                            if (Invoice::where('invoice', $value)->exists()) {
+                                $fail('Nomor Invoice sudah digunakan. Silakan pilih nomor lain atau gunakan invoice yang sudah ada.');
+                            }
+                        }
+                    },
+                ],
+                'store' => 'nullable|string|max:255',
+                'due_date' => 'nullable|date',
+                'transactions' => 'required|array|min:1',
+                'transactions.*.description' => 'required|string|max:255',
+                'transactions.*.quantity' => 'required|numeric|min:1',
+                'transactions.*.nominal' => 'required|numeric|min:0',
+                'voucher_details' => 'required|array|min:1',
+                'voucher_details.*.account_code' => [
+                    'required',
+                    'string',
+                    'max:50',
+                    function ($attribute, $value, $fail) use ($request, $voucherDetailsData) {
+                        $useInvoice = $request->use_invoice === 'yes';
+                        $hasSubsidiaryCode = collect($voucherDetailsData)->contains(function ($detail) {
+                            return Subsidiary::where('subsidiary_code', $detail['account_code'])->exists();
+                        });
+
+                        if ($useInvoice && !$hasSubsidiaryCode) {
+                            if (!Subsidiary::where('subsidiary_code', $value)->exists()) {
+                                $fail("Kode akun {$value} tidak valid di tabel subsidiaries.");
+                            }
+                        } else {
+                            if (
+                                !ChartOfAccount::where('account_code', $value)->exists() &&
+                                !Subsidiary::where('subsidiary_code', $value)->exists()
+                            ) {
+                                $fail("Kode akun {$value} tidak valid di tabel chart_of_accounts atau subsidiaries.");
+                            }
+                        }
+                    },
+                ],
+                'voucher_details.*.account_name' => 'required|string|max:255',
+                'voucher_details.*.debit' => 'nullable|numeric|min:0',
+                'voucher_details.*.credit' => 'nullable|numeric|min:0',
+            ],
+            [
+                'voucher_details.required' => 'Rincian Voucher minimal harus memiliki satu baris dengan Kode Akun.',
+                'voucher_details.min' => 'Rincian Voucher minimal harus memiliki satu baris dengan Kode Akun.',
+                'voucher_details.*.account_code.required' => 'Kode Akun wajib diisi pada setiap baris Rincian Voucher.',
+                'invoice.required_if' => 'Nomor Invoice wajib diisi jika menggunakan invoice.',
+                'due_date.required_if' => 'Tanggal Jatuh Tempo wajib diisi untuk invoice baru.',
+                'transactions.required' => 'Rincian Transaksi minimal harus memiliki satu baris.',
+                'transactions.min' => 'Rincian Transaksi minimal harus memiliki satu baris.',
+                'transactions.*.description.required' => 'Deskripsi wajib diisi untuk setiap transaksi.',
+                'transactions.*.quantity.required' => 'Kuantitas wajib diisi dan harus lebih dari 0.',
+                'transactions.*.quantity.min' => 'Kuantitas harus lebih dari 0.',
+                'transactions.*.nominal.required' => 'Nominal wajib diisi untuk setiap transaksi.',
+            ]
+        );
+
+        if ($validator->fails()) {
+            return redirect()->back()->withErrors($validator)->withInput();
+        }
 
         try {
             DB::beginTransaction();
 
-            $voucher = Voucher::findOrFail($id);
+            $voucher = Voucher::with(['transactions', 'voucherDetails'])->findOrFail($id);
 
             // Calculate totals
             $totalNominal = 0;
-            foreach ($request->transactions as $transaction) {
-                $quantity = floatval($transaction['quantity'] ?? 1);
-                $nominal = floatval($transaction['nominal'] ?? 0);
+            $transactionItems = [];
+            foreach ($transactionsData as $index => $transaction) {
+                $quantity = floatval($transaction['quantity']);
+                $nominal = floatval($transaction['nominal']);
                 $totalNominal += $quantity * $nominal;
+                $transactionItems[$index] = [
+                    'description' => $transaction['description'],
+                    'quantity' => $quantity,
+                    'nominal' => $nominal,
+                    'is_hpp' => str_starts_with($transaction['description'], 'HPP '),
+                ];
             }
 
             $totalDebit = 0;
             $totalCredit = 0;
             $subsidiaryCount = 0;
-            foreach ($request->voucher_details as $detail) {
+            foreach ($voucherDetailsData as $detail) {
                 $debit = floatval($detail['debit'] ?? 0);
                 $credit = floatval($detail['credit'] ?? 0);
 
-                // Ensure debit and credit are mutually exclusive
                 if ($debit > 0 && $credit > 0) {
-                    throw new \Exception("Debit and credit cannot both be non-zero for account code: {$detail['account_code']}");
+                    throw new \Exception("Debit dan kredit tidak boleh keduanya non-nol untuk kode akun: {$detail['account_code']}");
                 }
 
                 $totalDebit += $debit;
                 $totalCredit += $credit;
 
-                // Validate account codes
-                $accountCode = $detail['account_code'];
                 if ($request->use_invoice === 'yes') {
-                    $isSubsidiary = Subsidiary::where('subsidiary_code', $accountCode)->exists();
-                    $isAccount = ChartOfAccount::where('account_code', $accountCode)->exists();
+                    $isSubsidiary = Subsidiary::where('subsidiary_code', $detail['account_code'])->exists();
                     if ($isSubsidiary) {
                         $subsidiaryCount++;
                     }
-                    if (!$isSubsidiary && !$isAccount) {
-                        throw new \Exception("Invalid account code: {$accountCode}");
-                    }
-                    // Ensure only one subsidiary code is used
                     if ($subsidiaryCount > 1) {
-                        throw new \Exception("Only one subsidiary code can be used when invoice is enabled.");
-                    }
-                } else {
-                    if (!ChartOfAccount::where('account_code', $accountCode)->exists()) {
-                        throw new \Exception("Invalid account code: {$accountCode}");
+                        throw new \Exception("Hanya satu kode subsidiary yang dapat digunakan saat invoice diaktifkan.");
                     }
                 }
             }
 
             // Validate totals
             if (round($totalNominal, 2) !== round($totalDebit, 2) || round($totalNominal, 2) !== round($totalCredit, 2)) {
-                throw new \Exception('Total nominal must equal total debit and total credit.');
+                throw new \Exception('Total nominal harus sama dengan total debit dan total kredit.');
             }
 
             if (round($totalDebit, 2) !== round($totalCredit, 2)) {
-                throw new \Exception('Total debit must equal total credit.');
+                throw new \Exception('Total debit harus sama dengan total kredit.');
             }
 
-            if ($request->use_invoice === 'yes' && $request->use_existing_invoice === 'yes' && $request->invoice) {
-                $invoice = Invoice::where('invoice', $request->invoice)->first();
-
-                if (!$invoice) {
-                    throw new \Exception("Nomor invoice tidak valid: {$request->invoice}");
+            // Validate HPP transactions for PJ vouchers
+            if ($request->voucher_type === 'PJ') {
+                $stockItems = collect($transactionItems)
+                    ->filter(fn ($item) => !$item['is_hpp'])
+                    ->pluck('description')
+                    ->toArray();
+                foreach ($transactionItems as $index => $item) {
+                    if ($item['is_hpp']) {
+                        $stockItem = str_replace('HPP ', '', $item['description']);
+                        if (!in_array($stockItem, $stockItems)) {
+                            throw new \Exception("Transaksi HPP untuk item {$stockItem} tidak memiliki transaksi stok yang sesuai.");
+                        }
+                        $stockIndex = array_search($stockItem, array_column($transactionItems, 'description'));
+                        if ($stockIndex !== false && $transactionItems[$stockIndex]['quantity'] != $item['quantity']) {
+                            throw new \Exception("Kuantitas HPP untuk item {$stockItem} tidak sesuai dengan kuantitas stok.");
+                        }
+                    }
                 }
 
-                // Cari pembayaran voucher yang spesifik untuk invoice ini
-                $paymentOnInvoice = $invoice->payment_vouchers()->where('voucher_id', $voucher->id)->first();
+                // Validate at least one non-HPP transaction
+                $nonHppCount = collect($transactionItems)->filter(fn ($item) => !$item['is_hpp'])->count();
+                if ($nonHppCount === 0) {
+                    throw new \Exception('Voucher Penjualan harus memiliki setidaknya satu transaksi non-HPP.');
+                }
+            }
 
-                // Cari pembayaran voucher secara umum (mungkin terkait invoice lain sebelumnya)
-                $generalPayment = InvoicePayment::where('voucher_id', $voucher->id)->first();
+            // Validate stock availability for PJ vouchers
+            if ($request->voucher_type === 'PJ') {
+                foreach ($transactionsData as $transaction) {
+                    if (!str_starts_with($transaction['description'], 'HPP ')) {
+                        $item = $transaction['description'];
+                        $quantity = floatval($transaction['quantity']);
+                        $stock = Stock::where('item', $item)->first();
+                        if ($stock && $stock->quantity < $quantity) {
+                            throw new \Exception("Stock untuk item {$item} tidak mencukupi. Tersedia: {$stock->quantity}, Dibutuhkan: {$quantity}.");
+                        }
+                    }
+                }
+            }
 
-                if ($paymentOnInvoice) {
-                    // Kasus 1: Voucher sudah memiliki pembayaran terkait invoice ini, update
-                    $previousAmount = $paymentOnInvoice->amount;
-                    $paymentOnInvoice->update([
-                        'amount' => $totalNominal,
-                        'payment_date' => Carbon::parse($request->voucher_date),
-                    ]);
+            // Revert previous stock changes
+            if (in_array($voucher->voucher_type, ['PJ', 'PB'])) {
+                foreach ($voucher->transactions as $transaction) {
+                    if (!str_starts_with($transaction->description, 'HPP ')) {
+                        $item = $transaction->description;
+                        $quantity = floatval($transaction->quantity);
+                        $stock = Stock::where('item', $item)->first();
 
-                    // Update informasi invoice berdasarkan total pembayaran terkait
-                    $totalPaid = $invoice->payment_vouchers()->sum('amount');
-                    $remainingBalance = $invoice->total_amount - $totalPaid;
+                        if ($stock) {
+                            if ($voucher->voucher_type === 'PJ') {
+                                $stock->quantity += $quantity; // Revert sale
+                            } elseif ($voucher->voucher_type === 'PB') {
+                                $stock->quantity -= $quantity; // Revert purchase
+                            }
+                            $stock->save();
 
-                    $invoice->update([
-                        'remaining_amount' => max(0, $remainingBalance),
-                        'status' => $remainingBalance <= 0 ? 'paid' : 'pending',
-                    ]);
-                } elseif ($invoice && !$paymentOnInvoice && $generalPayment) {
-                    // Kasus 2: Voucher ada di invoices, tidak ada pembayaran spesifik untuk invoice ini,
-                    //         tetapi ada pembayaran umum di invoice_payments.
-                    //         Asumsikan kita ingin memindahkan/mengaitkan pembayaran ini ke invoice yang dipilih.
-                    $previousAmount = $generalPayment->amount;
-                    $generalPayment->update([
-                        'invoice_id' => $invoice->id,
-                        'amount' => $totalNominal,
-                        'payment_date' => Carbon::parse($request->voucher_date),
-                        'updated_at' => now(),
-                    ]);
+                            if ($stock->quantity < 0) {
+                                throw new \Exception("Stock untuk item {$item} tidak mencukupi setelah pembalikan.");
+                            }
+                        }
+                    }
+                }
+            }
 
-                    // Update informasi invoice berdasarkan total pembayaran terkait
-                    $totalPaid = $invoice->payment_vouchers()->sum('amount');
-                    $remainingBalance = $invoice->total_amount - $totalPaid;
+            // Apply new stock updates
+            if (in_array($request->voucher_type, ['PJ', 'PB'])) {
+                foreach ($transactionsData as $transaction) {
+                    if (!str_starts_with($transaction['description'], 'HPP ')) {
+                        $item = $transaction['description'];
+                        $quantity = floatval($transaction['quantity']);
 
-                    $invoice->update([
-                        'remaining_amount' => max(0, $remainingBalance),
-                        'status' => $remainingBalance <= 0 ? 'paid' : 'pending',
-                    ]);
-                } elseif ($invoice && !$paymentOnInvoice && !$generalPayment) {
-                    // Kasus 3: Voucher ada di invoices, tidak ada pembayaran terkait sama sekali.
-                    //         Buat entri baru di invoice_payments.
-                    $invoice->payment_vouchers()->create([
-                        'voucher_id' => $voucher->id,
-                        'amount' => $totalNominal,
-                        'payment_date' => Carbon::parse($request->voucher_date),
-                    ]);
-                    $previousAmount = 0;
+                        $isSale = $request->voucher_type === 'PJ';
+                        $isPurchase = $request->voucher_type === 'PB';
 
-                    // Update informasi invoice berdasarkan total pembayaran terkait
-                    $totalPaid = $invoice->payment_vouchers()->sum('amount');
-                    $remainingBalance = $invoice->total_amount - $totalPaid;
+                        $stock = Stock::where('item', $item)->first();
 
-                    $invoice->update([
-                        'remaining_amount' => max(0, $remainingBalance),
-                        'status' => $remainingBalance <= 0 ? 'paid' : 'pending',
-                    ]);
-                } elseif (!$invoice && $generalPayment) {
-                    // Kasus 4: Voucher tidak ada di invoices, tetapi ada di invoice_payments.
-                    //         Update data invoice_payments saja.
-                    $previousAmount = $generalPayment->amount;
-                    $generalPayment->update([
-                        'amount' => $totalNominal,
-                        'payment_date' => Carbon::parse($request->voucher_date),
+                        if (!$stock) {
+                            $stock = Stock::create([
+                                'item' => $item,
+                                'quantity' => $isPurchase ? $quantity : ($isSale ? -$quantity : 0),
+                            ]);
+                        } else {
+                            if ($isPurchase) {
+                                $stock->quantity += $quantity;
+                            } elseif ($isSale) {
+                                $stock->quantity -= $quantity;
+                            }
+                            $stock->save();
+
+                            if ($stock->quantity < 0) {
+                                throw new \Exception("Stock untuk item {$item} tidak mencukupi.");
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Handle invoice updates
+            $invoice = null;
+            if ($request->use_invoice === 'yes') {
+                if ($request->use_existing_invoice === 'yes') {
+                    $invoice = Invoice::where('invoice', $request->invoice)->first();
+                    if (!$invoice) {
+                        throw new \Exception("Invoice dengan nomor {$request->invoice} tidak ditemukan.");
+                    }
+                } else {
+                    $invoice = Invoice::create([
+                        'invoice' => $request->invoice,
+                        'due_date' => Carbon::parse($request->due_date),
+                        'amount' => $totalDebit, // For PJ, assume total_debit is the invoice amount
+                        'store' => $request->store,
+                        'created_at' => now(),
                         'updated_at' => now(),
                     ]);
                 }
+
+                // For PJ vouchers, create/update invoice payment
+                if ($request->voucher_type === 'PJ') {
+                    $payment = InvoicePayment::where('voucher_id', $voucher->id)->first();
+                    if ($payment) {
+                        $payment->update([
+                            'invoice_id' => $invoice->id,
+                            'amount' => $totalDebit, // Payment amount
+                            'payment_date' => Carbon::parse($request->voucher_date),
+                            'updated_at' => now(),
+                        ]);
+                    } else {
+                        InvoicePayment::create([
+                            'voucher_id' => $voucher->id,
+                            'invoice_id' => $invoice->id,
+                            'amount' => $totalDebit,
+                            'payment_date' => Carbon::parse($request->voucher_date),
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ]);
+                    }
+                }
+            } else {
+                // Remove any existing invoice payment if use_invoice is 'no'
+                InvoicePayment::where('voucher_id', $voucher->id)->delete();
             }
 
             // Update voucher
@@ -649,51 +803,51 @@ class VoucherController extends Controller
                 'transaction' => $request->transaction,
                 'use_invoice' => $request->use_invoice,
                 'use_existing_invoice' => $request->use_existing_invoice,
-                'invoice' => $request->invoice,
-                'store' => $request->store,
+                'invoice' => $request->use_invoice === 'yes' ? $request->invoice : null,
+                'store' => $request->use_invoice === 'yes' ? $request->store : null,
                 'total_nominal' => $totalNominal,
                 'total_debit' => $totalDebit,
                 'total_credit' => $totalCredit,
+                'updated_at' => now(),
             ]);
 
-            // Update transactions using relationship
+            // Sync transactions
             $voucher->transactions()->delete();
-            $transactions = array_filter($request->transactions, function ($transaction) {
-                return !empty($transaction['description']) || ($transaction['quantity'] ?? 0) > 0 || ($transaction['nominal'] ?? 0) > 0;
-            });
-            foreach ($transactions as $transaction) {
+            foreach ($transactionsData as $transaction) {
                 $voucher->transactions()->create([
-                    'description' => $transaction['description'] ?? null,
-                    'quantity' => $transaction['quantity'] ?? 1,
-                    'nominal' => $transaction['nominal'] ?? 0,
+                    'description' => $transaction['description'],
+                    'quantity' => floatval($transaction['quantity']),
+                    'nominal' => floatval($transaction['nominal']),
+                    'created_at' => now(),
+                    'updated_at' => now(),
                 ]);
             }
 
-            // Update voucher details using relationship
+            // Sync voucher details
             $voucher->voucherDetails()->delete();
-            foreach ($request->voucher_details as $detail) {
+            foreach ($voucherDetailsData as $detail) {
                 $voucher->voucherDetails()->create([
                     'account_code' => $detail['account_code'],
                     'account_name' => $detail['account_name'],
-                    'debit' => $detail['debit'] ?? 0,
-                    'credit' => $detail['credit'] ?? 0,
+                    'debit' => floatval($detail['debit'] ?? 0),
+                    'credit' => floatval($detail['credit'] ?? 0),
+                    'created_at' => now(),
+                    'updated_at' => now(),
                 ]);
             }
 
             DB::commit();
-            return redirect()->route('voucher_page')->with('success', 'Voucher berhasil diperbarui.');
+
+            return redirect()->back()
+                ->with('success', 'Voucher berhasil diperbarui.');
         } catch (\Exception $e) {
-            DB::rollback();
-            Log::error('Error updating voucher', [
-                'voucher_id' => $id,
-                'user_id' => auth()->id(),
-                'error' => $e->getMessage(),
-                'request_data' => $request->except(['_token', '_method']),
-            ]);
-            return redirect()->back()->withInput()->withErrors(['message' => 'Gagal memperbarui voucher: ' . $e->getMessage()]);
+            DB::rollBack();
+            Log::error('Voucher update failed: ' . $e->getMessage());
+            return redirect()->back()
+                ->with('message', 'Gagal memperbarui voucher: ' . $e->getMessage())
+                ->withInput();
         }
     }
-
     public function voucher_delete($id)
     {
         try {

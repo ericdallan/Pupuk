@@ -67,11 +67,11 @@
                 <label for="voucher_type" class="form-label">Tipe Voucher:</label>
                 <select name="voucher_type" id="voucher_type" class="form-select">
                     <option value="">Semua</option>
-                    <option value="PJ" {{ request('voucher_type') == 'PJ' ? 'selected' : '' }}>PJ</option>
-                    <option value="PG" {{ request('voucher_type') == 'PG' ? 'selected' : '' }}>PG</option>
-                    <option value="PM" {{ request('voucher_type') == 'PM' ? 'selected' : '' }}>PM</option>
-                    <option value="PB" {{ request('voucher_type') == 'PB' ? 'selected' : '' }}>PB</option>
-                    <option value="LN" {{ request('voucher_type') == 'LN' ? 'selected' : '' }}>LN</option>
+                    <option value="PJ" {{ request('voucher_type') == 'PJ' ? 'selected' : '' }}>Penjualan</option>
+                    <option value="PG" {{ request('voucher_type') == 'PG' ? 'selected' : '' }}>Pengeluaran</option>
+                    <option value="PM" {{ request('voucher_type') == 'PM' ? 'selected' : '' }}>Pemasukan</option>
+                    <option value="PB" {{ request('voucher_type') == 'PB' ? 'selected' : '' }}>Pembelian</option>
+                    <option value="LN" {{ request('voucher_type') == 'LN' ? 'selected' : '' }}>Lainnya</option>
                 </select>
             </div>
             <div class="col-md-3">

@@ -12,9 +12,23 @@ class StockController extends Controller
 {
     public function stock_page(Request $request)
     {
-        // Get the filter date from request, default to today
-        $filterDate = $request->input('filter_date', Carbon::today()->toDateString());
-        $filterDate = Carbon::parse($filterDate)->startOfDay();
+        // Get the start and end dates from request, default to start of year and today
+        $startDate = $request->input('start_date', Carbon::today()->startOfYear()->toDateString());
+        $endDate = $request->input('end_date', Carbon::today()->toDateString());
+
+        // Parse and validate dates
+        $startDate = Carbon::parse($startDate)->startOfDay();
+        $endDate = Carbon::parse($endDate)->endOfDay();
+
+        // Ensure end date is not in the future
+        if ($endDate->isFuture()) {
+            $endDate = Carbon::today()->endOfDay();
+        }
+
+        // Ensure start date is not after end date
+        if ($startDate->gt($endDate)) {
+            $startDate = $endDate->copy()->startOfYear();
+        }
 
         // Fetch all transactions with voucher type PB to calculate average HPP per stock item
         $allTransactions = DB::table('transactions')
@@ -22,6 +36,7 @@ class StockController extends Controller
             ->join('vouchers', 'transactions.voucher_id', '=', 'vouchers.id')
             ->where('vouchers.voucher_type', 'PB')
             ->where('transactions.description', 'NOT LIKE', 'HPP %')
+            ->whereBetween('transactions.created_at', [$startDate, $endDate])
             ->get();
 
         // Calculate average HPP for each stock item based on PB transactions only
@@ -40,7 +55,7 @@ class StockController extends Controller
             $hppAverages[$item]['average_hpp'] = $data['count'] > 0 ? $data['total_nominal'] / $data['count'] : 0;
         }
 
-        // Fetch the earliest transaction for each stock item to determine opening balance (quantity and HPP)
+        // Fetch the earliest transaction for each stock item to determine opening balance
         $openingBalances = DB::table('transactions')
             ->select('t1.description as item', 't1.quantity as opening_qty', 't1.nominal as opening_hpp', 't1.created_at')
             ->from('transactions as t1')
@@ -55,16 +70,18 @@ class StockController extends Controller
                     ->whereColumn('t1.created_at', 't2.min_created_at');
             })
             ->where('t1.description', 'NOT LIKE', 'HPP %')
+            ->where('t1.created_at', '<=', $endDate)
             ->get()
             ->keyBy('item');
 
-        // Fetch stock data with transactions and voucher types for the specified date
+        // Fetch stock data with transactions and voucher types for the specified date range
         $stockData = DB::table('stocks')
             ->select('stocks.id', 'stocks.item', 'stocks.unit', 'stocks.quantity', 'transactions.created_at', 'transactions.description', 'transactions.quantity as transaction_quantity', 'transactions.nominal', 'vouchers.voucher_type')
             ->distinct('stocks.item')
             ->leftJoin('transactions', 'stocks.item', '=', 'transactions.description')
             ->leftJoin('vouchers', 'transactions.voucher_id', '=', 'vouchers.id')
             ->where('transactions.description', 'NOT LIKE', 'HPP %')
+            ->whereBetween('transactions.created_at', [$startDate, $endDate])
             ->get();
 
         // Group and calculate incoming, outgoing, opening, and final stock for each item
@@ -79,17 +96,17 @@ class StockController extends Controller
                     'unit' => $stock->unit,
                     'quantity' => $stock->quantity,
                     'opening_qty' => $openingBalance ? $openingBalance->opening_qty : 0,
-                    'opening_hpp' => $openingBalance ? ($openingBalance->opening_hpp ?? 0) : 0, // Nominal from earliest transaction
+                    'opening_hpp' => $openingBalance ? ($openingBalance->opening_hpp ?? 0) : 0,
                     'incoming_qty' => 0,
                     'outgoing_qty' => 0,
                     'final_stock_qty' => 0,
-                    'average_hpp' => $hppAverages[$stock->item]['average_hpp'] ?? 0, // PB-specific average HPP
+                    'average_hpp' => $hppAverages[$stock->item]['average_hpp'] ?? 0,
                     'transactions' => collect()
                 ];
             }
 
-            // Incoming and outgoing stock on the filter date, excluding the earliest transaction
-            if ($stock->voucher_type && Carbon::parse($stock->created_at)->isSameDay($filterDate)) {
+            // Incoming and outgoing stock within the date range, excluding the earliest transaction
+            if ($stock->voucher_type && Carbon::parse($stock->created_at)->between($startDate, $endDate)) {
                 $openingBalance = $openingBalances[$stockKey] ?? null;
                 $isEarliestTransaction = $openingBalance && Carbon::parse($stock->created_at)->eq(Carbon::parse($openingBalance->created_at));
 
@@ -100,8 +117,8 @@ class StockController extends Controller
                 }
             }
 
-            // Collect transactions for modal (last 7 days)
-            if ($stock->voucher_type && Carbon::parse($stock->created_at)->gte(Carbon::now()->subDays(7))) {
+            // Collect transactions for modal (within date range)
+            if ($stock->voucher_type && Carbon::parse($stock->created_at)->between($startDate, $endDate)) {
                 $stockMap[$stockKey]->transactions->push((object) [
                     'description' => $stock->description,
                     'voucher_type' => $stock->voucher_type,
@@ -122,8 +139,9 @@ class StockController extends Controller
 
     public function export(Request $request)
     {
-        $filterDate = $request->input('filter_date', Carbon::today()->toDateString());
-        return Excel::download(new StockExport($filterDate), 'stock_report_' . $filterDate . '.xlsx');
+        $startDate = $request->input('start_date', Carbon::today()->startOfYear()->toDateString());
+        $endDate = $request->input('end_date', Carbon::today()->toDateString());
+        return Excel::download(new StockExport($startDate, $endDate), 'stock_report_' . $startDate . '_to_' . $endDate . '.xlsx');
     }
 
     public function get_transactions($stockId, Request $request)
