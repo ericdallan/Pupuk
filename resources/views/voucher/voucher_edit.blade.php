@@ -128,11 +128,11 @@
                 <label for="useInvoice" class="col-sm-3 col-form-label">Gunakan Invoice?</label>
                 <div class="col-sm-9">
                     <div class="form-check form-check-inline">
-                        <input class="form-check-input" type="radio" id="useInvoiceYes" name="use_invoice" value="yes" {{ $voucher->use_invoice === 'yes' ? 'checked' : '' }} required aria-required="true">
+                        <input class="form-check-input" type="radio" id="useInvoiceYes" name="use_invoice" value="yes" {{ $voucher->invoice ? 'checked' : ($voucher->use_invoice === 'yes' ? 'checked' : '') }} required aria-required="true">
                         <label class="form-check-label" for="useInvoiceYes">Ya</label>
                     </div>
                     <div class="form-check form-check-inline">
-                        <input class="form-check-input" type="radio" id="useInvoiceNo" name="use_invoice" value="no" {{ $voucher->use_invoice !== 'yes' ? 'checked' : '' }} required aria-required="true">
+                        <input class="form-check-input" type="radio" id="useInvoiceNo" name="use_invoice" value="no" {{ $voucher->invoice ? '' : ($voucher->use_invoice !== 'yes' ? 'checked' : '') }} required aria-required="true">
                         <label class="form-check-label" for="useInvoiceNo">Tidak</label>
                     </div>
                     <div class="invalid-feedback">Pilih apakah menggunakan invoice.</div>
@@ -140,7 +140,7 @@
             </div>
 
             <!-- Gunakan Invoice yang Sudah Ada? -->
-            <div class="row mb-3" id="existingInvoiceContainer" style="display: {{ $voucher->use_invoice === 'yes' ? 'block' : 'none' }};">
+            <div class="row mb-3" id="existingInvoiceContainer" style="display: {{ $voucher->invoice || $voucher->use_invoice === 'yes' ? 'block' : 'none' }};">
                 <label class="col-sm-3 col-form-label">Gunakan Invoice yang Sudah Ada?</label>
                 <div class="col-sm-9">
                     <div class="form-check form-check-inline">
@@ -155,7 +155,7 @@
             </div>
 
             <!-- Nomor Invoice -->
-            <div class="row mb-3" id="invoiceFieldContainer" style="display: {{ $voucher->use_invoice === 'yes' ? 'block' : 'none' }};">
+            <div class="row mb-3" id="invoiceFieldContainer" style="display: {{ $voucher->invoice || $voucher->use_invoice === 'yes' ? 'block' : 'none' }};">
                 <label for="invoice" class="col-sm-3 col-form-label">Nomor Invoice:</label>
                 <div class="col-sm-9">
                     <input type="text" class="form-control" id="invoice" name="invoice" value="{{ $voucher->invoice ?? '' }}">
@@ -164,7 +164,7 @@
             </div>
 
             <!-- Tanggal Jatuh Tempo -->
-            <div class="row mb-3" id="dueDateContainer" style="display: {{ $voucher->use_invoice === 'yes' ? 'block' : 'none' }};">
+            <div class="row mb-3" id="dueDateContainer" style="display: {{ $voucher->invoice || $voucher->use_invoice === 'yes' ? 'block' : 'none' }};">
                 <label for="due_date" class="col-sm-3 col-form-label">Tanggal Jatuh Tempo:</label>
                 <div class="col-sm-9">
                     <input type="date" class="form-control" id="due_date" name="due_date" value="{{ $dueDate }}" {{ $voucher->use_existing_invoice === 'yes' ? 'disabled' : '' }}>
@@ -173,7 +173,7 @@
             </div>
 
             <!-- Nama Toko -->
-            <div class="row mb-3" id="storeFieldContainer" style="display: {{ $voucher->use_invoice === 'yes' ? 'block' : 'none' }};">
+            <div class="row mb-3" id="storeFieldContainer" style="display: {{ $voucher->invoice || $voucher->use_invoice === 'yes' ? 'block' : 'none' }};">
                 <label for="store" class="col-sm-3 col-form-label">Nama Toko:</label>
                 <div class="col-sm-9">
                     <select class="form-select" id="store" name="store">
@@ -360,7 +360,7 @@
                 <label for="totalDebit" class="col-sm-3 col-form-label">Total Debit:</label>
                 <div class="col-sm-3">
                     <input type="text" class="form-control" id="totalDebit" name="total_debit" value="{{ number_format($voucher->total_debit, 2, ',', '.') }}" readonly>
-                    <input type="hidden" id="totalDebitRaw" name="total_debit_raw" value="{{ $voucher->total_debit }}">
+                    <input type="hidden" id="totalDebitRaw" name="total_de h4>bit_raw" value="{{ $voucher->total_debit }}">
                 </div>
                 <label for="totalCredit" class="col-sm-3 col-form-label">Total Kredit:</label>
                 <div class="col-sm-3">
@@ -387,6 +387,7 @@
         /**
          * @file Script untuk mengelola formulir edit voucher, termasuk penambahan/penghapusan baris transaksi dan detail voucher,
          * perhitungan total, validasi kesimbangan total, pengelolaan invoice, kode akun, dan HPP dengan kolom total dan logika qty HPP.
+         * Menambahkan logika untuk otomatis memilih "Gunakan Invoice" jika voucher memiliki invoice.
          */
         document.addEventListener('DOMContentLoaded', function() {
             // --- Element References ---
@@ -419,6 +420,7 @@
             const accounts = @json($accountsData);
             const stocks = @json($stocks);
             const transactions = @json($transactionsData);
+            const hasInvoice = @json($voucher -> invoice ? true : false);
 
             // --- Validation Functions ---
             function validateForm() {
@@ -465,7 +467,7 @@
                     });
                     rows.forEach(row => {
                         const description = row.querySelector('.descriptionInput')?.value || '';
-                        const isHpp = row.dataset.isHppRow - 1;
+                        const isHpp = row.dataset.isHppRow === 'true';
                         if (isHpp && description) {
                             const stockItem = description.replace(/^HPP /, '');
                             if (!stockDescriptions.has(stockItem)) {
@@ -614,6 +616,9 @@
                 let invoiceInput;
                 if (useInvoice === 'yes') {
                     invoiceInput = useExistingInvoice === 'yes' ? createInvoiceDropdown() : createInvoiceInput();
+                    if (hasInvoice) {
+                        invoiceInput.value = @json($voucher -> invoice);
+                    }
                 } else {
                     invoiceInput = createInvoiceInput();
                     invoiceInput.disabled = true;
@@ -621,6 +626,8 @@
                 }
                 invoiceInputDiv.appendChild(invoiceInput);
                 invoiceFieldContainer.appendChild(invoiceLabel);
+                invoiceInputDiv.appendChild(document.createElement('div')).className = 'invalid-feedback';
+                invoiceInputDiv.querySelector('.invalid-feedback').textContent = 'Nomor Invoice wajib diisi jika menggunakan invoice.';
                 invoiceFieldContainer.appendChild(invoiceInputDiv);
                 updateAccountCodeDatalist();
                 validateForm();
@@ -644,18 +651,22 @@
                 dueDateInput.disabled = useInvoice !== 'yes' || useExistingInvoice === 'yes';
                 if (useInvoice !== 'yes') {
                     dueDateInput.value = '';
+                } else if (hasInvoice && @json($dueDate)) {
+                    dueDateInput.value = @json($dueDate);
                 }
                 dueDateInputDiv.appendChild(dueDateInput);
                 dueDateContainer.appendChild(dueDateLabel);
+                dueDateInputDiv.appendChild(document.createElement('div')).className = 'invalid-feedback';
+                dueDateInputDiv.querySelector('.invalid-feedback').textContent = 'Tanggal Jatuh Tempo wajib diisi untuk invoice baru.';
                 dueDateContainer.appendChild(dueDateInputDiv);
-                if (useInvoice === 'yes' && useExistingInvoice === 'no') {
+                if (useInvoice === 'yes' && useExistingInvoice === 'no' && !dueDateInput.value) {
                     setTodayDueDate();
                 }
                 validateForm();
             }
 
             function updateInvoiceAndStoreFields() {
-                const useInvoice = useInvoiceYes.Checked ? 'yes' : 'no';
+                const useInvoice = useInvoiceYes.checked ? 'yes' : 'no';
                 storeFieldContainer.innerHTML = '';
 
                 useExistingInvoiceYes.disabled = useInvoice !== 'yes';
@@ -663,6 +674,9 @@
 
                 if (useInvoice === 'yes') {
                     storeFieldContainer.appendChild(createStoreDropdown());
+                    if (hasInvoice) {
+                        storeFieldContainer.querySelector('#store').value = @json($voucher -> store ?? '');
+                    }
                     invoiceFieldContainer.style.display = 'block';
                     storeFieldContainer.style.display = 'block';
                     existingInvoiceContainer.style.display = 'block';
