@@ -136,13 +136,14 @@
                                 <table class="table table-bordered" id="transactionTable">
                                     <thead>
                                         <tr class="text-center">
-                                            <th colspan="3">Rincian Transaksi</th>
+                                            <th colspan="4">Rincian Transaksi</th>
                                             <th style="width: 80px;">Action</th>
                                         </tr>
                                         <tr class="text-center">
                                             <th>Deskripsi</th>
                                             <th>Quantitas</th>
                                             <th>Nominal</th>
+                                            <th>Total</th>
                                             <th></th>
                                         </tr>
                                     </thead>
@@ -156,6 +157,9 @@
                                             </td>
                                             <td>
                                                 <input type="number" min="0" class="form-control nominalInput" name="transactions[0][nominal]">
+                                            </td>
+                                            <td>
+                                                <input type="text" class="form-control totalInput" name="transactions[0][total]" readonly>
                                             </td>
                                             <td class="text-center">
                                                 <button type="button" class="btn btn-danger removeTransactionRowBtn">Hapus</button>
@@ -652,9 +656,7 @@
             quantityInput.className = 'form-control quantityInput';
             quantityInput.name = `transactions[${newIndex}][quantity]`;
             quantityInput.value = quantity;
-            quantityInput.addEventListener('input', function() {
-                updateAllCalculationsAndValidations();
-            });
+            quantityInput.readOnly = voucherTypeSelect.value === 'PJ'; // Read-only for PJ to enforce sync
             quantityCell.appendChild(quantityInput);
             hppRow.appendChild(quantityCell);
 
@@ -671,13 +673,26 @@
             nominalCell.appendChild(nominalInput);
             hppRow.appendChild(nominalCell);
 
+            const totalCell = document.createElement('td');
+            const totalInput = document.createElement('input');
+            totalInput.type = 'text';
+            totalInput.className = 'form-control totalInput';
+            totalInput.name = `transactions[${newIndex}][total]`;
+            totalInput.readOnly = true;
+            totalInput.value = (quantity * averageHpp).toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+            totalCell.appendChild(totalInput);
+            hppRow.appendChild(totalCell);
+
             const actionCell = document.createElement('td');
             actionCell.className = 'text-center';
             const deleteButton = document.createElement('button');
             deleteButton.type = 'button';
             deleteButton.className = 'btn btn-danger removeTransactionRowBtn';
             deleteButton.textContent = 'Hapus';
-            deleteButton.disabled = true; // Disable delete button for HPP rows
+            deleteButton.disabled = true;
             actionCell.appendChild(deleteButton);
             hppRow.appendChild(actionCell);
 
@@ -703,10 +718,16 @@
                     descriptionInput.value = `HPP ${selectedItem}`;
                     const quantityInput = nextRow.querySelector('.quantityInput');
                     quantityInput.value = quantity;
+                    quantityInput.readOnly = voucherTypeSelect.value === 'PJ'; // Read-only for PJ
                     const nominalInput = nextRow.querySelector('.nominalInput');
                     const averageHpp = calculateAverageHpp(selectedItem);
                     nominalInput.value = averageHpp;
-                    console.log('Updated HPP row for', selectedItem, 'with nominal:', averageHpp);
+                    const totalInput = nextRow.querySelector('.totalInput');
+                    totalInput.value = (quantity * averageHpp).toLocaleString('en-US', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2
+                    });
+                    console.log('Updated HPP row for', selectedItem, 'with nominal:', averageHpp, 'and quantity:', quantity);
                     updateAllCalculationsAndValidations();
                     return;
                 }
@@ -818,6 +839,16 @@
             nominalCell.appendChild(nominalInput);
             row.appendChild(nominalCell);
 
+            const totalCell = document.createElement('td');
+            const totalInput = document.createElement('input');
+            totalInput.type = 'text';
+            totalInput.className = 'form-control totalInput';
+            totalInput.name = `transactions[${index}][total]`;
+            totalInput.readOnly = true;
+            totalInput.value = '0.00';
+            totalCell.appendChild(totalInput);
+            row.appendChild(totalCell);
+
             const actionCell = document.createElement('td');
             actionCell.className = 'text-center';
             const deleteButton = document.createElement('button');
@@ -845,7 +876,7 @@
             transactionTableBody.querySelectorAll('.removeTransactionRowBtn').forEach(button => {
                 const row = button.closest('tr');
                 const isHppRow = row.dataset.isHppRow === 'true';
-                button.disabled = isHppRow; // Disable button if it's an HPP row
+                button.disabled = isHppRow;
 
                 button.addEventListener('click', function() {
                     const totalRows = transactionTableBody.querySelectorAll('tr').length;
@@ -882,12 +913,58 @@
             });
         }
 
+        function calculateRowTotal(row) {
+            const quantity = parseFloat(row.querySelector('.quantityInput')?.value) || 0;
+            const nominal = parseFloat(row.querySelector('.nominalInput')?.value) || 0;
+            const total = quantity * nominal;
+            const totalInput = row.querySelector('.totalInput');
+            if (totalInput) {
+                totalInput.value = total.toLocaleString('en-US', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                });
+            }
+            return total;
+        }
+
+        function syncHppQuantity(row) {
+            if (voucherTypeSelect.value !== 'PJ') return;
+
+            const rowIndex = parseInt(row.dataset.rowIndex);
+            const isHppRow = row.dataset.isHppRow === 'true';
+            if (!isHppRow) {
+                // Find the next HPP row and sync its quantity
+                let nextRow = row.nextSibling;
+                while (nextRow) {
+                    if (nextRow.dataset.isHppRow === 'true') {
+                        const hppQuantityInput = nextRow.querySelector('.quantityInput');
+                        const currentQuantity = parseFloat(row.querySelector('.quantityInput')?.value) || 1;
+                        hppQuantityInput.value = currentQuantity;
+                        const hppNominal = parseFloat(nextRow.querySelector('.nominalInput')?.value) || 0;
+                        const hppTotalInput = nextRow.querySelector('.totalInput');
+                        hppTotalInput.value = (currentQuantity * hppNominal).toLocaleString('en-US', {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2
+                        });
+                        break;
+                    }
+                    nextRow = nextRow.nextSibling;
+                }
+            }
+        }
+
         function attachTransactionInputListeners() {
             const transactionInputs = transactionTableBody.querySelectorAll('.quantityInput, .nominalInput, .descriptionInput');
             transactionInputs.forEach(input => {
-                input.removeEventListener('input', updateAllCalculationsAndValidations);
-                input.addEventListener('input', updateAllCalculationsAndValidations);
+                input.removeEventListener('input', handleTransactionInput);
+                input.addEventListener('input', handleTransactionInput);
             });
+        }
+
+        function handleTransactionInput(event) {
+            const row = event.target.closest('tr');
+            syncHppQuantity(row);
+            updateAllCalculationsAndValidations();
         }
 
         function refreshTransactionTable() {
@@ -960,10 +1037,9 @@
         function calculateTotalNominal() {
             let totalNominalRaw = 0;
             transactionTableBody.querySelectorAll('tr').forEach(row => {
-                const quantity = parseFloat(row.querySelector('.quantityInput')?.value) || 0;
-                const nominal = parseFloat(row.querySelector('.nominalInput')?.value) || 0;
-                totalNominalRaw += quantity * nominal;
-                console.log(`Row: ${row.querySelector('.descriptionInput')?.value}, Quantity: ${quantity}, Nominal: ${nominal}, Contribution to Total: ${quantity * nominal}`);
+                const total = calculateRowTotal(row);
+                totalNominalRaw += total;
+                console.log(`Row: ${row.querySelector('.descriptionInput')?.value}, Total: ${total}`);
             });
             totalNominalInput.value = totalNominalRaw.toLocaleString('en-US', {
                 minimumFractionDigits: 2,
@@ -1023,6 +1099,10 @@
         }
 
         function updateAllCalculationsAndValidations() {
+            transactionTableBody.querySelectorAll('tr').forEach(row => {
+                calculateRowTotal(row);
+                syncHppQuantity(row);
+            });
             validateTotals();
         }
 
