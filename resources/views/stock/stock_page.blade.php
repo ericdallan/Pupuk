@@ -56,6 +56,7 @@
             </tr>
         </thead>
         <tbody>
+            @if (!empty($stockData))
             @foreach ($stockData as $stock)
             <tr>
                 <td>{{ $loop->iteration }}</td>
@@ -76,6 +77,15 @@
                 </td>
             </tr>
             @endforeach
+            @else
+            <tr>
+                <td colspan="14" class="text-center">
+                    <div class="alert alert-info mb-0">
+                        Data stok belum ditemukan. Silakan tambahkan data stok terlebih dahulu.
+                    </div>
+                </td>
+            </tr>
+            @endif
         </tbody>
     </table>
 </div>

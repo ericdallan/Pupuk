@@ -39,7 +39,7 @@ class Invoice extends Model
         return $this->belongsTo(Subsidiary::class, 'subsidiary_code', 'subsidiary_code');
     }
 
-    public function payment_vouchers(): HasMany
+    public function invoice_payments(): HasMany
     {
         return $this->hasMany(InvoicePayment::class, 'invoice_id');
     }

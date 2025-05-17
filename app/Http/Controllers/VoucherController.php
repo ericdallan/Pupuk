@@ -395,7 +395,7 @@ class VoucherController extends Controller
                     $invoice->save();
 
                     // Link payment voucher to invoice
-                    $invoice->payment_vouchers()->create([
+                    $invoice->invoice_payments()->create([
                         'voucher_id' => $voucher->id,
                         'amount' => $totalAmount,
                         'payment_date' => $request->voucher_date,
@@ -538,6 +538,7 @@ class VoucherController extends Controller
             ->toArray();
 
         // Filter transactions to remove invalid entries (empty description or zero values, unless HPP)
+        /** @var array $transactionsData */
         $transactionsData = collect($request->transactions ?? [])
             ->filter(function ($transaction) {
                 $hasDescription = !empty($transaction['description']);
@@ -796,37 +797,70 @@ class VoucherController extends Controller
                     $invoice = Invoice::create([
                         'invoice' => $request->invoice,
                         'due_date' => Carbon::parse($request->due_date),
-                        'amount' => $totalDebit, // For PJ, assume total_debit is the invoice amount
+                        'amount' => $totalDebit, // Assume total_debit is the invoice amount
+                        'remaining_amount' => $totalDebit, // Initialize remaining_amount
                         'store' => $request->store,
                         'created_at' => now(),
                         'updated_at' => now(),
                     ]);
                 }
 
-                // For PJ vouchers, create/update invoice payment
-                if ($request->voucher_type === 'PJ') {
-                    $payment = InvoicePayment::where('voucher_id', $voucher->id)->first();
-                    if ($payment) {
-                        $payment->update([
-                            'invoice_id' => $invoice->id,
-                            'amount' => $totalDebit, // Payment amount
-                            'payment_date' => Carbon::parse($request->voucher_date),
-                            'updated_at' => now(),
-                        ]);
-                    } else {
-                        InvoicePayment::create([
-                            'voucher_id' => $voucher->id,
-                            'invoice_id' => $invoice->id,
-                            'amount' => $totalDebit,
-                            'payment_date' => Carbon::parse($request->voucher_date),
-                            'created_at' => now(),
-                            'updated_at' => now(),
-                        ]);
-                    }
+                // Create/update invoice payment for all voucher types when invoice is used
+                // Calculate payment amount (using total_debit, adjustable per voucher type if needed)
+                $paymentAmount = round($totalDebit, 2);
+                if ($invoice->total_amount < $paymentAmount) {
+                    throw new \Exception("Jumlah pembayaran ({$paymentAmount}) melebihi tagihan invoice ({$invoice->total_amount}).");
+                }
+
+                $payment = InvoicePayment::where('voucher_id', $voucher->id)->first();
+                if ($payment) {
+                    // Adjust remaining_amount for the old payment amount
+                    $oldPaymentAmount = $payment->amount;
+                    $invoice->remaining_amount += $oldPaymentAmount; // Revert the old payment
+                    // Update existing payment
+                    $payment->update([
+                        'invoice_id' => $invoice->id,
+                        'amount' => $paymentAmount, // Ensure amount is updated
+                        'payment_date' => Carbon::parse($request->voucher_date),
+                        'updated_at' => now(),
+                    ]);
+                    // Deduct the new payment amount
+                    $invoice->remaining_amount -= $paymentAmount;
+                } else {
+                    // Create new payment
+                    InvoicePayment::create([
+                        'voucher_id' => $voucher->id,
+                        'invoice_id' => $invoice->id,
+                        'amount' => $paymentAmount,
+                        'payment_date' => Carbon::parse($request->voucher_date),
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                    // Deduct the payment amount
+                    $invoice->remaining_amount -= $paymentAmount;
+                }
+
+                // Save the updated remaining_amount
+                $invoice->updated_at = now();
+                $invoice->save();
+
+                // Validate remaining_amount is not negative (should be caught by the earlier check, but adding for safety)
+                if ($invoice->remaining_amount < 0) {
+                    throw new \Exception("Sisa tagihan invoice menjadi negatif ({$invoice->remaining_amount}).");
                 }
             } else {
                 // Remove any existing invoice payment if use_invoice is 'no'
-                InvoicePayment::where('voucher_id', $voucher->id)->delete();
+                $payment = InvoicePayment::where('voucher_id', $voucher->id)->first();
+                if ($payment) {
+                    // Revert the payment amount to remaining_amount
+                    $invoice = Invoice::find($payment->invoice_id);
+                    if ($invoice) {
+                        $invoice->remaining_amount += $payment->amount;
+                        $invoice->updated_at = now();
+                        $invoice->save();
+                    }
+                    $payment->delete();
+                }
             }
 
             // Update voucher
@@ -894,43 +928,47 @@ class VoucherController extends Controller
             // 1. Find the voucher to be deleted
             $voucherToDelete = Voucher::findOrFail($id);
 
-            // 2. Delete related voucher details
+            // 2. Check invoice and payment conditions to determine if deletion is allowed
+            if ($voucherToDelete->has_stock) {
+                throw new \Exception('Voucher tidak dapat dihapus karena memiliki data stok.');
+            }
+
+            $hasInvoices = $voucherToDelete->invoices()->exists();
+            $hasInvoiceWithPayments = $voucherToDelete->invoices()->whereHas('invoice_payments')->exists();
+
+            if ($hasInvoices && $hasInvoiceWithPayments) {
+                throw new \Exception('Voucher tidak dapat dihapus karena memiliki invoice yang terkait dengan pembayaran.');
+            }
+
+            // 3. Delete related voucher details
             $voucherToDelete->voucherDetails()->delete();
 
-            // 3. Get related transactions before deleting them
+            // 4. Get related transactions before deleting them
             $transactions = $voucherToDelete->transactions()->get();
 
-            // 4. Update stock quantities and delete stock if quantity = 0 and no related transactions
-            // Group transactions by description to accumulate quantities
+            // 5. Update stock quantities and delete stock if quantity = 0 and no related transactions
             $transactionQuantities = $transactions->groupBy('description')->map(function ($group) {
                 return $group->sum('quantity');
             });
 
-            // Update stock quantities for each unique description
             foreach ($transactionQuantities as $description => $totalQuantity) {
-                // Find stock record where stocks.item matches transactions.description
                 $stock = Stock::where('item', $description)->first();
 
                 if ($stock && $totalQuantity > 0) {
-                    // Adjust stock quantity based on voucher type
                     if ($voucherToDelete->voucher_type === 'PJ') {
-                        // Increase stock quantity for sales (undo stock reduction)
                         $stock->quantity += $totalQuantity;
                     } elseif ($voucherToDelete->voucher_type === 'PB') {
-                        // Decrease stock quantity for purchases (undo stock addition)
                         $stock->quantity -= $totalQuantity;
-                        // Ensure quantity doesn't go negative
                         if ($stock->quantity < 0) {
                             $stock->quantity = 0;
                         }
                     }
                     $stock->save();
 
-                    // Check if stock quantity is 0 and no other transactions exist for this item
                     if ($stock->quantity == 0) {
                         $remainingTransactions = DB::table('transactions')
                             ->where('description', $description)
-                            ->where('voucher_id', '!=', $voucherToDelete->id) // Exclude current voucher's transactions
+                            ->where('voucher_id', '!=', $voucherToDelete->id)
                             ->count();
                         if ($remainingTransactions == 0) {
                             $stock->delete();
@@ -939,39 +977,25 @@ class VoucherController extends Controller
                 }
             }
 
-            // 5. Delete related transactions
+            // 6. Delete related transactions
             $voucherToDelete->transactions()->delete();
 
-            // 6. Handle invoice payments deletion and related vouchers
-            if ($voucherToDelete->invoice) {
-                $invoice = Invoice::where('invoice', $voucherToDelete->invoice)->first();
+            // 7. Handle invoice payments deletion if they exist
+            if ($hasInvoiceWithPayments) {
+                // Delete invoice payments related to the voucher
+                $voucherToDelete->invoice_payments()->delete();
 
-                if ($invoice) {
-                    // 6.1 Delete invoice payments related to the voucher being deleted
-                    $invoice->payment_vouchers()->where('voucher_id', $voucherToDelete->id)->delete();
-
-                    // 6.2 Find other vouchers that have invoice_payments related to the same invoice
-                    $relatedVouchersToDelete = Voucher::whereHas('invoice_payments', function ($query) use ($invoice) {
-                        $query->where('invoice_id', $invoice->id);
-                    })
-                        ->where('id', '!=', $voucherToDelete->id) // Exclude the voucher being deleted
-                        ->get();
-
-                    // 6.3 Delete the related vouchers
-                    foreach ($relatedVouchersToDelete as $relatedVoucher) {
-                        // Delete invoice payments associated with the related voucher
-                        InvoicePayment::where('voucher_id', $relatedVoucher->id)->delete();
-                        $relatedVoucher->delete();
-                    }
-
-                    // 6.4 Check if the invoice has any remaining payments. If not, delete the invoice
-                    $remainingPayments = InvoicePayment::where('invoice_id', $invoice->id)->count();
+                // Check if the related invoice has no remaining payments and delete it if so
+                $invoiceIds = InvoicePayment::where('voucher_id', $voucherToDelete->id)->pluck('invoice_id')->unique();
+                foreach ($invoiceIds as $invoiceId) {
+                    $remainingPayments = InvoicePayment::where('invoice_id', $invoiceId)->count();
                     if ($remainingPayments == 0) {
-                        $invoice->delete();
+                        Invoice::where('id', $invoiceId)->delete();
                     }
                 }
             }
-            // 7. Delete the voucher itself
+
+            // 8. Delete the voucher itself
             $voucherToDelete->delete();
 
             DB::commit();
