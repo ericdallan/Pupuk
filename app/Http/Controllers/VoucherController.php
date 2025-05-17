@@ -26,6 +26,15 @@ class VoucherController extends Controller
         $company = Company::select('company_name', 'director')->first();
         $query = Voucher::query();
 
+        // Search functionality
+        if ($request->has('search') && $request->search != '') {
+            $query->where(function ($q) use ($request) {
+                $q->where('voucher_number', 'like', '%' . $request->search . '%')
+                    ->orWhere('invoice', 'like', '%' . $request->search . '%');
+            });
+        }
+
+        // Existing filters
         if ($request->has('voucher_type') && $request->voucher_type != '') {
             $query->where('voucher_type', $request->voucher_type);
         }
@@ -38,8 +47,10 @@ class VoucherController extends Controller
             $query->whereYear('voucher_date', $request->year);
         }
 
-        // Eager-load invoices, invoice_payments, and transactions
-        $vouchers = $query->with(['invoices', 'invoice_payments', 'transactions'])->get();
+        // Paginate results (10 per page)
+        $vouchers = $query->with(['invoices', 'invoice_payments', 'transactions'])
+            ->paginate(10)
+            ->appends($request->query());
 
         // Fetch the earliest transaction for each stock item
         $openingStockTransactions = DB::table('transactions')
@@ -67,14 +78,12 @@ class VoucherController extends Controller
             });
 
         // Map vouchers to include stock-related flags
-        $vouchers = $vouchers->map(function ($voucher) use ($openingStockTransactions) {
-            // Check for stock-related transactions
+        $vouchers->getCollection()->transform(function ($voucher) use ($openingStockTransactions) {
             $hasStock = $voucher->transactions()->whereHas('stock', function ($query) {
                 $query->whereColumn('transactions.description', 'stocks.item');
             })->exists();
             $voucher->has_stock = $hasStock;
 
-            // Check if voucher contains the earliest transaction for any stock item
             $voucher->is_opening_stock = isset($openingStockTransactions[$voucher->id])
                 ? $openingStockTransactions[$voucher->id]
                 : [];
@@ -113,7 +122,6 @@ class VoucherController extends Controller
 
         $sessionService = app('session');
         $sessionId = $sessionService->getId() ?? '';
-        $userId = $sessionService->get('user_id');
         $sessionData = \Illuminate\Support\Facades\DB::table('sessions')
             ->where('id', $sessionId)
             ->first();
@@ -134,7 +142,6 @@ class VoucherController extends Controller
             ->pluck('vouchers.invoice')
             ->toArray();
         $subsidiaries = Subsidiary::all();
-
         $stocksData = Stock::all();
 
         $subsidiariesData = $subsidiaries->map(function ($subsidiary) {
