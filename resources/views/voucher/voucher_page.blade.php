@@ -119,7 +119,21 @@
                 @foreach ($vouchers as $voucher_item)
                 <tr>
                     <td>{{ $voucher_item->voucher_number }}</td>
-                    <td>{{ $voucher_item->voucher_type }}</td>
+                    <td>
+                        @if($voucher_item->voucher_type == 'PJ')
+                        Penjualan
+                        @elseif($voucher_item->voucher_type == 'PG')
+                        Pengeluaran
+                        @elseif($voucher_item->voucher_type == 'PM')
+                        Pemasukan
+                        @elseif($voucher_item->voucher_type == 'PB')
+                        Pembelian
+                        @elseif($voucher_item->voucher_type == 'LN')
+                        Lainnya
+                        @else
+                        {{ $voucher_item->voucher_type }}
+                        @endif
+                    </td>
                     <td>{{ !empty($voucher_item->invoice) ? $voucher_item->invoice : '-' }}</td>
                     <td>
                         @if (!empty($voucher_item->is_opening_stock))

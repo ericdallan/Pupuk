@@ -26,6 +26,7 @@ class Invoice extends Model
     protected $casts = [
         'total_amount' => 'decimal:2',
         'remaining_amount' => 'decimal:2',
+        'due_date' => 'datetime',
     ];
 
     public function voucher(): BelongsTo

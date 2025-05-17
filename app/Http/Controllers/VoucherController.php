@@ -337,6 +337,7 @@ class VoucherController extends Controller
 
             // Handle Invoice creation or update
             if ($request->use_invoice === 'yes') {
+                // Find the subsidiary_code from voucher details
                 $subsidiaryCode = collect($voucherDetailsData)->firstWhere(function ($detail) {
                     return Subsidiary::where('subsidiary_code', $detail['account_code'])->exists();
                 })['account_code'] ?? null;
@@ -345,13 +346,28 @@ class VoucherController extends Controller
                     throw new \Exception('No valid subsidiary_code found in voucher details.');
                 }
 
+                // Fetch the total_amount from voucher_details for the given voucher_id and subsidiary_code
+                $voucherDetails = DB::table('voucher_details')
+                    ->where('voucher_id', $voucher->id)
+                    ->where('account_code', $subsidiaryCode)
+                    ->selectRaw('SUM(debit) - SUM(credit) as total_amount')
+                    ->first();
+
+                if (!$voucherDetails || is_null($voucherDetails->total_amount)) {
+                    throw new \Exception("No voucher details found for subsidiary_code {$subsidiaryCode} and voucher_id {$voucher->id}, or total_amount is null.");
+                }
+
+                $totalAmount = abs($voucherDetails->total_amount); // Use absolute value to ensure positive total_amount
+
+                if ($totalAmount <= 0) {
+                    throw new \Exception("Total amount for subsidiary_code {$subsidiaryCode} and voucher_id {$voucher->id} is invalid or zero.");
+                }
+
                 $invoice = Invoice::where('invoice', $request->invoice)->first();
 
                 if ($request->use_existing_invoice === 'yes' && !$invoice) {
                     throw new \Exception('Selected existing invoice not found.');
                 }
-
-                $totalAmount = $request->total_debit; // Assuming total_debit represents payment amount
 
                 if (!$invoice) {
                     // Create new invoice (initial sales voucher)
@@ -366,6 +382,7 @@ class VoucherController extends Controller
                     ]);
                 } else {
                     // Update existing invoice (payment voucher)
+                    // For payment, use the total_amount as the payment amount to deduct
                     $invoice->remaining_amount -= $totalAmount;
                     $invoice->status = $invoice->remaining_amount <= 0 ? 'paid' : 'pending';
                     $invoice->save();
@@ -476,6 +493,19 @@ class VoucherController extends Controller
         // Get heading text for voucher type
         $headingText = $this->getVoucherHeading($voucher->voucher_type);
 
+        $dueDate = '';
+        if ($voucher->invoice) {
+            $invoice = \App\Models\Invoice::where('invoice', $voucher->invoice)->first();
+            if ($invoice) {
+                // Check if due_date is a Carbon instance or parse it if it's a string
+                if ($invoice->due_date instanceof \Carbon\Carbon) {
+                    $dueDate = $invoice->due_date->format('Y-m-d');
+                } elseif (is_string($invoice->due_date) && !empty($invoice->due_date)) {
+                    $dueDate = \Carbon\Carbon::parse($invoice->due_date)->format('Y-m-d');
+                }
+            }
+        }
+
         return view('voucher.voucher_edit', compact(
             'voucher',
             'headingText',
@@ -486,7 +516,8 @@ class VoucherController extends Controller
             'subsidiariesData',
             'accountsData',
             'stocks',
-            'transactionsData'
+            'transactionsData',
+            'dueDate'
         ));
     }
     public function voucher_update(Request $request, $id)

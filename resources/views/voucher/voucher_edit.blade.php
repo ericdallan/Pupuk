@@ -167,7 +167,7 @@
             <div class="row mb-3" id="dueDateContainer" style="display: {{ $voucher->use_invoice === 'yes' ? 'block' : 'none' }};">
                 <label for="due_date" class="col-sm-3 col-form-label">Tanggal Jatuh Tempo:</label>
                 <div class="col-sm-9">
-                    <input type="date" class="form-control" id="due_date" name="due_date" value="{{ $voucher->invoice && $invoice = \App\Models\Invoice::where('invoice', $voucher->invoice)->first() ? $invoice->due_date->format('Y-m-d') : '' }}" {{ $voucher->use_existing_invoice === 'yes' ? 'disabled' : '' }}>
+                    <input type="date" class="form-control" id="due_date" name="due_date" value="{{ $dueDate }}" {{ $voucher->use_existing_invoice === 'yes' ? 'disabled' : '' }}>
                     <div class="invalid-feedback">Tanggal Jatuh Tempo wajib diisi untuk invoice baru.</div>
                 </div>
             </div>

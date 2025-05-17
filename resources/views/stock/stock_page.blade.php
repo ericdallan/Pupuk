@@ -101,16 +101,14 @@
                 <div class="transaction-table">
                     @if ($stock->transactions->count() > 0)
                     <div class="table-responsive">
-                        <table class="table table-striped table-bordered table-hover text
-
--center">
+                        <table class="table table-striped table-bordered table-hover text-center">
                             <thead class="table-dark">
                                 <tr>
                                     <th>No</th>
                                     <th>Deskripsi</th>
                                     <th>Tipe Transaksi</th>
                                     <th>Kuantitas</th>
-                                    <th>HPP</th>
+                                    <th>Nominal</th>
                                     <th>Tanggal</th>
                                 </tr>
                             </thead>
