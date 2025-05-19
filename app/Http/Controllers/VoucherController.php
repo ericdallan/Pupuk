@@ -982,6 +982,18 @@ class VoucherController extends Controller
 
             // 7. Handle invoice payments deletion if they exist
             if ($hasInvoiceWithPayments) {
+                // Get all invoice payments for this voucher
+                $invoicePayments = $voucherToDelete->invoice_payments()->get();
+
+                // Update remaining_amount in related invoices
+                foreach ($invoicePayments as $payment) {
+                    $invoice = Invoice::find($payment->invoice_id);
+                    if ($invoice) {
+                        // Adjust remaining_amount: add back the payment amount
+                        $invoice->remaining_amount += $payment->amount;
+                        $invoice->save();
+                    }
+                }
                 // Delete invoice payments related to the voucher
                 $voucherToDelete->invoice_payments()->delete();
 
@@ -1010,7 +1022,6 @@ class VoucherController extends Controller
             return redirect()->back()->withErrors(['message' => 'Gagal menghapus voucher: ' . $e->getMessage()]);
         }
     }
-
     private function generateVoucherNumber($voucherType)
     {
         $lastVoucher = Voucher::where('voucher_type', $voucherType)

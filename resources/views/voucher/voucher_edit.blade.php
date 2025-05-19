@@ -31,7 +31,6 @@
         {{ session('success') }}
     </div>
     @endif
-
     @if ($errors->any())
     <div id="error-message" class="alert alert-danger" style="cursor: pointer;" onclick="this.remove();">
         <ul>
@@ -45,11 +44,9 @@
         {{ session('message') }}
     </div>
     @endif
-
     <form id="voucherForm" method="POST" action="{{ route('voucher.update', $voucher->id) }}" enctype="multipart/form-data">
         @csrf
         @method('PUT')
-
         <div class="container mt-4">
             <h2 class="text-center">Formulir Edit {{ $headingText }} Voucher</h2>
 
@@ -59,7 +56,6 @@
                     <input type="text" class="form-control" id="voucherNumber" name="voucher_number" value="{{ $voucher->voucher_number }}" readonly>
                 </div>
             </div>
-
             <div class="row mb-3">
                 <label for="companyName" class="col-sm-3 col-form-label">Nama Perusahaan:</label>
                 <div class="col-sm-9">
@@ -71,7 +67,19 @@
                     @endif
                 </div>
             </div>
-
+            <div class="row mb-3">
+                <label for="useStock" class="col-sm-3 col-form-label">Transaksi Stok?</label>
+                <div class="col-sm-9">
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" id="useStockYes" name="use_stock" value="yes" {{ in_array($voucher->voucher_type, ['PB', 'PJ']) ? 'checked' : '' }}>
+                        <label class="form-check-label" for="useStockYes">Ya</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" id="useStockNo" name="use_stock" value="no" {{ !in_array($voucher->voucher_type, ['PB', 'PJ']) ? 'checked' : '' }}>
+                        <label class="form-check-label" for="useStockNo">Tidak</label>
+                    </div>
+                </div>
+            </div>
             <div class="row mb-3">
                 <label for="voucherType" class="col-sm-3 col-form-label">Tipe Voucher:</label>
                 <div class="col-sm-3">
@@ -93,7 +101,6 @@
                     <input type="text" class="form-control" id="voucherDay" name="voucher_day" value="{{ $voucher->voucher_day }}" readonly>
                 </div>
             </div>
-
             <div class="row mb-3">
                 <label for="preparedBy" class="col-sm-3 col-form-label">Dibuat Oleh:</label>
                 <div class="col-sm-9">
@@ -101,28 +108,24 @@
                     <div class="invalid-feedback">Dibuat Oleh wajib diisi.</div>
                 </div>
             </div>
-
             <div class="row mb-3">
                 <label for="givenTo" class="col-sm-3 col-form-label">Diberikan Kepada:</label>
                 <div class="col-sm-9">
                     <input type="text" class="form-control" id="givenTo" name="given_to" value="{{ $voucher->given_to }}">
                 </div>
             </div>
-
             <div class="row mb-3">
                 <label for="approvedBy" class="col-sm-3 col-form-label">Disetujui Oleh:</label>
                 <div class="col-sm-9">
                     <input type="text" class="form-control" id="approvedBy" name="approved_by" value="{{ $voucher->approved_by }}" readonly>
                 </div>
             </div>
-
             <div class="row mb-3">
                 <label for="transaction" class="col-sm-3 col-form-label">Transaksi:</label>
                 <div class="col-sm-9">
                     <input type="text" class="form-control" id="transaction" name="transaction" value="{{ $voucher->transaction }}">
                 </div>
             </div>
-
             <!-- Gunakan Invoice? -->
             <div class="row mb-3">
                 <label for="useInvoice" class="col-sm-3 col-form-label">Gunakan Invoice?</label>
@@ -138,7 +141,6 @@
                     <div class="invalid-feedback">Pilih apakah menggunakan invoice.</div>
                 </div>
             </div>
-
             <!-- Gunakan Invoice yang Sudah Ada? -->
             <div class="row mb-3" id="existingInvoiceContainer" style="display: {{ $voucher->invoice || $voucher->use_invoice === 'yes' ? 'block' : 'none' }};">
                 <label class="col-sm-3 col-form-label">Gunakan Invoice yang Sudah Ada?</label>
@@ -153,7 +155,6 @@
                     </div>
                 </div>
             </div>
-
             <!-- Nomor Invoice -->
             <div class="row mb-3" id="invoiceFieldContainer" style="display: {{ $voucher->invoice || $voucher->use_invoice === 'yes' ? 'block' : 'none' }};">
                 <label for="invoice" class="col-sm-3 col-form-label">Nomor Invoice:</label>
@@ -162,7 +163,6 @@
                     <div class="invalid-feedback">Nomor Invoice wajib diisi jika menggunakan invoice.</div>
                 </div>
             </div>
-
             <!-- Tanggal Jatuh Tempo -->
             <div class="row mb-3" id="dueDateContainer" style="display: {{ $voucher->invoice || $voucher->use_invoice === 'yes' ? 'block' : 'none' }};">
                 <label for="due_date" class="col-sm-3 col-form-label">Tanggal Jatuh Tempo:</label>
@@ -171,7 +171,6 @@
                     <div class="invalid-feedback">Tanggal Jatuh Tempo wajib diisi untuk invoice baru.</div>
                 </div>
             </div>
-
             <!-- Nama Toko -->
             <div class="row mb-3" id="storeFieldContainer" style="display: {{ $voucher->invoice || $voucher->use_invoice === 'yes' ? 'block' : 'none' }};">
                 <label for="store" class="col-sm-3 col-form-label">Nama Toko:</label>
@@ -184,7 +183,6 @@
                     </select>
                 </div>
             </div>
-
             <!-- Rincian Transaksi -->
             <div class="mb-3">
                 <h5>Rincian Transaksi</h5>
@@ -303,7 +301,6 @@
                     <button type="button" id="addTransactionRowBtn" class="btn btn-primary">Tambah Transaksi</button>
                 </div>
             </div>
-
             <!-- Rincian Voucher -->
             <div class="table-responsive">
                 <table class="table table-bordered" id="voucherDetailsTable">
@@ -354,7 +351,6 @@
                 </table>
                 <button type="button" id="addVoucherDetailRowBtn" class="btn btn-primary">Tambah Kode Akun</button>
             </div>
-
             <!-- Totals -->
             <div class="row mb-3">
                 <label for="totalDebit" class="col-sm-3 col-form-label">Total Debit:</label>
@@ -368,7 +364,6 @@
                     <input type="hidden" id="totalCreditRaw" name="total_credit_raw" value="{{ $voucher->total_credit }}">
                 </div>
             </div>
-
             <!-- Validation Message -->
             <div class="row mb-3">
                 <label for="validation" class="col-sm-3 col-form-label">Pesan:</label>
@@ -382,13 +377,7 @@
             </div>
         </div>
     </form>
-
     <script>
-        /**
-         * @file Script untuk mengelola formulir edit voucher, termasuk penambahan/penghapusan baris transaksi dan detail voucher,
-         * perhitungan total, validasi kesimbangan total, pengelolaan invoice, kode akun, dan HPP dengan kolom total dan logika qty HPP.
-         * Menambahkan logika untuk otomatis memilih "Gunakan Invoice" jika voucher memiliki invoice.
-         */
         document.addEventListener('DOMContentLoaded', function() {
             // --- Element References ---
             const voucherForm = document.getElementById('voucherForm');
@@ -404,6 +393,8 @@
             const validationInput = document.getElementById('validation');
             const saveVoucherBtn = document.getElementById('saveVoucherBtn');
             const voucherTypeSelect = document.getElementById('voucherType');
+            const useStockYes = document.getElementById('useStockYes');
+            const useStockNo = document.getElementById('useStockNo');
             const useInvoiceYes = document.getElementById('useInvoiceYes');
             const useInvoiceNo = document.getElementById('useInvoiceNo');
             const invoiceFieldContainer = document.getElementById('invoiceFieldContainer');
@@ -420,7 +411,67 @@
             const accounts = @json($accountsData);
             const stocks = @json($stocks);
             const transactions = @json($transactionsData);
+            const currentVoucherType = @json($voucher -> voucher_type);
             const hasInvoice = @json($voucher -> invoice ? true : false);
+
+            // --- Voucher Type Options ---
+            const voucherTypeOptions = [{
+                    value: 'PJ',
+                    text: 'Penjualan',
+                    stock: true
+                },
+                {
+                    value: 'PB',
+                    text: 'Pembelian',
+                    stock: true
+                },
+                {
+                    value: 'PG',
+                    text: 'Pengeluaran',
+                    stock: false
+                },
+                {
+                    value: 'PM',
+                    text: 'Pemasukan',
+                    stock: false
+                },
+                {
+                    value: 'LN',
+                    text: 'Lainnya',
+                    stock: false
+                }
+            ];
+
+            // --- Update Voucher Type Dropdown ---
+            function updateVoucherTypeOptions() {
+                const useStock = useStockYes.checked ? 'yes' : 'no';
+                voucherTypeSelect.innerHTML = '';
+                const validOptions = voucherTypeOptions.filter(option =>
+                    useStock === 'yes' ? option.stock : !option.stock
+                );
+
+                validOptions.forEach(option => {
+                    const opt = document.createElement('option');
+                    opt.value = option.value;
+                    opt.textContent = option.text;
+                    // Select the current voucher type if it matches, otherwise leave unselected
+                    if (option.value === currentVoucherType) {
+                        opt.selected = true;
+                    }
+                    voucherTypeSelect.appendChild(opt);
+                });
+
+                // If the current voucher type is not in the valid options, select the first option
+                if (!validOptions.some(opt => opt.value === voucherTypeSelect.value)) {
+                    voucherTypeSelect.value = validOptions[0]?.value || '';
+                }
+
+                // Trigger change event to ensure transaction table updates
+                const changeEvent = new Event('change', {
+                    bubbles: true
+                });
+                voucherTypeSelect.dispatchEvent(changeEvent);
+            }
 
             // --- Validation Functions ---
             function validateForm() {
@@ -696,17 +747,6 @@
                 updateAccountCodeDatalist();
             }
 
-            useInvoiceYes?.addEventListener('change', updateInvoiceAndStoreFields);
-            useInvoiceNo?.addEventListener('change', updateInvoiceAndStoreFields);
-            useExistingInvoiceYes?.addEventListener('change', function() {
-                updateInvoiceField();
-                updateDueDateField();
-            });
-            useExistingInvoiceNo?.addEventListener('change', function() {
-                updateInvoiceField();
-                updateDueDateField();
-            });
-
             // --- Stock and HPP Logic ---
             function createStockDropdown(index, initialValue = '') {
                 const select = document.createElement('select');
@@ -906,42 +946,19 @@
                 const descriptionCell = document.createElement('td');
                 let descriptionElement;
                 const voucherType = voucherTypeSelect.value;
+                const useStock = useStockYes.checked ? 'yes' : 'no';
                 const description = transactionData?.description || '';
                 const isHppRow = row.dataset.isHppRow === 'true';
 
                 if (isHppRow) {
                     descriptionElement = createDescriptionInput(index, description);
                     descriptionElement.readOnly = true;
-                } else if (voucherType === 'PJ') {
+                } else if (useStock === 'yes' && (voucherType === 'PJ' || voucherType === 'PB')) {
                     descriptionElement = createStockDropdown(index, description);
                     if (descriptionElement.dataset.listenerAttached === 'false') {
                         descriptionElement.addEventListener('change', handleStockChange.bind(null, index));
                         descriptionElement.dataset.listenerAttached = 'true';
                     }
-                } else if (voucherType === 'PB') {
-                    descriptionElement = document.createElement('div');
-                    descriptionElement.className = 'input-group';
-
-                    const select = createStockDropdown(index, description);
-                    select.className = 'form-control descriptionInput';
-                    select.style.width = '50%';
-
-                    const input = createDescriptionInput(index, description);
-                    input.className = 'form-control descriptionInput';
-                    input.style.width = '50%';
-
-                    select.addEventListener('change', function() {
-                        input.value = this.value;
-                        updateAllCalculationsAndValidations();
-                    });
-
-                    input.addEventListener('input', function() {
-                        select.value = '';
-                        updateAllCalculationsAndValidations();
-                    });
-
-                    descriptionElement.appendChild(select);
-                    descriptionElement.appendChild(input);
                 } else {
                     descriptionElement = createDescriptionInput(index, description);
                 }
@@ -1385,6 +1402,23 @@
 
             document.getElementById('voucherDate')?.addEventListener('change', updateVoucherDay);
 
+            // --- Handle Stock Transaction Change ---
+            useStockYes.addEventListener('change', function() {
+                updateVoucherTypeOptions();
+                updateAllCalculationsAndValidations();
+            });
+
+            useStockNo.addEventListener('change', function() {
+                updateVoucherTypeOptions();
+                updateAllCalculationsAndValidations();
+            });
+
+            // --- Handle Voucher Type Change ---
+            voucherTypeSelect.addEventListener('change', function() {
+                refreshTransactionTable();
+                updateAllCalculationsAndValidations();
+            });
+
             // --- Form Submission ---
             voucherForm.addEventListener('submit', function(event) {
                 if (!validateForm() || !validateTotals()) {
@@ -1394,6 +1428,7 @@
             });
 
             // --- Initialization ---
+            updateVoucherTypeOptions(); // Initialize voucher type options and pre-select current voucher type
             attachTransactionRemoveButtonListeners();
             attachTransactionInputListeners();
             attachVoucherDetailRemoveButtonListeners();

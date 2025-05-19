@@ -35,6 +35,19 @@
                             @endif
                         </div>
                         <div class="row mb-3">
+                            <label for="useStock" class="col-sm-3 col-form-label">Transaksi Stok?</label>
+                            <div class="col-sm-9">
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" id="useStockYes" name="use_stock" value="yes">
+                                    <label class="form-check-label" for="useStockYes">Ya</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" id="useStockNo" name="use_stock" value="no">
+                                    <label class="form-check-label" for="useStockNo">Tidak</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
                             <label for="voucherType" class="col-sm-3 col-form-label">Tipe Voucher:</label>
                             <div class="col-sm-3">
                                 <select class="form-select" id="voucherType" name="voucher_type">
@@ -262,12 +275,89 @@
         const existingInvoiceContainer = document.getElementById('existingInvoiceContainer');
         const useExistingInvoiceYes = document.getElementById('useExistingInvoiceYes');
         const useExistingInvoiceNo = document.getElementById('useExistingInvoiceNo');
+        const useStockYes = document.getElementById('useStockYes');
+        const useStockNo = document.getElementById('useStockNo');
         const existingInvoices = @json($existingInvoices);
         const storeNames = @json($storeNames);
         const subsidiaries = @json($subsidiariesData);
         const accounts = @json($accountsData);
         const stocks = @json($stocksData);
         const transactions = @json($transactionsData);
+
+        // Define voucher types and their descriptions
+        const voucherTypes = {
+            PJ: {
+                value: 'PJ',
+                text: 'Penjualan',
+                description: 'Voucher Penjualan - Dokumen internal perusahaan untuk mencatat transaksi penjualan barang atau jasa yang tidak dapat dicatat pada voucher lain.'
+            },
+            PB: {
+                value: 'PB',
+                text: 'Pembelian',
+                description: 'Voucher Pembelian - Dokumen untuk mencatat transaksi pembelian barang atau jasa, seperti pembelian material, peralatan, atau layanan dari pemasok.'
+            },
+            PG: {
+                value: 'PG',
+                text: 'Pengeluaran',
+                description: 'Voucher Pengeluaran - Dokumen untuk mencatat pengeluaran dana perusahaan, seperti pembayaran tagihan, pembelian material, atau biaya operasional, sebagai bukti otorisasi transaksi.'
+            },
+            PM: {
+                value: 'PM',
+                text: 'Pemasukan',
+                description: 'Voucher Pemasukan - Dokumen internal perusahaan untuk mencatat penerimaan dana, seperti pembayaran dari pelanggan, setoran tunai, atau penerimaan lain yang masuk ke kas atau bank perusahaan.'
+            },
+            LN: {
+                value: 'LN',
+                text: 'Lainnya',
+                description: 'Voucher Lainnya - Dokumen untuk mencatat transaksi yang tidak termasuk dalam kategori voucher lain, seperti koreksi jurnal atau transaksi khusus lainnya.'
+            }
+        };
+
+        // Function to update voucherType options based on use_stock
+        function updateVoucherTypeOptions() {
+            const useStock = document.querySelector('input[name="use_stock"]:checked')?.value || 'no';
+            const currentValue = voucherTypeSelect.value;
+            voucherTypeSelect.innerHTML = '';
+
+            const defaultOption = document.createElement('option');
+            defaultOption.value = '';
+            defaultOption.textContent = 'Pilih Tipe Voucher';
+            voucherTypeSelect.appendChild(defaultOption);
+
+            if (useStock === 'yes') {
+                // Only show PB and PJ
+                [voucherTypes.PB, voucherTypes.PJ].forEach(type => {
+                    const option = document.createElement('option');
+                    option.value = type.value;
+                    option.textContent = type.text;
+                    voucherTypeSelect.appendChild(option);
+                });
+            } else {
+                // Show PG, PM, LN
+                [voucherTypes.PG, voucherTypes.PM, voucherTypes.LN].forEach(type => {
+                    const option = document.createElement('option');
+                    option.value = type.value;
+                    option.textContent = type.text;
+                    voucherTypeSelect.appendChild(option);
+                });
+            }
+
+            // Restore previous selection if still valid, else reset description
+            if (currentValue && voucherTypeSelect.querySelector(`option[value="${currentValue}"]`)) {
+                voucherTypeSelect.value = currentValue;
+                deskripsiVoucherTextarea.value = voucherTypes[currentValue]?.description || '';
+            } else {
+                voucherTypeSelect.value = '';
+                deskripsiVoucherTextarea.value = '';
+            }
+
+            refreshTransactionTable();
+            updateAllCalculationsAndValidations();
+        }
+
+        // Event listeners for use_stock radio buttons
+        useStockYes.addEventListener('change', updateVoucherTypeOptions);
+        useStockNo.addEventListener('change', updateVoucherTypeOptions);
 
         function isSubsidiaryCodeUsed() {
             const accountCodeInputs = voucherDetailsTableBody.querySelectorAll('.accountCodeInput');
@@ -656,7 +746,7 @@
             quantityInput.className = 'form-control quantityInput';
             quantityInput.name = `transactions[${newIndex}][quantity]`;
             quantityInput.value = quantity;
-            quantityInput.readOnly = voucherTypeSelect.value === 'PJ'; // Read-only for PJ to enforce sync
+            quantityInput.readOnly = voucherTypeSelect.value === 'PJ';
             quantityCell.appendChild(quantityInput);
             hppRow.appendChild(quantityCell);
 
@@ -718,7 +808,7 @@
                     descriptionInput.value = `HPP ${selectedItem}`;
                     const quantityInput = nextRow.querySelector('.quantityInput');
                     quantityInput.value = quantity;
-                    quantityInput.readOnly = voucherTypeSelect.value === 'PJ'; // Read-only for PJ
+                    quantityInput.readOnly = voucherTypeSelect.value === 'PJ';
                     const nominalInput = nextRow.querySelector('.nominalInput');
                     const averageHpp = calculateAverageHpp(selectedItem);
                     nominalInput.value = averageHpp;
@@ -782,37 +872,40 @@
             const descriptionCell = document.createElement('td');
             let descriptionElement;
             const voucherType = voucherTypeSelect.value;
+            const useStock = document.querySelector('input[name="use_stock"]:checked')?.value || 'no';
 
-            if (voucherType === 'PJ') {
-                descriptionElement = createStockDropdown(index);
-                if (descriptionElement.dataset.listenerAttached === 'false') {
-                    descriptionElement.addEventListener('change', handleStockChange.bind(null, index));
-                    descriptionElement.dataset.listenerAttached = 'true';
+            if (useStock === 'yes' && (voucherType === 'PJ' || voucherType === 'PB')) {
+                if (voucherType === 'PJ') {
+                    descriptionElement = createStockDropdown(index);
+                    if (descriptionElement.dataset.listenerAttached === 'false') {
+                        descriptionElement.addEventListener('change', handleStockChange.bind(null, index));
+                        descriptionElement.dataset.listenerAttached = 'true';
+                    }
+                } else if (voucherType === 'PB') {
+                    descriptionElement = document.createElement('div');
+                    descriptionElement.className = 'input-group';
+
+                    const select = createStockDropdown(index);
+                    select.className = 'form-control';
+                    select.style.width = '50%';
+
+                    const input = createDescriptionInput(index);
+                    input.className = 'form-control';
+                    input.style.width = '50%';
+
+                    select.addEventListener('change', function() {
+                        input.value = this.value;
+                        updateAllCalculationsAndValidations();
+                    });
+
+                    input.addEventListener('input', function() {
+                        select.value = '';
+                        updateAllCalculationsAndValidations();
+                    });
+
+                    descriptionElement.appendChild(select);
+                    descriptionElement.appendChild(input);
                 }
-            } else if (voucherType === 'PB') {
-                descriptionElement = document.createElement('div');
-                descriptionElement.className = 'input-group';
-
-                const select = createStockDropdown(index);
-                select.className = 'form-control';
-                select.style.width = '50%';
-
-                const input = createDescriptionInput(index);
-                input.className = 'form-control';
-                input.style.width = '50%';
-
-                select.addEventListener('change', function() {
-                    input.value = this.value;
-                    updateAllCalculationsAndValidations();
-                });
-
-                input.addEventListener('input', function() {
-                    select.value = '';
-                    updateAllCalculationsAndValidations();
-                });
-
-                descriptionElement.appendChild(select);
-                descriptionElement.appendChild(input);
             } else {
                 descriptionElement = createDescriptionInput(index);
             }
@@ -933,7 +1026,6 @@
             const rowIndex = parseInt(row.dataset.rowIndex);
             const isHppRow = row.dataset.isHppRow === 'true';
             if (!isHppRow) {
-                // Find the next HPP row and sync its quantity
                 let nextRow = row.nextSibling;
                 while (nextRow) {
                     if (nextRow.dataset.isHppRow === 'true') {
@@ -1008,30 +1100,8 @@
         voucherTypeSelect.addEventListener('change', function() {
             refreshTransactionTable();
             const selectedValue = this.value;
-            let defaultDescription = '';
-
-            switch (selectedValue) {
-                case 'PJ':
-                    defaultDescription = 'Voucher Penjualan - Dokumen internal perusahaan untuk mencatat transaksi penjualan barang atau jasa yang tidak dapat dicatat pada voucher lain.';
-                    break;
-                case 'PG':
-                    defaultDescription = 'Voucher Pengeluaran - Dokumen untuk mencatat pengeluaran dana perusahaan, seperti pembayaran tagihan, pembelian material, atau biaya operasional, sebagai bukti otorisasi transaksi.';
-                    break;
-                case 'PM':
-                    defaultDescription = 'Voucher Pemasukan - Dokumen internal perusahaan untuk mencatat penerimaan dana, seperti pembayaran dari pelanggan, setoran tunai, atau penerimaan lain yang masuk ke kas atau bank perusahaan.';
-                    break;
-                case 'PB':
-                    defaultDescription = 'Voucher Pembelian - Dokumen untuk mencatat transaksi pembelian barang atau jasa, seperti pembelian material, peralatan, atau layanan dari pemasok.';
-                    break;
-                case 'LN':
-                    defaultDescription = 'Voucher Lainnya - Dokumen untuk mencatat transaksi yang tidak termasuk dalam kategori voucher lain, seperti koreksi jurnal atau transaksi khusus lainnya.';
-                    break;
-                default:
-                    defaultDescription = '';
-                    break;
-            }
-
-            deskripsiVoucherTextarea.value = defaultDescription;
+            deskripsiVoucherTextarea.value = voucherTypes[selectedValue]?.description || '';
+            updateAllCalculationsAndValidations();
         });
 
         function calculateTotalNominal() {
@@ -1135,6 +1205,7 @@
             document.getElementById('dueDate').value = `${year}-${month}-${day}`;
         }
 
+        // Initialize
         attachTransactionInputListeners();
         attachTransactionRemoveButtonListeners();
         attachVoucherDetailRemoveButtonListeners();
@@ -1146,6 +1217,7 @@
         setTodayVoucherDate();
         updateInvoiceAndStoreFields();
         updateAccountCodeDatalist();
+        updateVoucherTypeOptions();
         refreshTransactionTable();
     });
 </script>

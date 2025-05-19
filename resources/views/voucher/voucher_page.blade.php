@@ -133,7 +133,7 @@
     @if ($vouchers->count() > 0)
     <div class="table-responsive">
         <table class="table table-striped table-bordered table-hover text-center">
-            <thead class="table-dark">
+            <thead class="table-dark" style="text-align: center; vertical-align: middle;">
                 <tr>
                     <th>Nomor Voucher</th>
                     <th>Tipe Voucher</th>
@@ -142,7 +142,7 @@
                     <th>Tanggal Voucher</th>
                     <th>Transaksi</th>
                     <th>Total Nominal</th>
-                    <th colspan="4" style="text-align: center; vertical-align: middle;">Aksi</th>
+                    <th colspan="4">Aksi</th>
                 </tr>
             </thead>
             <tbody>
