@@ -3,169 +3,73 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use App\Services\StockService;
 use Carbon\Carbon;
 use App\Exports\StockExport;
 use Maatwebsite\Excel\Facades\Excel;
 
 class StockController extends Controller
 {
+    protected $stockService;
+
+    public function __construct(StockService $stockService)
+    {
+        $this->stockService = $stockService;
+    }
+
+    /**
+     * Display the Stock page
+     *
+     * @param Request $request
+     * @return \Illuminate\View\View|\Illuminate\Http\RedirectResponse
+     */
     public function stock_page(Request $request)
     {
-        // Get the start and end dates from request, default to start of year and today
-        $startDate = $request->input('start_date', Carbon::today()->startOfYear()->toDateString());
-        $endDate = $request->input('end_date', Carbon::today()->toDateString());
-
-        // Parse and validate dates
-        $startDate = Carbon::parse($startDate)->startOfDay();
-        $endDate = Carbon::parse($endDate)->endOfDay();
-
-        // Ensure end date is not in the future
-        if ($endDate->isFuture()) {
-            $endDate = Carbon::today()->endOfDay();
+        try {
+            $data = $this->stockService->prepareStockData($request->all());
+            return view('stock.stock_page', $data);
+        } catch (\Exception $e) {
+            Log::error('Stock Page Error: ' . $e->getMessage());
+            return redirect()->back()->withErrors(['error' => 'Gagal memuat halaman stok']);
         }
-
-        // Ensure start date is not after end date
-        if ($startDate->gt($endDate)) {
-            $startDate = $endDate->copy()->startOfYear();
-        }
-
-        // Fetch all transactions with voucher type PB to calculate average HPP per stock item
-        $allTransactions = DB::table('transactions')
-            ->select('transactions.description', 'transactions.nominal')
-            ->join('vouchers', 'transactions.voucher_id', '=', 'vouchers.id')
-            ->where('vouchers.voucher_type', 'PB')
-            ->where('transactions.description', 'NOT LIKE', 'HPP %')
-            ->whereBetween('transactions.created_at', [$startDate, $endDate])
-            ->get();
-
-        // Calculate average HPP for each stock item based on PB transactions only
-        $hppAverages = [];
-        foreach ($allTransactions as $transaction) {
-            $item = $transaction->description;
-            if (!isset($hppAverages[$item])) {
-                $hppAverages[$item] = ['total_nominal' => 0, 'count' => 0];
-            }
-            $hppAverages[$item]['total_nominal'] += $transaction->nominal ?? 0;
-            $hppAverages[$item]['count'] += 1;
-        }
-
-        // Compute the average HPP
-        foreach ($hppAverages as $item => $data) {
-            $hppAverages[$item]['average_hpp'] = $data['count'] > 0 ? $data['total_nominal'] / $data['count'] : 0;
-        }
-
-        // Fetch the earliest transaction for each stock item to determine opening balance
-        $openingBalances = DB::table('transactions')
-            ->select('t1.description as item', 't1.quantity as opening_qty', 't1.nominal as opening_hpp', 't1.created_at')
-            ->from('transactions as t1')
-            ->join('vouchers', 't1.voucher_id', '=', 'vouchers.id')
-            ->join(DB::raw('(
-                SELECT description, MIN(created_at) as min_created_at
-                FROM transactions
-                WHERE description NOT LIKE "HPP %"
-                GROUP BY description
-            ) as t2'), function ($join) {
-                $join->on('t1.description', '=', 't2.description')
-                    ->whereColumn('t1.created_at', 't2.min_created_at');
-            })
-            ->where('t1.description', 'NOT LIKE', 'HPP %')
-            ->where('t1.created_at', '<=', $endDate)
-            ->get()
-            ->keyBy('item');
-
-        // Fetch stock data with transactions and voucher types for the specified date range
-        $stockData = DB::table('stocks')
-            ->select('stocks.id', 'stocks.item', 'stocks.unit', 'stocks.quantity', 'transactions.created_at', 'transactions.description', 'transactions.quantity as transaction_quantity', 'transactions.nominal', 'vouchers.voucher_type')
-            ->distinct('stocks.item')
-            ->leftJoin('transactions', 'stocks.item', '=', 'transactions.description')
-            ->leftJoin('vouchers', 'transactions.voucher_id', '=', 'vouchers.id')
-            ->where('transactions.description', 'NOT LIKE', 'HPP %')
-            ->whereBetween('transactions.created_at', [$startDate, $endDate])
-            ->get();
-
-        // Group and calculate incoming, outgoing, opening, and final stock for each item
-        $stockMap = [];
-        foreach ($stockData as $stock) {
-            $stockKey = $stock->item;
-            if (!isset($stockMap[$stockKey])) {
-                $openingBalance = $openingBalances[$stockKey] ?? null;
-                $stockMap[$stockKey] = (object) [
-                    'id' => $stock->id,
-                    'item' => $stock->item,
-                    'unit' => $stock->unit,
-                    'quantity' => $stock->quantity,
-                    'opening_qty' => $openingBalance ? $openingBalance->opening_qty : 0,
-                    'opening_hpp' => $openingBalance ? ($openingBalance->opening_hpp ?? 0) : 0,
-                    'incoming_qty' => 0,
-                    'outgoing_qty' => 0,
-                    'final_stock_qty' => 0,
-                    'average_hpp' => $hppAverages[$stock->item]['average_hpp'] ?? 0,
-                    'transactions' => collect()
-                ];
-            }
-
-            // Incoming and outgoing stock within the date range, excluding the earliest transaction
-            if ($stock->voucher_type && Carbon::parse($stock->created_at)->between($startDate, $endDate)) {
-                $openingBalance = $openingBalances[$stockKey] ?? null;
-                $isEarliestTransaction = $openingBalance && Carbon::parse($stock->created_at)->eq(Carbon::parse($openingBalance->created_at));
-
-                if ($stock->voucher_type === 'PB' && !$isEarliestTransaction) {
-                    $stockMap[$stockKey]->incoming_qty += $stock->transaction_quantity;
-                } elseif ($stock->voucher_type === 'PJ') {
-                    $stockMap[$stockKey]->outgoing_qty += $stock->transaction_quantity;
-                }
-            }
-
-            // Collect transactions for modal (within date range)
-            if ($stock->voucher_type && Carbon::parse($stock->created_at)->between($startDate, $endDate)) {
-                $stockMap[$stockKey]->transactions->push((object) [
-                    'description' => $stock->description,
-                    'voucher_type' => $stock->voucher_type,
-                    'quantity' => $stock->transaction_quantity,
-                    'nominal' => $stock->nominal,
-                    'created_at' => $stock->created_at
-                ]);
-            }
-        }
-
-        // Calculate final stock
-        foreach ($stockMap as $stock) {
-            $stock->final_stock_qty = ($stock->opening_qty ?? 0) + ($stock->incoming_qty ?? 0) - ($stock->outgoing_qty ?? 0);
-        }
-
-        return view('stock.stock_page', ['stockData' => array_values($stockMap)]);
     }
 
+    /**
+     * Export stock data to Excel
+     *
+     * @param Request $request
+     * @return \Symfony\Component\HttpFoundation\BinaryFileResponse
+     */
     public function export(Request $request)
     {
-        $startDate = $request->input('start_date', Carbon::today()->startOfYear()->toDateString());
-        $endDate = $request->input('end_date', Carbon::today()->toDateString());
-        return Excel::download(new StockExport($startDate, $endDate), 'stock_report_' . $startDate . '_to_' . $endDate . '.xlsx');
+        try {
+            $startDate = $request->input('start_date', Carbon::today()->startOfYear()->toDateString());
+            $endDate = $request->input('end_date', Carbon::today()->toDateString());
+            $data = $this->stockService->prepareExportData($startDate, $endDate);
+            return Excel::download(new StockExport($data['startDate'], $data['endDate'], $data['stockData']), 'stock_report_' . $data['startDate']->toDateString() . '_to_' . $data['endDate']->toDateString() . '.xlsx');
+        } catch (\Exception $e) {
+            Log::error('Stock Export Error: ' . $e->getMessage());
+            return redirect()->back()->withErrors(['error' => 'Gagal mengekspor data stok']);
+        }
     }
 
+    /**
+     * Fetch transactions for a specific stock item
+     *
+     * @param int $stockId
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function get_transactions($stockId, Request $request)
     {
-        $filter = $request->input('filter', '7_days');
-        $dateRange = $filter === '7_days' ? Carbon::now()->subDays(7) : Carbon::now()->subMonth();
-
-        $stock = DB::table('stocks')->where('id', $stockId)->first();
-        if (!$stock) {
-            return response()->json(['transactions' => []]);
+        try {
+            $filter = $request->input('filter', '7_days');
+            $transactions = $this->stockService->getTransactions((int) $stockId, $filter);
+            return response()->json(['transactions' => $transactions]);
+        } catch (\Exception $e) {
+            Log::error('Get Transactions Error: ' . $e->getMessage());
+            return response()->json(['transactions' => []], 500);
         }
-
-        $transactions = DB::table('transactions')
-            ->where('description', $stock->item)
-            ->where('description', 'NOT LIKE', 'HPP %')
-            ->leftJoin('vouchers', 'transactions.voucher_id', '=', 'vouchers.id')
-            ->where('transactions.created_at', '>=', $dateRange)
-            ->select('transactions.description', 'vouchers.voucher_type', 'transactions.quantity', 'transactions.nominal', 'transactions.created_at')
-            ->get()
-            ->map(function ($transaction) {
-                $transaction->created_at = Carbon::parse($transaction->created_at)->format('d-m-Y');
-                return $transaction;
-            });
-
-        return response()->json(['transactions' => $transactions]);
     }
 }

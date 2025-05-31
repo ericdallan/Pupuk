@@ -2,50 +2,52 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Models\Company;
-use Illuminate\Support\Facades\Storage;
+use App\Services\CompanyService;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class CompanyController extends Controller
 {
+    protected $companyService;
+
+    public function __construct(CompanyService $companyService)
+    {
+        $this->companyService = $companyService;
+    }
+
+    /**
+     * Display the company page
+     *
+     * @return \Illuminate\View\View
+     */
     public function company_page()
     {
-        $company = Company::first(); // Mengambil data perusahaan pertama
-        return view('company.company_page', compact('company'));
+        try {
+            $company = Company::first();
+            return view('company.company_page', compact('company'));
+        } catch (\Exception $e) {
+            Log::error('Error loading company page: ' . $e->getMessage());
+            return redirect()->route('company_page')->with('error', 'Gagal memuat halaman perusahaan.');
+        }
     }
+
+    /**
+     * Update company data
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\RedirectResponse
+     */
     public function update(Request $request)
     {
-        // Validasi data yang masuk
-        $request->validate([
-            'company_name' => 'required',
-            'director' => 'required',
-            'address' => 'required',
-            'phone' => 'required',
-            'email' => 'required|email',
-            'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048', // Validasi logo
-        ]);
-
-        $company = Company::firstOrNew(); // Ambil data perusahaan pertama atau buat baru jika tidak ada
-
-        // Proses upload logo (jika ada)
-        if ($request->hasFile('logo')) {
-            // Hapus logo lama jika ada
-            if ($company->logo) {
-                Storage::delete('public/' . $company->logo);
-            }
-
-            $logoPath = $request->file('logo')->store('public/logos');
-            $company->logo = str_replace('public/', '', $logoPath); // Simpan path relatif
+        try {
+            $this->companyService->updateOrCreateCompany($request->all(), $request);
+            return redirect()->route('company_page')->with('success', 'Data perusahaan berhasil diperbarui.');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return redirect()->route('company_page')->withErrors($e->errors())->withInput();
+        } catch (\Exception $e) {
+            Log::error('Error updating company data: ' . $e->getMessage());
+            return redirect()->route('company_page')->with('error', 'Gagal memperbarui data perusahaan. Silakan coba lagi.');
         }
-
-        // Update data perusahaan
-        $company->company_name = $request->input('company_name');
-        $company->address = $request->input('address');
-        $company->director = $request->input('director');
-        $company->phone = $request->input('phone');
-        $company->email = $request->input('email');
-        $company->save();
-
-        return redirect()->route('company_page')->with('success', 'Data perusahaan berhasil diperbarui.');
     }
 }
