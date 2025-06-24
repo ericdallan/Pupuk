@@ -26,7 +26,7 @@
                             <label for="companyName" class="col-sm-3 col-form-label">Nama Perusahaan:</label>
                             @if ($company && $company->company_name)
                             <div class="col-sm-9">
-                                <input type="text" class="form-control" id="companyName" name="companyName" value="{{$company->company_name}}" readonly>
+                                <input type="text" class="form-control" id="companyName" name="companyName" value="{{ $company->company_name }}" readonly>
                             </div>
                             @else
                             <div class="col-sm-9">
@@ -57,6 +57,8 @@
                                     <option value="PM">Pemasukan</option>
                                     <option value="PB">Pembelian</option>
                                     <option value="LN">Lainnya</option>
+                                    <option value="PH">Pemindahan</option>
+                                    <option value="PK">Pemakaian</option>
                                 </select>
                             </div>
                             <label for="voucherDate" class="col-sm-2 col-form-label">Tanggal:</label>
@@ -80,7 +82,7 @@
                             </div>
                         </div>
                         <div class="row mb-3">
-                            <label for="preparedBy" class="col-sm-3 col-form-label">Diberikan Kepada:</label>
+                            <label for="given_to" class="col-sm-3 col-form-label">Diberikan Kepada:</label>
                             <div class="col-sm-9">
                                 <input type="text" class="form-control" id="given_to" name="given_to">
                             </div>
@@ -154,7 +156,7 @@
                                         </tr>
                                         <tr class="text-center">
                                             <th>Deskripsi</th>
-                                            <th>Quantitas</th>
+                                            <th>Kuantitas</th>
                                             <th>Nominal</th>
                                             <th>Total</th>
                                             <th></th>
@@ -166,10 +168,10 @@
                                                 <input type="text" class="form-control descriptionInput" name="transactions[0][description]">
                                             </td>
                                             <td>
-                                                <input type="number" min="1" class="form-control quantityInput" name="transactions[0][quantity]" value="1">
+                                                <input type="number" min="0.01" step="0.01" class="form-control quantityInput" name="transactions[0][quantity]" value="1">
                                             </td>
                                             <td>
-                                                <input type="number" min="0" class="form-control nominalInput" name="transactions[0][nominal]">
+                                                <input type="number" min="0" step="0.01" class="form-control nominalInput" name="transactions[0][nominal]">
                                             </td>
                                             <td>
                                                 <input type="text" class="form-control totalInput" name="transactions[0][total]" readonly>
@@ -213,8 +215,8 @@
                                                 <datalist id="dynamicAccountCodes"></datalist>
                                             </td>
                                             <td><input type="text" class="form-control accountName" name="voucher_details[0][account_name]" readonly></td>
-                                            <td><input type="number" min="0" class="form-control debitInput" name="voucher_details[0][debit]"></td>
-                                            <td><input type="number" min="0" class="form-control creditInput" name="voucher_details[0][credit]"></td>
+                                            <td><input type="number" min="0" step="0.01" class="form-control debitInput" name="voucher_details[0][debit]"></td>
+                                            <td><input type="number" min="0" step="0.01" class="form-control creditInput" name="voucher_details[0][credit]"></td>
                                             <td class="text-center">
                                                 <button type="button" class="btn btn-danger removeVoucherDetailRowBtn">Hapus</button>
                                             </td>
@@ -281,7 +283,9 @@
         const storeNames = @json($storeNames);
         const subsidiaries = @json($subsidiariesData);
         const accounts = @json($accountsData);
-        const stocks = @json($stocksData);
+        const stocks = @json($stocks);
+        const transferStocks = @json($transferStocks);
+        const usedStocks = @json($usedStocks);
         const transactions = @json($transactionsData);
 
         // Define voucher types and their descriptions
@@ -310,7 +314,17 @@
                 value: 'LN',
                 text: 'Lainnya',
                 description: 'Voucher Lainnya - Dokumen untuk mencatat transaksi yang tidak termasuk dalam kategori voucher lain, seperti koreksi jurnal atau transaksi khusus lainnya.'
-            }
+            },
+            PH: {
+                value: 'PH',
+                text: 'Pemindahan',
+                description: 'Voucher Pemindahan - Dokumen untuk mencatat pemindahan stok barang dari satu lokasi ke lokasi lain dalam perusahaan.'
+            },
+            PK: {
+                value: 'PK',
+                text: 'Pemakaian',
+                description: 'Voucher Pemakaian - Dokumen untuk mencatat pemakaian barang dalam operasional perusahaan.'
+            },
         };
 
         // Function to update voucherType options based on use_stock
@@ -325,15 +339,13 @@
             voucherTypeSelect.appendChild(defaultOption);
 
             if (useStock === 'yes') {
-                // Only show PB and PJ
-                [voucherTypes.PB, voucherTypes.PJ].forEach(type => {
+                [voucherTypes.PB, voucherTypes.PJ, voucherTypes.PH, voucherTypes.PK].forEach(type => {
                     const option = document.createElement('option');
                     option.value = type.value;
                     option.textContent = type.text;
                     voucherTypeSelect.appendChild(option);
                 });
             } else {
-                // Show PG, PM, LN
                 [voucherTypes.PG, voucherTypes.PM, voucherTypes.LN].forEach(type => {
                     const option = document.createElement('option');
                     option.value = type.value;
@@ -342,7 +354,6 @@
                 });
             }
 
-            // Restore previous selection if still valid, else reset description
             if (currentValue && voucherTypeSelect.querySelector(`option[value="${currentValue}"]`)) {
                 voucherTypeSelect.value = currentValue;
                 deskripsiVoucherTextarea.value = voucherTypes[currentValue]?.description || '';
@@ -355,7 +366,6 @@
             updateAllCalculationsAndValidations();
         }
 
-        // Event listeners for use_stock radio buttons
         useStockYes.addEventListener('change', updateVoucherTypeOptions);
         useStockNo.addEventListener('change', updateVoucherTypeOptions);
 
@@ -363,9 +373,7 @@
             const accountCodeInputs = voucherDetailsTableBody.querySelectorAll('.accountCodeInput');
             for (let input of accountCodeInputs) {
                 const code = input.value.trim();
-                if (subsidiaries.some(s => s.subsidiary_code === code)) {
-                    return true;
-                }
+                if (subsidiaries.some(s => s.subsidiary_code === code)) return true;
             }
             return false;
         }
@@ -407,14 +415,10 @@
 
                 if (useInvoice === 'yes' && subsidiaries.some(s => s.subsidiary_code === enteredCode)) {
                     const subsidiary = subsidiaries.find(s => s.subsidiary_code === enteredCode);
-                    if (subsidiary) {
-                        accountNameInput.value = subsidiary.account_name;
-                    }
+                    if (subsidiary) accountNameInput.value = subsidiary.account_name;
                 } else {
                     const account = accounts.find(a => a.account_code === enteredCode);
-                    if (account) {
-                        accountNameInput.value = account.account_name;
-                    }
+                    if (account) accountNameInput.value = account.account_name;
                 }
             });
         }
@@ -433,14 +437,10 @@
 
                     if (useInvoice === 'yes' && subsidiaries.some(s => s.subsidiary_code === enteredCode)) {
                         const subsidiary = subsidiaries.find(s => s.subsidiary_code === enteredCode);
-                        if (subsidiary) {
-                            accountNameInput.value = subsidiary.account_name;
-                        }
+                        if (subsidiary) accountNameInput.value = subsidiary.account_name;
                     } else {
                         const account = accounts.find(a => a.account_code === enteredCode);
-                        if (account) {
-                            accountNameInput.value = account.account_name;
-                        }
+                        if (account) accountNameInput.value = account.account_name;
                     }
                     updateAccountCodeDatalist();
                 });
@@ -625,9 +625,7 @@
             dueDateInputDiv.appendChild(dueDateInput);
             dueDateContainer.appendChild(dueDateLabel);
             dueDateContainer.appendChild(dueDateInputDiv);
-            if (useInvoice === 'yes' && useExistingInvoice === 'no') {
-                setTodayDueDate();
-            }
+            if (useInvoice === 'yes' && useExistingInvoice === 'no') setTodayDueDate();
         }
 
         function updateInvoiceAndStoreFields() {
@@ -680,14 +678,20 @@
 
             const defaultOption = document.createElement('option');
             defaultOption.value = '';
-            defaultOption.textContent = 'Pilih Nama Stock';
+            defaultOption.textContent = 'Pilih Item Stok';
             select.appendChild(defaultOption);
 
-            const filteredStocks = stocks.filter(stock => !stock.item.startsWith('HPP '));
-            filteredStocks.forEach(stock => {
+            let stockData = [];
+            const voucherType = voucherTypeSelect.value;
+            if (voucherType === 'PH') stockData = stocks.filter(stock => !stock.item.startsWith('HPP '));
+            else if (voucherType === 'PK') stockData = transferStocks.filter(stock => !stock.item.startsWith('HPP '));
+            else if (voucherType === 'PJ') stockData = usedStocks.filter(stock => !stock.item.startsWith('HPP '));
+            else if (voucherType === 'PB') stockData = stocks.filter(stock => !stock.item.startsWith('HPP '));
+
+            stockData.forEach(stock => {
                 const option = document.createElement('option');
                 option.value = stock.item;
-                option.textContent = stock.item;
+                option.textContent = `${stock.item} (Stok: ${stock.quantity})`;
                 select.appendChild(option);
             });
 
@@ -708,23 +712,23 @@
                 return 0;
             }
 
-            const matchingTransactions = transactions.filter(t => t.description === item);
+            const matchingTransactions = transactions.filter(t => t.description === item && t.voucher_type === 'PB');
             if (matchingTransactions.length === 0) {
-                console.log(`No matching transactions for ${item}, returning 0`);
+                console.log(`No matching purchase transactions for ${item}, returning 0`);
                 return 0;
             }
 
             const totalNominal = matchingTransactions.reduce((sum, t) => sum + (parseFloat(t.nominal) || 0), 0);
             const transactionCount = matchingTransactions.length;
             const averageHpp = transactionCount > 0 ? totalNominal / transactionCount : 0;
-            console.log(`Matching transactions for ${item}:`, matchingTransactions);
+            console.log(`Matching purchase transactions for ${item}:`, matchingTransactions);
             console.log(`Total Nominal: ${totalNominal}, Transaction Count: ${transactionCount}`);
             console.log(`Calculated average HPP for ${item}: ${averageHpp}`);
             return averageHpp;
         }
 
         function addHppRow(currentIndex, selectedItem, quantity) {
-            if (!selectedItem) return;
+            if (!selectedItem || voucherTypeSelect.value !== 'PK') return;
 
             const currentRow = transactionTableBody.querySelector(`tr[data-row-index="${currentIndex}"]`);
             const newIndex = transactionTableBody.querySelectorAll('tr').length;
@@ -742,11 +746,12 @@
             const quantityCell = document.createElement('td');
             const quantityInput = document.createElement('input');
             quantityInput.type = 'number';
-            quantityInput.min = '1';
+            quantityInput.min = '0.01';
+            quantityInput.step = '0.01';
             quantityInput.className = 'form-control quantityInput';
             quantityInput.name = `transactions[${newIndex}][quantity]`;
             quantityInput.value = quantity;
-            quantityInput.readOnly = voucherTypeSelect.value === 'PJ';
+            quantityInput.readOnly = true;
             quantityCell.appendChild(quantityInput);
             hppRow.appendChild(quantityCell);
 
@@ -754,10 +759,11 @@
             const nominalInput = document.createElement('input');
             nominalInput.type = 'number';
             nominalInput.min = '0';
+            nominalInput.step = '0.01';
             nominalInput.className = 'form-control nominalInput';
             nominalInput.name = `transactions[${newIndex}][nominal]`;
             const averageHpp = calculateAverageHpp(selectedItem);
-            nominalInput.value = averageHpp;
+            nominalInput.value = averageHpp.toFixed(2);
             nominalInput.readOnly = true;
             console.log('Set HPP nominal to:', nominalInput.value, 'for item:', selectedItem);
             nominalCell.appendChild(nominalInput);
@@ -769,7 +775,7 @@
             totalInput.className = 'form-control totalInput';
             totalInput.name = `transactions[${newIndex}][total]`;
             totalInput.readOnly = true;
-            totalInput.value = (quantity * averageHpp).toLocaleString('en-US', {
+            totalInput.value = (quantity * averageHpp).toLocaleString('id-ID', {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2
             });
@@ -786,18 +792,15 @@
             actionCell.appendChild(deleteButton);
             hppRow.appendChild(actionCell);
 
-            if (currentRow.nextSibling) {
-                transactionTableBody.insertBefore(hppRow, currentRow.nextSibling);
-            } else {
-                transactionTableBody.appendChild(hppRow);
-            }
+            if (currentRow.nextSibling) transactionTableBody.insertBefore(hppRow, currentRow.nextSibling);
+            else transactionTableBody.appendChild(hppRow);
 
             updateTransactionRowIndices();
             updateAllCalculationsAndValidations();
         }
 
         function updateHppRow(currentIndex, selectedItem, quantity) {
-            if (!selectedItem) return;
+            if (!selectedItem || voucherTypeSelect.value !== 'PK') return;
 
             const currentRow = transactionTableBody.querySelector(`tr[data-row-index="${currentIndex}"]`);
             let nextRow = currentRow.nextSibling;
@@ -808,12 +811,13 @@
                     descriptionInput.value = `HPP ${selectedItem}`;
                     const quantityInput = nextRow.querySelector('.quantityInput');
                     quantityInput.value = quantity;
-                    quantityInput.readOnly = voucherTypeSelect.value === 'PJ';
+                    quantityInput.readOnly = true;
                     const nominalInput = nextRow.querySelector('.nominalInput');
                     const averageHpp = calculateAverageHpp(selectedItem);
-                    nominalInput.value = averageHpp;
+                    nominalInput.value = averageHpp.toFixed(2);
+                    nominalInput.readOnly = true;
                     const totalInput = nextRow.querySelector('.totalInput');
-                    totalInput.value = (quantity * averageHpp).toLocaleString('en-US', {
+                    totalInput.value = (quantity * averageHpp).toLocaleString('id-ID', {
                         minimumFractionDigits: 2,
                         maximumFractionDigits: 2
                     });
@@ -834,7 +838,7 @@
             const row = event.target.closest('tr');
             const quantity = parseFloat(row.querySelector('.quantityInput')?.value) || 1;
 
-            if (selectedItem) {
+            if (selectedItem && voucherTypeSelect.value === 'PK') {
                 let nextRow = row.nextSibling;
                 let hppRowExists = false;
                 while (nextRow) {
@@ -845,11 +849,8 @@
                     nextRow = nextRow.nextSibling;
                 }
 
-                if (hppRowExists) {
-                    updateHppRow(index, selectedItem, quantity);
-                } else {
-                    addHppRow(index, selectedItem, quantity);
-                }
+                if (hppRowExists) updateHppRow(index, selectedItem, quantity);
+                else addHppRow(index, selectedItem, quantity);
             } else {
                 let nextRow = row.nextSibling;
                 while (nextRow) {
@@ -979,20 +980,15 @@
                         const isHppRow = row.dataset.isHppRow === 'true';
                         const voucherType = voucherTypeSelect.value;
 
-                        if (voucherType === 'PJ') {
-                            if (isHppRow) {
-                                alert("Baris HPP tidak dapat dihapus secara langsung. Hapus baris item terkait terlebih dahulu.");
-                                return;
-                            } else {
-                                const description = row.querySelector('.descriptionInput:not([type="text"])')?.value || '';
-                                let nextRow = row.nextSibling;
-                                while (nextRow) {
-                                    if (nextRow.dataset.isHppRow === 'true' && nextRow.querySelector('.descriptionInput')?.value === `HPP ${description}`) {
-                                        nextRow.remove();
-                                        break;
-                                    }
-                                    nextRow = nextRow.nextSibling;
+                        if (voucherType === 'PK' && !isHppRow) {
+                            const description = row.querySelector('.descriptionInput:not([type="text"])')?.value || row.querySelector('.descriptionInput[type="text"]')?.value || '';
+                            let nextRow = row.nextSibling;
+                            while (nextRow) {
+                                if (nextRow.dataset.isHppRow === 'true' && nextRow.querySelector('.descriptionInput')?.value === `HPP ${description}`) {
+                                    nextRow.remove();
+                                    break;
                                 }
+                                nextRow = nextRow.nextSibling;
                             }
                         }
 
@@ -1012,7 +1008,7 @@
             const total = quantity * nominal;
             const totalInput = row.querySelector('.totalInput');
             if (totalInput) {
-                totalInput.value = total.toLocaleString('en-US', {
+                totalInput.value = total.toLocaleString('id-ID', {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2
                 });
@@ -1021,7 +1017,7 @@
         }
 
         function syncHppQuantity(row) {
-            if (voucherTypeSelect.value !== 'PJ') return;
+            if (voucherTypeSelect.value !== 'PK') return;
 
             const rowIndex = parseInt(row.dataset.rowIndex);
             const isHppRow = row.dataset.isHppRow === 'true';
@@ -1031,10 +1027,10 @@
                     if (nextRow.dataset.isHppRow === 'true') {
                         const hppQuantityInput = nextRow.querySelector('.quantityInput');
                         const currentQuantity = parseFloat(row.querySelector('.quantityInput')?.value) || 1;
-                        hppQuantityInput.value = currentQuantity;
                         const hppNominal = parseFloat(nextRow.querySelector('.nominalInput')?.value) || 0;
+                        hppQuantityInput.value = currentQuantity;
                         const hppTotalInput = nextRow.querySelector('.totalInput');
-                        hppTotalInput.value = (currentQuantity * hppNominal).toLocaleString('en-US', {
+                        hppTotalInput.value = (currentQuantity * hppNominal).toLocaleString('id-ID', {
                             minimumFractionDigits: 2,
                             maximumFractionDigits: 2
                         });
@@ -1043,6 +1039,36 @@
                     nextRow = nextRow.nextSibling;
                 }
             }
+        }
+
+        function validateStockQuantity(row) {
+            const voucherType = voucherTypeSelect.value;
+            const description = row.querySelector('.descriptionInput')?.value || '';
+            const quantity = parseFloat(row.querySelector('.quantityInput')?.value) || 0;
+            const isHppRow = row.dataset.isHppRow === 'true';
+
+            if (isHppRow || !['PH', 'PK', 'PJ'].includes(voucherType)) return true;
+
+            let stockData = [];
+            let tableName = '';
+            if (voucherType === 'PH') {
+                stockData = stocks;
+                tableName = 'Stok';
+            } else if (voucherType === 'PK') {
+                stockData = transferStocks;
+                tableName = 'Stok Pemindahan';
+            } else if (voucherType === 'PJ') {
+                stockData = usedStocks;
+                tableName = 'Stok Pemakaian';
+            }
+
+            const stock = stockData.find(s => s.item === description);
+            if (!stock || stock.quantity < quantity) {
+                validationInput.value = `Kuantitas untuk item ${description} melebihi stok tersedia di tabel ${tableName}. Tersedia: ${stock ? stock.quantity : 0}, Dibutuhkan: ${quantity}`;
+                saveVoucherBtn.disabled = true;
+                return false;
+            }
+            return true;
         }
 
         function attachTransactionInputListeners() {
@@ -1061,22 +1087,37 @@
 
         function refreshTransactionTable() {
             const rows = transactionTableBody.querySelectorAll('tr');
-            const descriptions = Array.from(rows).map(row => {
+            const transactions = Array.from(rows).map(row => {
                 const descriptionInput = row.querySelector('.descriptionInput[type="text"]');
                 const descriptionSelect = row.querySelector('.descriptionInput:not([type="text"])');
-                return descriptionInput?.value || descriptionSelect?.value || '';
+                const quantity = row.querySelector('.quantityInput')?.value || '1';
+                const nominal = row.querySelector('.nominalInput')?.value || '0';
+                return {
+                    description: descriptionInput?.value || descriptionSelect?.value || '',
+                    quantity,
+                    nominal,
+                    isHppRow: row.dataset.isHppRow === 'true'
+                };
             });
 
-            const nonHppDescriptions = descriptions.filter(description => !description.startsWith('HPP '));
+            const nonHppTransactions = transactions.filter(t => !t.isHppRow);
 
             transactionTableBody.innerHTML = '';
-            nonHppDescriptions.forEach((description, index) => {
+            nonHppTransactions.forEach((t, index) => {
                 const newRow = generateTransactionTableRow(index);
                 transactionTableBody.appendChild(newRow);
                 const rowDescriptionInput = newRow.querySelector('.descriptionInput[type="text"]');
                 const rowDescriptionSelect = newRow.querySelector('.descriptionInput:not([type="text"])');
-                if (rowDescriptionInput) rowDescriptionInput.value = description;
-                if (rowDescriptionSelect) rowDescriptionSelect.value = description;
+                const rowQuantityInput = newRow.querySelector('.quantityInput');
+                const rowNominalInput = newRow.querySelector('.nominalInput');
+                if (rowDescriptionInput) rowDescriptionInput.value = t.description;
+                if (rowDescriptionSelect) rowDescriptionSelect.value = t.description;
+                rowQuantityInput.value = t.quantity;
+                rowNominalInput.value = t.nominal;
+
+                if (voucherTypeSelect.value === 'PK' && t.description) {
+                    addHppRow(index, t.description, parseFloat(t.quantity));
+                }
             });
 
             if (transactionTableBody.querySelectorAll('tr').length === 0) {
@@ -1086,6 +1127,7 @@
 
             attachTransactionRemoveButtonListeners();
             attachTransactionInputListeners();
+            updateAllCalculationsAndValidations();
         }
 
         addTransactionRowBtn.addEventListener('click', function() {
@@ -1108,10 +1150,9 @@
             let totalNominalRaw = 0;
             transactionTableBody.querySelectorAll('tr').forEach(row => {
                 const total = calculateRowTotal(row);
-                totalNominalRaw += total;
-                console.log(`Row: ${row.querySelector('.descriptionInput')?.value}, Total: ${total}`);
+                totalNominalRaw += parseFloat(total.toString().replace(/[^0-9.-]+/g, '')) || 0;
             });
-            totalNominalInput.value = totalNominalRaw.toLocaleString('en-US', {
+            totalNominalInput.value = totalNominalRaw.toLocaleString('id-ID', {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2
             });
@@ -1131,11 +1172,11 @@
                 totalCredit += parseFloat(input.value.replace(/[^0-9.-]/g, '')) || 0;
             });
 
-            totalDebitInput.value = totalDebit.toLocaleString('en-US', {
+            totalDebitInput.value = totalDebit.toLocaleString('id-ID', {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2
             });
-            totalCreditInput.value = totalCredit.toLocaleString('en-US', {
+            totalCreditInput.value = totalCredit.toLocaleString('id-ID', {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2
             });
@@ -1155,6 +1196,13 @@
                 totalDebitRaw,
                 totalCreditRaw
             } = calculateTotalsAndValidate();
+
+            let allRowsValid = true;
+            transactionTableBody.querySelectorAll('tr').forEach(row => {
+                if (!validateStockQuantity(row)) allRowsValid = false;
+            });
+
+            if (!allRowsValid) return;
 
             if (totalNominalRaw !== totalDebitRaw || totalNominalRaw !== totalCreditRaw) {
                 validationInput.value = "Total Nominal pada Rincian Transaksi harus sama dengan Total Debit dan Total Kredit pada Rincian Voucher.";
@@ -1182,9 +1230,7 @@
                 const date = new Date(voucherDate);
                 const days = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
                 document.getElementById('voucherDay').value = days[date.getDay()];
-            } else {
-                document.getElementById('voucherDay').value = "";
-            }
+            } else document.getElementById('voucherDay').value = "";
         }
         document.getElementById('voucherDate').addEventListener('change', updateVoucherDay);
 
@@ -1205,14 +1251,11 @@
             document.getElementById('dueDate').value = `${year}-${month}-${day}`;
         }
 
-        // Initialize
         attachTransactionInputListeners();
         attachTransactionRemoveButtonListeners();
         attachVoucherDetailRemoveButtonListeners();
         const initialVoucherDetailRow = voucherDetailsTableBody.querySelector('tr');
-        if (initialVoucherDetailRow) {
-            attachVoucherDetailRowEventListeners(initialVoucherDetailRow, 0);
-        }
+        if (initialVoucherDetailRow) attachVoucherDetailRowEventListeners(initialVoucherDetailRow, 0);
         updateAllCalculationsAndValidations();
         setTodayVoucherDate();
         updateInvoiceAndStoreFields();

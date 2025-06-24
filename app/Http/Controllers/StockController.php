@@ -47,7 +47,7 @@ class StockController extends Controller
             $startDate = $request->input('start_date', Carbon::today()->startOfYear()->toDateString());
             $endDate = $request->input('end_date', Carbon::today()->toDateString());
             $data = $this->stockService->prepareExportData($startDate, $endDate);
-            return Excel::download(new StockExport($data['startDate'], $data['endDate'], $data['stockData']), 'stock_report_' . $data['startDate']->toDateString() . '_to_' . $data['endDate']->toDateString() . '.xlsx');
+            return Excel::download(new StockExport($data['startDate'], $data['endDate'], array_merge($data['stockData'], $data['transferStockData'], $data['usedStockData'])), 'stock_report_' . $data['startDate']->toDateString() . '_to_' . $data['endDate']->toDateString() . '.xlsx');
         } catch (\Exception $e) {
             Log::error('Stock Export Error: ' . $e->getMessage());
             return redirect()->back()->withErrors(['error' => 'Gagal mengekspor data stok']);

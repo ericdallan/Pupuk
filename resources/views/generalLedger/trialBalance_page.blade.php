@@ -21,7 +21,7 @@
         </div>
         <div class="col-md-3" style="display: flex; align-items: flex-end;">
             <button type="submit" class="btn btn-primary me-2">Filter</button>
-            <a href="{{ route('export_neraca_saldo', ['month' => $month, 'year' => $year, 'columns' => 'code_name_total']) }}" class="btn btn-secondary">Export as Excel</a>
+            <a href="{{ route('export_neraca_saldo', ['month' => $month, 'year' => $year, 'columns' => 'code_name_total']) }}" class="btn btn-success">Export as Excel</a>
         </div>
     </div>
 </form>

@@ -70,15 +70,63 @@ class StockService
             ->get()
             ->keyBy('item');
 
+        // Data untuk tabel stocks
         $stockData = DB::table('stocks')
             ->select('stocks.id', 'stocks.item', 'stocks.unit', 'stocks.quantity', 'transactions.created_at', 'transactions.description', 'transactions.quantity as transaction_quantity', 'transactions.nominal', 'vouchers.voucher_type')
-            ->distinct('stocks.item')
             ->leftJoin('transactions', 'stocks.item', '=', 'transactions.description')
             ->leftJoin('vouchers', 'transactions.voucher_id', '=', 'vouchers.id')
             ->where('transactions.description', 'NOT LIKE', 'HPP %')
             ->whereBetween('transactions.created_at', [$startDate, $endDate])
             ->get();
 
+        // Data untuk tabel transfer_stocks
+        $transferStockData = DB::table('transfer_stocks')
+            ->select('transfer_stocks.id', 'transfer_stocks.item', 'transfer_stocks.unit', 'transfer_stocks.quantity', 'transactions.created_at', 'transactions.description', 'transactions.quantity as transaction_quantity', 'transactions.nominal', 'vouchers.voucher_type')
+            ->leftJoin('transactions', 'transfer_stocks.item', '=', 'transactions.description')
+            ->leftJoin('vouchers', 'transactions.voucher_id', '=', 'vouchers.id')
+            ->where('transactions.description', 'NOT LIKE', 'HPP %')
+            ->whereBetween('transactions.created_at', [$startDate, $endDate])
+            ->get();
+
+        // Data untuk tabel used_stocks
+        $usedStockData = DB::table('used_stocks')
+            ->select('used_stocks.id', 'used_stocks.item', 'used_stocks.unit', 'used_stocks.quantity', 'transactions.created_at', 'transactions.description', 'transactions.quantity as transaction_quantity', 'transactions.nominal', 'vouchers.voucher_type')
+            ->leftJoin('transactions', 'used_stocks.item', '=', 'transactions.description')
+            ->leftJoin('vouchers', 'transactions.voucher_id', '=', 'vouchers.id')
+            ->where('transactions.description', 'NOT LIKE', 'HPP %')
+            ->whereBetween('transactions.created_at', [$startDate, $endDate])
+            ->get();
+
+        $stockMap = $this->processStockData($stockData, $openingBalances, $hppAverages, 'stocks');
+        $transferStockMap = $this->processStockData($transferStockData, $openingBalances, $hppAverages, 'transfer_stocks');
+        $usedStockMap = $this->processStockData($usedStockData, $openingBalances, $hppAverages, 'used_stocks');
+
+        return [
+            'stockData' => array_values($stockMap),
+            'transferStockData' => array_values($transferStockMap),
+            'usedStockData' => array_values($usedStockMap),
+            'startDate' => $startDate,
+            'endDate' => $endDate,
+        ];
+    }
+
+    /**
+     * Process stock data for a specific table
+     *
+     * @param Collection $stockData
+     * @param Collection $openingBalances
+     * @param array $hppAverages
+     * @param string $tableName
+     * @return array
+     */
+    private function processStockData(Collection $stockData, Collection $openingBalances, array $hppAverages, string $tableName): array
+    {
+        $startDate = $data['start_date'] ?? Carbon::today()->startOfYear()->toDateString();
+        $endDate = $data['end_date'] ?? Carbon::today()->toDateString();
+
+        $startDate = Carbon::parse($startDate)->startOfDay();
+        $endDate = Carbon::parse($endDate)->endOfDay();
+        
         $stockMap = [];
         foreach ($stockData as $stock) {
             $stockKey = $stock->item;
@@ -95,7 +143,8 @@ class StockService
                     'outgoing_qty' => 0,
                     'final_stock_qty' => 0,
                     'average_hpp' => $hppAverages[$stock->item]['average_hpp'] ?? 0,
-                    'transactions' => collect()
+                    'transactions' => collect(),
+                    'table_name' => $tableName
                 ];
             }
 
@@ -125,11 +174,7 @@ class StockService
             $stock->final_stock_qty = ($stock->opening_qty ?? 0) + ($stock->incoming_qty ?? 0) - ($stock->outgoing_qty ?? 0);
         }
 
-        return [
-            'stockData' => array_values($stockMap),
-            'startDate' => $startDate,
-            'endDate' => $endDate,
-        ];
+        return $stockMap;
     }
 
     /**
@@ -152,12 +197,13 @@ class StockService
             $startDate = $endDate->copy()->startOfYear();
         }
 
-        $stockData = $this->prepareStockData(['start_date' => $startDate->toDateString(), 'end_date' => $endDate->toDateString()])['stockData'];
-
+        $data = $this->prepareStockData(['start_date' => $startDate->toDateString(), 'end_date' => $endDate->toDateString()]);
         return [
-            'stockData' => $stockData,
-            'startDate' => $startDate,
-            'endDate' => $endDate,
+            'stockData' => $data['stockData'],
+            'transferStockData' => $data['transferStockData'],
+            'usedStockData' => $data['usedStockData'],
+            'startDate' => $data['startDate'],
+            'endDate' => $data['endDate'],
         ];
     }
 

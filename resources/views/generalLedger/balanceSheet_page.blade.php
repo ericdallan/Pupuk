@@ -63,7 +63,7 @@
                 <button type="submit" class="btn btn-primary">Filter</button>
             </div>
             <div class="col-md-auto">
-                <a href="{{ route('export_BalanceSheet', ['start_date' => request('start_date'), 'end_date' => request('end_date')]) }}" class="btn btn-secondary">
+                <a href="{{ route('export_BalanceSheet', ['start_date' => request('start_date'), 'end_date' => request('end_date')]) }}" class="btn btn-success">
                     Export as Excel
                 </a>
             </div>

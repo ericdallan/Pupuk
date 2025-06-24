@@ -65,7 +65,7 @@
             </div>
             <div class="col-md-auto">
                 <button type="submit" class="btn btn-primary me-2">Filter</button>
-                <a href="{{ route('export_income_statement', ['month' => $month, 'year' => $year]) }}" class="btn btn-secondary">
+                <a href="{{ route('export_income_statement', ['month' => $month, 'year' => $year]) }}" class="btn btn-success">
                     Export as Excel
                 </a>
             </div>

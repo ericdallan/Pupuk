@@ -48,7 +48,7 @@
         </div>
         <div class="col-md-3">
             <button type="submit" class="btn btn-primary me-2">Filter</button>
-            <a href="{{ route('generalledger_print', ['month' => $month, 'year' => $year, 'account_name_hidden' => implode(',', $selectedAccountName)]) }}" class="btn btn-secondary">Export as Excel</a>
+            <a href="{{ route('generalledger_print', ['month' => $month, 'year' => $year, 'account_name_hidden' => implode(',', $selectedAccountName)]) }}" class="btn btn-success">Export as Excel</a>
         </div>
     </div>
 </form>
