@@ -5,7 +5,8 @@ namespace App\Services;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
-
+use App\Imports\StockImport;
+use Maatwebsite\Excel\Facades\Excel;
 class StockService
 {
     /**
@@ -234,5 +235,15 @@ class StockService
                 $transaction->created_at = Carbon::parse($transaction->created_at)->format('d-m-Y');
                 return (object) $transaction;
             });
+    }
+    /**
+     * Import stock data from Excel file
+     *
+     * @param \Illuminate\Http\UploadedFile $file
+     * @return void
+     */
+    public function importStockData($file)
+    {
+        Excel::import(new StockImport(), $file);
     }
 }

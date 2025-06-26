@@ -73,7 +73,6 @@
     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
 </div>
 @endif
-
 <div class="mt-4">
     <form action="{{ route('voucher_page') }}" method="GET" class="mb-3">
         <div class="row">

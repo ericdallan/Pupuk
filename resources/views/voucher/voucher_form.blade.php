@@ -728,7 +728,7 @@
         }
 
         function addHppRow(currentIndex, selectedItem, quantity) {
-            if (!selectedItem || voucherTypeSelect.value !== 'PK') return;
+            if (!selectedItem || voucherTypeSelect.value !== 'PJ') return;
 
             const currentRow = transactionTableBody.querySelector(`tr[data-row-index="${currentIndex}"]`);
             const newIndex = transactionTableBody.querySelectorAll('tr').length;
@@ -800,7 +800,7 @@
         }
 
         function updateHppRow(currentIndex, selectedItem, quantity) {
-            if (!selectedItem || voucherTypeSelect.value !== 'PK') return;
+            if (!selectedItem || voucherTypeSelect.value !== 'PJ') return;
 
             const currentRow = transactionTableBody.querySelector(`tr[data-row-index="${currentIndex}"]`);
             let nextRow = currentRow.nextSibling;
@@ -838,7 +838,7 @@
             const row = event.target.closest('tr');
             const quantity = parseFloat(row.querySelector('.quantityInput')?.value) || 1;
 
-            if (selectedItem && voucherTypeSelect.value === 'PK') {
+            if (selectedItem && voucherTypeSelect.value === 'PJ') {
                 let nextRow = row.nextSibling;
                 let hppRowExists = false;
                 while (nextRow) {
@@ -875,14 +875,14 @@
             const voucherType = voucherTypeSelect.value;
             const useStock = document.querySelector('input[name="use_stock"]:checked')?.value || 'no';
 
-            if (useStock === 'yes' && (voucherType === 'PJ' || voucherType === 'PB')) {
-                if (voucherType === 'PJ') {
+            if (useStock === 'yes' && (voucherType === 'PJ' || voucherType === 'PB' || voucherType === 'PH' || voucherType === 'PK')) {
+                if (voucherType === 'PJ' || voucherType === 'PH') {
                     descriptionElement = createStockDropdown(index);
                     if (descriptionElement.dataset.listenerAttached === 'false') {
                         descriptionElement.addEventListener('change', handleStockChange.bind(null, index));
                         descriptionElement.dataset.listenerAttached = 'true';
                     }
-                } else if (voucherType === 'PB') {
+                } else if (voucherType === 'PB' || voucherType === 'PK') {
                     descriptionElement = document.createElement('div');
                     descriptionElement.className = 'input-group';
 
@@ -980,7 +980,7 @@
                         const isHppRow = row.dataset.isHppRow === 'true';
                         const voucherType = voucherTypeSelect.value;
 
-                        if (voucherType === 'PK' && !isHppRow) {
+                        if (voucherType === 'PJ' && !isHppRow) {
                             const description = row.querySelector('.descriptionInput:not([type="text"])')?.value || row.querySelector('.descriptionInput[type="text"]')?.value || '';
                             let nextRow = row.nextSibling;
                             while (nextRow) {
@@ -1017,7 +1017,7 @@
         }
 
         function syncHppQuantity(row) {
-            if (voucherTypeSelect.value !== 'PK') return;
+            if (voucherTypeSelect.value !== 'PJ') return;
 
             const rowIndex = parseInt(row.dataset.rowIndex);
             const isHppRow = row.dataset.isHppRow === 'true';
@@ -1043,31 +1043,85 @@
 
         function validateStockQuantity(row) {
             const voucherType = voucherTypeSelect.value;
-            const description = row.querySelector('.descriptionInput')?.value || '';
-            const quantity = parseFloat(row.querySelector('.quantityInput')?.value) || 0;
+            const descriptionInput = row.querySelector('.descriptionInput');
+            const quantityInput = row.querySelector('.quantityInput');
+
+            // Pastikan elemen input ada sebelum melanjutkan
+            if (!descriptionInput || !quantityInput) {
+                validationInput.value = 'Elemen input stok atau kuantitas tidak ditemukan di baris ini.';
+                saveVoucherBtn.disabled = true;
+                console.log('Validation failed: Row structure:', row.outerHTML);
+                return false;
+            }
+
+            let description = '';
+            if (descriptionInput.tagName.toLowerCase() === 'select') {
+                description = descriptionInput.value?.trim() || '';
+            } else {
+                description = descriptionInput.value?.trim() || '';
+            }
+            const quantity = parseFloat(quantityInput.value) || 0;
             const isHppRow = row.dataset.isHppRow === 'true';
 
+            // Skip validasi jika isHppRow atau voucherType tidak valid
             if (isHppRow || !['PH', 'PK', 'PJ'].includes(voucherType)) return true;
 
             let stockData = [];
             let tableName = '';
+            let targetTableName = ''; // Untuk konteks tambahan (opsional)
+
+            // Tentukan stockData dan tableName berdasarkan voucherType
             if (voucherType === 'PH') {
                 stockData = stocks;
                 tableName = 'Stok';
             } else if (voucherType === 'PK') {
                 stockData = transferStocks;
                 tableName = 'Stok Pemindahan';
+                targetTableName = 'Stok Pemakaian';
             } else if (voucherType === 'PJ') {
                 stockData = usedStocks;
                 tableName = 'Stok Pemakaian';
             }
 
-            const stock = stockData.find(s => s.item === description);
-            if (!stock || stock.quantity < quantity) {
-                validationInput.value = `Kuantitas untuk item ${description} melebihi stok tersedia di tabel ${tableName}. Tersedia: ${stock ? stock.quantity : 0}, Dibutuhkan: ${quantity}`;
+            // Validasi jika stockData tidak tersedia
+            if (!stockData || !Array.isArray(stockData) || stockData.length === 0) {
+                validationInput.value = `Data tabel ${tableName} kosong atau tidak tersedia.`;
+                saveVoucherBtn.disabled = true;
+                console.log(`Stock data for ${tableName} is empty or undefined:`, stockData);
+                return false;
+            }
+
+            // Pencocokan case-insensitive dan bersihkan description
+            const cleanDescription = description.replace(/\(Stok: \d+\)/, '').trim().toLowerCase();
+            const stock = stockData.find(s => s.item?.toLowerCase() === cleanDescription);
+
+            // Validasi
+            if (!description) {
+                validationInput.value = 'Item belum dipilih di baris ini.';
                 saveVoucherBtn.disabled = true;
                 return false;
             }
+            if (!stock) {
+                validationInput.value = `Item ${description} tidak ditemukan di tabel ${tableName}.`;
+                saveVoucherBtn.disabled = true;
+                console.log(`Stock not found for item: ${description}, Cleaned: ${cleanDescription}, Available items:`, stockData.map(s => s.item));
+                return false;
+            }
+            if (stock.quantity < quantity) {
+                validationInput.value = `Kuantitas untuk item ${description} melebihi stok tersedia di tabel ${tableName}. Tersedia: ${stock.quantity}, Dibutuhkan: ${quantity}`;
+                saveVoucherBtn.disabled = true;
+                console.log(`Insufficient stock for ${description}: Available ${stock.quantity}, Needed ${quantity}`);
+                return false;
+            }
+
+            // Pesan sukses untuk PK
+            if (voucherType === 'PK' && stock.quantity >= quantity) {
+                validationInput.value = `Stok ${description} cukup untuk dipindahkan ke ${targetTableName}. Tersedia: ${stock.quantity}, Dibutuhkan: ${quantity}`;
+                saveVoucherBtn.disabled = false;
+            } else {
+                saveVoucherBtn.disabled = false; // Aktifkan tombol untuk PH dan PJ jika valid
+            }
+
             return true;
         }
 
@@ -1076,6 +1130,12 @@
             transactionInputs.forEach(input => {
                 input.removeEventListener('input', handleTransactionInput);
                 input.addEventListener('input', handleTransactionInput);
+
+                // Tambahkan event listener untuk <select>
+                if (input.tagName.toLowerCase() === 'select') {
+                    input.removeEventListener('change', handleTransactionInput);
+                    input.addEventListener('change', handleTransactionInput);
+                }
             });
         }
 
@@ -1115,7 +1175,7 @@
                 rowQuantityInput.value = t.quantity;
                 rowNominalInput.value = t.nominal;
 
-                if (voucherTypeSelect.value === 'PK' && t.description) {
+                if (voucherTypeSelect.value === 'PJ' && t.description) {
                     addHppRow(index, t.description, parseFloat(t.quantity));
                 }
             });
@@ -1125,6 +1185,7 @@
                 transactionTableBody.appendChild(newRow);
             }
 
+            // Pastikan semua baris memiliki listener dan elemen yang diperlukan
             attachTransactionRemoveButtonListeners();
             attachTransactionInputListeners();
             updateAllCalculationsAndValidations();
@@ -1156,7 +1217,6 @@
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2
             });
-            console.log('Total Nominal Calculated:', totalNominalRaw);
             return totalNominalRaw;
         }
 
@@ -1199,7 +1259,11 @@
 
             let allRowsValid = true;
             transactionTableBody.querySelectorAll('tr').forEach(row => {
-                if (!validateStockQuantity(row)) allRowsValid = false;
+                const descriptionInput = row.querySelector('.descriptionInput');
+                const quantityInput = row.querySelector('.quantityInput');
+                if (descriptionInput && quantityInput) { // Hanya validasi baris dengan input
+                    if (!validateStockQuantity(row)) allRowsValid = false;
+                }
             });
 
             if (!allRowsValid) return;

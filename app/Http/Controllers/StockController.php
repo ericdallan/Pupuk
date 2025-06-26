@@ -7,6 +7,8 @@ use Illuminate\Support\Facades\Log;
 use App\Services\StockService;
 use Carbon\Carbon;
 use App\Exports\StockExport;
+use App\Exports\StockImportTemplate; 
+use App\Imports\StockImport;
 use Maatwebsite\Excel\Facades\Excel;
 
 class StockController extends Controller
@@ -51,6 +53,41 @@ class StockController extends Controller
         } catch (\Exception $e) {
             Log::error('Stock Export Error: ' . $e->getMessage());
             return redirect()->back()->withErrors(['error' => 'Gagal mengekspor data stok']);
+        }
+    }
+    /**
+     * Download stock import template
+     *
+     * @return \Symfony\Component\HttpFoundation\BinaryFileResponse
+     */
+    public function importTemplate()
+    {
+        try {
+            return Excel::download(new StockImportTemplate(), 'stock_import_template.xlsx');
+        } catch (\Exception $e) {
+            Log::error('Stock Import Template Error: ' . $e->getMessage());
+            return redirect()->back()->withErrors(['error' => 'Gagal mengunduh template impor stok']);
+        }
+    }
+
+    /**
+     * Import stock data from Excel
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function import(Request $request)
+    {
+        try {
+            $request->validate([
+                'stock_file' => 'required|file|mimes:xlsx,xls|max:2048', // Max 2MB
+            ]);
+
+            $this->stockService->importStockData($request->file('stock_file'));
+            return redirect()->route('stock_page')->with('success', 'Data stok berhasil diimpor');
+        } catch (\Exception $e) {
+            Log::error('Stock Import Error: ' . $e->getMessage());
+            return redirect()->back()->withErrors(['error' => 'Gagal mengimpor data stok']);
         }
     }
 

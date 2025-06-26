@@ -3,25 +3,29 @@
 @section('title', 'Stock Barang Dagangan')
 
 @section('content')
-
-<!-- Filter Form -->
-<form method="GET" action="{{ route('stock_page') }}" class="mb-1">
+<!-- resources/views/stock/stock_page.blade.php -->
+<!-- Main Filter Form -->
+<form method="GET" action="{{ route('stock_page') }}" class="mb-3">
     <div class="row align-items-end">
         <div class="col-md-3 mb-3">
-            <label for="start_date" class="form-label">Start Date</label>
+            <label for="start_date" id="stock_start_date" class="form-label">Start Date</label>
             <input type="date" name="start_date" id="start_date" class="form-control" value="{{ request('start_date', now()->startOfYear()->toDateString()) }}" min="{{ now()->subYears(5)->startOfYear()->toDateString() }}" max="{{ now()->toDateString() }}">
         </div>
 
         <div class="col-md-3 mb-3">
             <label for="end_date" class="form-label">End Date</label>
-            <input type="date" name="end_date" id="end_date" class="form-control" value="{{ request('end_date', now()->toDateString()) }}" min="{{ request('start_date', now()->startOfYear()->toDateString()) }}" max="{{ now()->toDateString() }}">
+            <input type="date" name="end_date" type="end_date" id="end_date" class="form-control" value="{{ request('end_date', now()->toDateString()) }}" min="{{ request('start_date', now()->startOfYear()->toDateString()) }}" max="{{ now()->toDateString() }}">
         </div>
 
         <div class="col-md-6 mb-3">
             <div class="d-flex align-items-center">
+                <!-- Hidden input to store table filter -->
+                <input type="hidden" name="table_filter" id="table_filter" value="{{ request('table_filter', 'all') }}">
+
+                <!-- Table Filter Dropdown -->
                 <div class="dropdown me-2">
                     <button class="btn btn-secondary dropdown-toggle" type="button" id="tableFilterDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                        Filter Tabel
+                        {{ request('table_filter', 'all') == 'all' ? 'Semua Table' : (request('table_filter') == 'stocks' ? 'Table Stocks' : (request('table_filter') == 'transfer_stocks' ? 'Table Transfer Stocks' : 'Table Used Stocks')) }}
                     </button>
                     <ul class="dropdown-menu" aria-labelledby="tableFilterDropdown">
                         <li><a class="dropdown-item" href="#" data-filter="all">Semua Table</a></li>
@@ -31,13 +35,42 @@
                     </ul>
                 </div>
 
+                <!-- Filter Button -->
                 <button type="submit" class="btn btn-primary me-2">Filter</button>
 
-                <a href="{{ route('stock.export') . '?start_date=' . request('start_date', now()->startOfYear()->toDateString()) . '&end_date=' . request('end_date', now()->toDateString()) }}" class="btn btn-success">Export to Excel</a>
+                <!-- Export Button -->
+                <a href="{{ route('stock.export') . '?start_date=' . request('start_date', now()->startOfYear()->toDateString()) . '&end_date=' . request('end_date', now()->toDateString()) . '&table_filter=' . request('table_filter', 'all') }}" class="btn btn-success me-2">Export to Excel</a>
+
+                <!-- Import Button (Triggers Modal) -->
+                <button type="button" class="btn btn-info" data-bs-toggle="modal" data-bs-target="#importStockModal">Import Stok</button>
             </div>
         </div>
     </div>
 </form>
+
+<!-- Import Stock Modal -->
+<div class="modal fade" id="importStockModal" tabindex="-1" aria-labelledby="importStockModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="importStockModalLabel">Import Stok Data</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p><a href="{{ route('stock.download.template') }}" class="btn btn-secondary btn-sm mb-3">Download Template</a></p>
+                <form id="importStockForm" action="{{ route('stock.import') }}" method="POST" enctype="multipart/form-data">
+                    @csrf
+                    <div class="mb-3">
+                        <label for="stock_file" class="form-label">Upload Excel File</label>
+                        <input type="file" name="stock_file" id="stock_file" class="form-control" accept=".xlsx,.xls" required>
+                        <div class="invalid-feedback">Please select an Excel file (.xlsx or .xls).</div>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Upload</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
 
 <!-- Stocks Table -->
 <div class="table-section" data-table="stocks">
@@ -272,6 +305,10 @@
                                         Penjualan
                                         @elseif ($transaction->voucher_type == 'PB')
                                         Pembelian
+                                        @elseif ($transaction->voucher_type == 'PH')
+                                        Pemindahan
+                                        @elseif ($transaction->voucher_type == 'PK')
+                                        Pemakaian
                                         @else
                                         {{ $transaction->voucher_type }}
                                         @endif
