@@ -364,6 +364,7 @@
 
             refreshTransactionTable();
             updateAllCalculationsAndValidations();
+            updateAddItemButtonVisibility();
         }
 
         useStockYes.addEventListener('change', updateVoucherTypeOptions);
@@ -955,6 +956,105 @@
             return row;
         }
 
+        function calculateNonNewItemTotals() {
+            let totalNonNewItem = 0;
+            transactionTableBody.querySelectorAll('tr').forEach(row => {
+                const isNewItemRow = row.dataset.isNewItem === 'true';
+                const isHppRow = row.dataset.isHppRow === 'true';
+                if (!isNewItemRow && !isHppRow) {
+                    const total = calculateRowTotal(row);
+                    totalNonNewItem += parseFloat(total.toString().replace(/[^0-9.-]+/g, '')) || 0;
+                }
+            });
+            return totalNonNewItem;
+        }
+
+        function generateNewItemRow(index) {
+            const row = document.createElement('tr');
+            row.dataset.rowIndex = index;
+            row.dataset.isNewItem = 'true';
+
+            const descriptionCell = document.createElement('td');
+            const descriptionInput = document.createElement('input');
+            descriptionInput.type = 'text';
+            descriptionInput.className = 'form-control descriptionInput';
+            descriptionInput.name = `transactions[${index}][description]`;
+            descriptionInput.placeholder = 'Masukkan Nama Barang Baru';
+            descriptionCell.appendChild(descriptionInput);
+            row.appendChild(descriptionCell);
+
+            const quantityCell = document.createElement('td');
+            const quantityInput = document.createElement('input');
+            quantityInput.type = 'number';
+            quantityInput.min = '1';
+            quantityInput.className = 'form-control quantityInput';
+            quantityInput.name = `transactions[${index}][quantity]`;
+            quantityInput.value = '1';
+            quantityCell.appendChild(quantityInput);
+            row.appendChild(quantityCell);
+
+            const nominalCell = document.createElement('td');
+            const nominalInput = document.createElement('input');
+            nominalInput.type = 'number';
+            nominalInput.min = '0';
+            nominalInput.step = '0.01';
+            nominalInput.className = 'form-control nominalInput';
+            nominalInput.name = `transactions[${index}][nominal]`;
+            // Set nominal to the accumulated total of non-new-item rows
+            nominalInput.value = calculateNonNewItemTotals().toFixed(2);
+            nominalInput.readOnly = true; // Make it read-only to reflect calculated value
+            nominalCell.appendChild(nominalInput);
+            row.appendChild(nominalCell);
+
+            const totalCell = document.createElement('td');
+            const totalInput = document.createElement('input');
+            totalInput.type = 'text';
+            totalInput.className = 'form-control totalInput';
+            totalInput.name = `transactions[${index}][total]`;
+            totalInput.readOnly = true;
+            // Calculate total based on quantity and nominal
+            const quantity = parseFloat(quantityInput.value) || 1;
+            totalInput.value = (quantity * parseFloat(nominalInput.value)).toLocaleString('id-ID', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+            totalCell.appendChild(totalInput);
+            row.appendChild(totalCell);
+
+            const actionCell = document.createElement('td');
+            actionCell.className = 'text-center';
+            const deleteButton = document.createElement('button');
+            deleteButton.type = 'button';
+            deleteButton.className = 'btn btn-danger removeTransactionRowBtn';
+            deleteButton.textContent = 'Hapus';
+            actionCell.appendChild(deleteButton);
+            row.appendChild(actionCell);
+
+            return row;
+        }
+
+        function updateNewItemNominal() {
+            transactionTableBody.querySelectorAll('tr[data-is-new-item="true"]').forEach(row => {
+                const index = parseInt(row.dataset.rowIndex);
+                const nominalInput = row.querySelector('.nominalInput');
+                const quantityInput = row.querySelector('.quantityInput');
+                const totalInput = row.querySelector('.totalInput');
+
+                if (nominalInput && totalInput) {
+                    // Update nominal with accumulated total of non-new-item rows
+                    const newNominal = calculateNonNewItemTotals().toFixed(2);
+                    nominalInput.value = newNominal;
+
+                    // Update total based on new nominal and quantity
+                    const quantity = parseFloat(quantityInput.value) || 1;
+                    totalInput.value = (quantity * parseFloat(newNominal)).toLocaleString('id-ID', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2
+                    });
+                }
+            });
+        }
+
         function updateTransactionRowIndices() {
             transactionTableBody.querySelectorAll('tr').forEach((row, index) => {
                 row.dataset.rowIndex = index;
@@ -970,6 +1070,7 @@
             transactionTableBody.querySelectorAll('.removeTransactionRowBtn').forEach(button => {
                 const row = button.closest('tr');
                 const isHppRow = row.dataset.isHppRow === 'true';
+                const isNewItemRow = row.dataset.isNewItem === 'true';
                 button.disabled = isHppRow;
 
                 button.addEventListener('click', function() {
@@ -995,6 +1096,9 @@
                         row.remove();
                         updateTransactionRowIndices();
                         updateAllCalculationsAndValidations();
+                        if (isNewItemRow) {
+                            updateAddItemButtonState();
+                        }
                     } else {
                         alert("Tidak dapat menghapus baris transaksi terakhir.");
                     }
@@ -1046,12 +1150,14 @@
             const descriptionInput = row.querySelector('.descriptionInput');
             const quantityInput = row.querySelector('.quantityInput');
 
-            // Pastikan elemen input ada sebelum melanjutkan
             if (!descriptionInput || !quantityInput) {
                 validationInput.value = 'Elemen input stok atau kuantitas tidak ditemukan di baris ini.';
                 saveVoucherBtn.disabled = true;
                 console.log('Validation failed: Row structure:', row.outerHTML);
-                return false;
+                return {
+                    isValid: false,
+                    message: validationInput.value
+                };
             }
 
             let description = '';
@@ -1062,15 +1168,21 @@
             }
             const quantity = parseFloat(quantityInput.value) || 0;
             const isHppRow = row.dataset.isHppRow === 'true';
+            const isNewItemRow = row.dataset.isNewItem === 'true';
 
-            // Skip validasi jika isHppRow atau voucherType tidak valid
-            if (isHppRow || !['PH', 'PK', 'PJ'].includes(voucherType)) return true;
+            console.log('Validating: VoucherType=', voucherType, 'Description=', description, 'Quantity=', quantity, 'IsHppRow=', isHppRow, 'IsNewItemRow=', isNewItemRow);
+
+            if (isHppRow || !['PH', 'PK', 'PJ'].includes(voucherType)) {
+                return {
+                    isValid: true,
+                    message: ''
+                };
+            }
 
             let stockData = [];
             let tableName = '';
-            let targetTableName = ''; // Untuk konteks tambahan (opsional)
+            let targetTableName = '';
 
-            // Tentukan stockData dan tableName berdasarkan voucherType
             if (voucherType === 'PH') {
                 stockData = stocks;
                 tableName = 'Stok';
@@ -1083,46 +1195,68 @@
                 tableName = 'Stok Pemakaian';
             }
 
-            // Validasi jika stockData tidak tersedia
+            console.log('Stock Data for', tableName, ':', stockData);
+
             if (!stockData || !Array.isArray(stockData) || stockData.length === 0) {
                 validationInput.value = `Data tabel ${tableName} kosong atau tidak tersedia.`;
                 saveVoucherBtn.disabled = true;
                 console.log(`Stock data for ${tableName} is empty or undefined:`, stockData);
-                return false;
+                return {
+                    isValid: false,
+                    message: validationInput.value
+                };
             }
 
-            // Pencocokan case-insensitive dan bersihkan description
-            const cleanDescription = description.replace(/\(Stok: \d+\)/, '').trim().toLowerCase();
-            const stock = stockData.find(s => s.item?.toLowerCase() === cleanDescription);
+            if (!isNewItemRow) {
+                const cleanDescription = description.replace(/\(Stok: \d+\)/, '').trim().toLowerCase();
+                console.log('Clean Description:', cleanDescription);
+                const stock = stockData.find(s => s.item?.toLowerCase().replace(/\(stok: \d+\)/, '').trim() === cleanDescription);
 
-            // Validasi
-            if (!description) {
-                validationInput.value = 'Item belum dipilih di baris ini.';
-                saveVoucherBtn.disabled = true;
-                return false;
-            }
-            if (!stock) {
-                validationInput.value = `Item ${description} tidak ditemukan di tabel ${tableName}.`;
-                saveVoucherBtn.disabled = true;
-                console.log(`Stock not found for item: ${description}, Cleaned: ${cleanDescription}, Available items:`, stockData.map(s => s.item));
-                return false;
-            }
-            if (stock.quantity < quantity) {
-                validationInput.value = `Kuantitas untuk item ${description} melebihi stok tersedia di tabel ${tableName}. Tersedia: ${stock.quantity}, Dibutuhkan: ${quantity}`;
-                saveVoucherBtn.disabled = true;
-                console.log(`Insufficient stock for ${description}: Available ${stock.quantity}, Needed ${quantity}`);
-                return false;
+                console.log('Stock Found:', stock);
+
+                if (!description) {
+                    validationInput.value = 'Item belum dipilih di baris ini.';
+                    saveVoucherBtn.disabled = true;
+                    return {
+                        isValid: false,
+                        message: validationInput.value
+                    };
+                }
+                if (!stock) {
+                    validationInput.value = `Item ${description} tidak ditemukan di tabel ${tableName}. Available items:`, stockData.map(s => s.item);
+                    saveVoucherBtn.disabled = true;
+                    console.log(`Stock not found for item: ${description}, Cleaned: ${cleanDescription}, Available items:`, stockData.map(s => s.item));
+                    return {
+                        isValid: false,
+                        message: validationInput.value
+                    };
+                }
+                if (stock.quantity < quantity) {
+                    validationInput.value = `Kuantitas untuk item ${description} melebihi stok tersedia di tabel ${tableName}. Tersedia: ${stock.quantity}, Dibutuhkan: ${quantity}`;
+                    saveVoucherBtn.disabled = true;
+                    console.log(`Insufficient stock for ${description}: Available ${stock.quantity}, Needed ${quantity}`);
+                    return {
+                        isValid: false,
+                        message: validationInput.value
+                    };
+                }
             }
 
-            // Pesan sukses untuk PK
-            if (voucherType === 'PK' && stock.quantity >= quantity) {
+            // Success message for PK
+            if (voucherType === 'PK' && !isNewItemRow && stock.quantity >= quantity) {
                 validationInput.value = `Stok ${description} cukup untuk dipindahkan ke ${targetTableName}. Tersedia: ${stock.quantity}, Dibutuhkan: ${quantity}`;
                 saveVoucherBtn.disabled = false;
-            } else {
-                saveVoucherBtn.disabled = false; // Aktifkan tombol untuk PH dan PJ jika valid
+                console.log('PK Success Message Set:', validationInput.value);
+                return {
+                    isValid: true,
+                    message: validationInput.value
+                };
             }
 
-            return true;
+            return {
+                isValid: true,
+                message: ''
+            };
         }
 
         function attachTransactionInputListeners() {
@@ -1156,7 +1290,8 @@
                     description: descriptionInput?.value || descriptionSelect?.value || '',
                     quantity,
                     nominal,
-                    isHppRow: row.dataset.isHppRow === 'true'
+                    isHppRow: row.dataset.isHppRow === 'true',
+                    isNewItem: row.dataset.isNewItem === 'true'
                 };
             });
 
@@ -1164,7 +1299,7 @@
 
             transactionTableBody.innerHTML = '';
             nonHppTransactions.forEach((t, index) => {
-                const newRow = generateTransactionTableRow(index);
+                const newRow = t.isNewItem ? generateNewItemRow(index) : generateTransactionTableRow(index);
                 transactionTableBody.appendChild(newRow);
                 const rowDescriptionInput = newRow.querySelector('.descriptionInput[type="text"]');
                 const rowDescriptionSelect = newRow.querySelector('.descriptionInput:not([type="text"])');
@@ -1175,7 +1310,7 @@
                 rowQuantityInput.value = t.quantity;
                 rowNominalInput.value = t.nominal;
 
-                if (voucherTypeSelect.value === 'PJ' && t.description) {
+                if (voucherTypeSelect.value === 'PJ' && t.description && !t.isNewItem) {
                     addHppRow(index, t.description, parseFloat(t.quantity));
                 }
             });
@@ -1200,11 +1335,44 @@
             updateAllCalculationsAndValidations();
         });
 
+        // Add new button and functionality for "Tambah Nama Barang"
+        const addItemButton = document.createElement('button');
+        addItemButton.type = 'button';
+        addItemButton.id = 'addItemRowBtn';
+        addItemButton.className = 'btn btn-primary';
+        addItemButton.textContent = 'Tambah Nama Barang';
+        addItemButton.style.marginLeft = '10px';
+        addItemButton.style.display = 'none'; // Hidden by default
+
+        addTransactionRowBtn.parentNode.insertBefore(addItemButton, addTransactionRowBtn.nextSibling);
+
+        function updateAddItemButtonVisibility() {
+            const voucherType = voucherTypeSelect.value;
+            addItemButton.style.display = voucherType === 'PK' ? 'inline-block' : 'none';
+            updateAddItemButtonState();
+        }
+
+        function updateAddItemButtonState() {
+            const hasNewItemRow = Array.from(transactionTableBody.querySelectorAll('tr')).some(row => row.dataset.isNewItem === 'true');
+            addItemButton.disabled = hasNewItemRow;
+        }
+
+        addItemButton.addEventListener('click', function() {
+            const newIndex = transactionTableBody.querySelectorAll('tr').length;
+            const newRow = generateNewItemRow(newIndex);
+            transactionTableBody.appendChild(newRow);
+            attachTransactionRemoveButtonListeners();
+            attachTransactionInputListeners();
+            updateAddItemButtonState();
+            updateAllCalculationsAndValidations();
+        });
+
         voucherTypeSelect.addEventListener('change', function() {
             refreshTransactionTable();
             const selectedValue = this.value;
             deskripsiVoucherTextarea.value = voucherTypes[selectedValue]?.description || '';
             updateAllCalculationsAndValidations();
+            updateAddItemButtonVisibility();
         });
 
         function calculateTotalNominal() {
@@ -1257,26 +1425,27 @@
                 totalCreditRaw
             } = calculateTotalsAndValidate();
 
-            let allRowsValid = true;
-            transactionTableBody.querySelectorAll('tr').forEach(row => {
-                const descriptionInput = row.querySelector('.descriptionInput');
-                const quantityInput = row.querySelector('.quantityInput');
-                if (descriptionInput && quantityInput) { // Hanya validasi baris dengan input
-                    if (!validateStockQuantity(row)) allRowsValid = false;
-                }
-            });
-
-            if (!allRowsValid) return;
-
             if (totalNominalRaw !== totalDebitRaw || totalNominalRaw !== totalCreditRaw) {
                 validationInput.value = "Total Nominal pada Rincian Transaksi harus sama dengan Total Debit dan Total Kredit pada Rincian Voucher.";
                 saveVoucherBtn.disabled = true;
+                return {
+                    isValid: false,
+                    message: validationInput.value
+                };
             } else if (totalDebitRaw !== totalCreditRaw) {
                 validationInput.value = "Total Debit harus sama dengan Total Kredit.";
                 saveVoucherBtn.disabled = true;
+                return {
+                    isValid: false,
+                    message: validationInput.value
+                };
             } else {
                 validationInput.value = "Totalnya seimbang dan valid.";
                 saveVoucherBtn.disabled = false;
+                return {
+                    isValid: true,
+                    message: validationInput.value
+                };
             }
         }
 
@@ -1285,8 +1454,45 @@
                 calculateRowTotal(row);
                 syncHppQuantity(row);
             });
-            validateTotals();
+
+            let allRowsValid = true;
+            let stockValidationMessage = '';
+            transactionTableBody.querySelectorAll('tr').forEach(row => {
+                const descriptionInput = row.querySelector('.descriptionInput');
+                const quantityInput = row.querySelector('.quantityInput');
+                if (descriptionInput && quantityInput) {
+                    const result = validateStockQuantity(row);
+                    if (!result.isValid) {
+                        allRowsValid = false;
+                        validationInput.value = result.message;
+                        saveVoucherBtn.disabled = true;
+                    } else if (result.message) {
+                        stockValidationMessage = result.message;
+                    }
+                }
+            });
+
+            updateNewItemNominal(); // Recalculate nominal for new item rows
+
+            if (allRowsValid && stockValidationMessage) {
+                validationInput.value = stockValidationMessage;
+                saveVoucherBtn.disabled = false;
+            } else if (allRowsValid) {
+                const totalsResult = validateTotals();
+                validationInput.value = totalsResult.message;
+                saveVoucherBtn.disabled = !totalsResult.isValid;
+            }
         }
+
+        // Ensure validation runs on form changes
+        ['change', 'input'].forEach(event => {
+            transactionTableBody.addEventListener(event, updateAllCalculationsAndValidations, true);
+            voucherDetailsTableBody.addEventListener(event, updateAllCalculationsAndValidations, true);
+            voucherTypeSelect.addEventListener(event, updateAllCalculationsAndValidations);
+            document.querySelectorAll('input[name="use_stock"], input[name="use_invoice"]').forEach(input => {
+                input.addEventListener(event, updateAllCalculationsAndValidations);
+            });
+        });
 
         function updateVoucherDay() {
             const voucherDate = document.getElementById('voucherDate').value;

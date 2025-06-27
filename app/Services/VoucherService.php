@@ -255,19 +255,19 @@ class VoucherService
         $transferStock = TransferStock::where('item', $item)->first();
 
         if (!$transferStock) {
-            if ($voucherType === 'PH') {
-                TransferStock::create([
-                    'item' => $item,
-                    'quantity' => $quantity,
-                ]);
-            } else {
-                throw new \Exception("Stok untuk item {$item} tidak ditemukan di tabel transfer_stocks.");
-            }
-        } else {
+            // Izinkan pembuatan item baru untuk semua voucherType (PH atau PK) sebagai pengecualian
+            TransferStock::create([
+                'item' => $item,
+                'quantity' => $quantity,
+            ]);
+            $transferStock = TransferStock::where('item', $item)->first(); // Refresh instance
+        }
+
+        if ($transferStock) {
             if ($voucherType === 'PH') {
                 $transferStock->quantity += $quantity;
             } elseif ($voucherType === 'PK') {
-                $transferStock->quantity -= $quantity;
+                $transferStock->quantity -= $quantity; // Decrease quantity for PK
             }
             $transferStock->save();
 
@@ -471,8 +471,14 @@ class VoucherService
                             $this->updateStock($item, $quantity, 'PH');
                             $this->updateTransferStock($item, $quantity, 'PH');
                         } elseif ($request->voucher_type === 'PK') {
-                            $this->updateTransferStock($item, $quantity, 'PK');
-                            $this->updateUsedStock($item, $quantity, 'PK');
+                            $this->updateTransferStock($item, $quantity, 'PK'); // Decrease transfer_stocks
+                            // Add or update used_stocks for new items
+                            $existingTransferStock = TransferStock::where('item', $item)->first();
+                            if (!$existingTransferStock) {
+                                $this->updateUsedStock($item, $quantity, 'PK'); // Add new item to used_stocks
+                            } else {
+                                $this->updateUsedStock($item, $quantity, 'PK'); // Update existing used_stocks
+                            }
                         } elseif ($request->voucher_type === 'PJ') {
                             $this->updateUsedStock($item, $quantity, 'PJ');
                         }
@@ -832,8 +838,14 @@ class VoucherService
                             $this->updateStock($item, $quantity, 'PH');
                             $this->updateTransferStock($item, $quantity, 'PH');
                         } elseif ($request->voucher_type === 'PK') {
-                            $this->updateTransferStock($item, $quantity, 'PK');
-                            $this->updateUsedStock($item, $quantity, 'PK');
+                            $this->updateTransferStock($item, $quantity, 'PK'); // Decrease transfer_stocks
+                            // Add or update used_stocks for new items
+                            $existingTransferStock = TransferStock::where('item', $item)->first();
+                            if (!$existingTransferStock) {
+                                $this->updateUsedStock($item, $quantity, 'PK'); // Add new item to used_stocks
+                            } else {
+                                $this->updateUsedStock($item, $quantity, 'PK'); // Update existing used_stocks
+                            }
                         } elseif ($request->voucher_type === 'PJ') {
                             $this->updateUsedStock($item, $quantity, 'PJ');
                         }
