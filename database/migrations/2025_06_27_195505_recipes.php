@@ -11,11 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
-        schema::create('used_stocks', function (Blueprint $table) {
+        Schema::create('recipes', function (Blueprint $table) {
             $table->id();
-            $table->string('item');
-            $table->string('size');
-            $table->integer('quantity');
+            $table->string('product_name'); // Nama produk jadi
+            $table->json('ingredients')->nullable(); // [{"transfer_stock_id": 1, "quantity": 1}, {"transfer_stock_id": 2, "quantity": 1}]
             $table->timestamps();
         });
     }
@@ -25,6 +24,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('used_stocks');
+        Schema::dropIfExists('recipes');
     }
 };

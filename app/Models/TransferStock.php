@@ -12,12 +12,18 @@ class TransferStock extends Model
 
     protected $fillable = [
         'item',
-        'unit',
+        'size',
         'quantity',
     ];
 
     public function transactions()
     {
         return $this->hasMany(Transaction::class);
+    }
+    public function recipes()
+    {
+        return $this->belongsToMany(Recipe::class, 'recipe_transfer_stock')
+            ->withPivot('quantity')
+            ->withTimestamps();
     }
 }

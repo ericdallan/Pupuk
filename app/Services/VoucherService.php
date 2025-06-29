@@ -206,22 +206,29 @@ class VoucherService
      * @return void
      * @throws \Exception
      */
-    private function updateStock(string $item, float $quantity, string $voucherType): void
+    private function updateStock(string $item, float $quantity, string $voucherType, ?string $size = null): void
     {
         if (str_starts_with($item, 'HPP ')) {
             return;
         }
 
-        $stock = Stock::where('item', $item)->first();
+        if ($voucherType === 'PB' && is_null($size)) {
+            throw new \Exception("Ukuran wajib diisi untuk item {$item} pada voucher tipe PB.");
+        }
+
+        $stock = Stock::where('item', $item)->where('size', $size)->first();
 
         if (!$stock) {
             if ($voucherType === 'PB') {
                 Stock::create([
                     'item' => $item,
+                    'size' => $size ?? throw new \Exception("Ukuran wajib diisi untuk item {$item} pada voucher tipe PB."),
                     'quantity' => $quantity,
+                    'created_at' => now(),
+                    'updated_at' => now(),
                 ]);
             } else {
-                throw new \Exception("Stok untuk item {$item} tidak ditemukan di tabel stocks.");
+                throw new \Exception("Stok untuk item {$item} dengan ukuran {$size} tidak ditemukan di tabel stocks.");
             }
         } else {
             if ($voucherType === 'PB') {
@@ -232,7 +239,7 @@ class VoucherService
             $stock->save();
 
             if ($stock->quantity < 0) {
-                throw new \Exception("Stok untuk item {$item} tidak mencukupi di tabel stocks. Tersedia: {$stock->quantity}, Dibutuhkan: {$quantity}.");
+                throw new \Exception("Stok untuk item {$item} dengan ukuran {$size} tidak mencukupi di tabel stocks.");
             }
         }
     }
@@ -326,23 +333,23 @@ class VoucherService
      * @return void
      * @throws \Exception
      */
-    private function reverseStock(string $item, float $quantity, string $voucherType): void
+    private function reverseStock(string $item, float $quantity, string $voucherType, ?string $size = null): void
     {
         if (str_starts_with($item, 'HPP ')) {
             return;
         }
 
         if ($voucherType === 'PB') {
-            $stock = Stock::where('item', $item)->first();
+            $stock = Stock::where('item', $item)->where('size', $size)->first();
             if ($stock) {
                 $stock->quantity -= $quantity;
                 $stock->save();
                 if ($stock->quantity < 0) {
-                    throw new \Exception("Stok untuk item {$item} tidak mencukupi setelah pembalikan di tabel stocks.");
+                    throw new \Exception("Stok untuk item {$item} dengan ukuran {$size} tidak mencukupi setelah pembalikan di tabel stocks.");
                 }
             }
         } elseif ($voucherType === 'PH') {
-            $stock = Stock::where('item', $item)->first();
+            $stock = Stock::where('item', $item)->where('size', $size)->first();
             $transferStock = TransferStock::where('item', $item)->first();
             if ($stock) {
                 $stock->quantity += $quantity; // Reverse reduction
@@ -422,6 +429,7 @@ class VoucherService
                             'voucher_id' => $voucher->id,
                             'description' => $transaction['description'],
                             'quantity' => $transaction['quantity'] ?? 1,
+                            'size' => $transaction['size'] ?? null,
                             'nominal' => $transaction['nominal'] ?? 0.00,
                             'is_hpp' => str_starts_with($transaction['description'], 'HPP '),
                             'index' => $index,
@@ -439,6 +447,7 @@ class VoucherService
                             $transactionsToCreate[] = [
                                 'voucher_id' => $voucher->id,
                                 'description' => "HPP {$item}",
+                                'size' => $transaction['size'] ?? null,
                                 'quantity' => $quantity,
                                 'nominal' => $averageHpp,
                                 'is_hpp' => true,
@@ -452,23 +461,24 @@ class VoucherService
                     Transactions::create([
                         'voucher_id' => $voucher->id,
                         'description' => $transaction['description'],
+                        'size' => $transaction['size'] ?? null,
                         'quantity' => $transaction['quantity'],
                         'nominal' => $transaction['nominal'],
                     ]);
                 }
             }
-
             // Update stock for PB, PH, PK, PJ voucher types
             if (in_array($request->voucher_type, ['PB', 'PH', 'PK', 'PJ']) && !empty($transactionsToCreate)) {
                 foreach ($transactionsToCreate as $transaction) {
                     if (!$transaction['is_hpp']) {
                         $item = $transaction['description'];
                         $quantity = floatval($transaction['quantity']);
+                        $size = $transaction['size'] ?? null; // Get size from transaction
 
                         if ($request->voucher_type === 'PB') {
-                            $this->updateStock($item, $quantity, 'PB');
+                            $this->updateStock($item, $quantity, 'PB', $size); // Pass size
                         } elseif ($request->voucher_type === 'PH') {
-                            $this->updateStock($item, $quantity, 'PH');
+                            $this->updateStock($item, $quantity, 'PH', $size); // Pass size
                             $this->updateTransferStock($item, $quantity, 'PH');
                         } elseif ($request->voucher_type === 'PK') {
                             $this->updateTransferStock($item, $quantity, 'PK'); // Decrease transfer_stocks
@@ -820,7 +830,12 @@ class VoucherService
             if (in_array($voucher->voucher_type, ['PB', 'PH', 'PK', 'PJ'])) {
                 foreach ($voucher->transactions as $transaction) {
                     if (!str_starts_with($transaction->description, 'HPP ')) {
-                        $this->reverseStock($transaction->description, floatval($transaction->quantity), $voucher->voucher_type);
+                        $this->reverseStock(
+                            $transaction->description,
+                            floatval($transaction->quantity),
+                            $voucher->voucher_type,
+                            $transaction->size // Pass size
+                        );
                     }
                 }
             }
@@ -831,11 +846,12 @@ class VoucherService
                     if (!str_starts_with($transaction['description'], 'HPP ')) {
                         $item = $transaction['description'];
                         $quantity = floatval($transaction['quantity']);
+                        $size = $transaction['size'] ?? null; // Get size from transaction
 
                         if ($request->voucher_type === 'PB') {
-                            $this->updateStock($item, $quantity, 'PB');
+                            $this->updateStock($item, $quantity, 'PB', $size); // Pass size
                         } elseif ($request->voucher_type === 'PH') {
-                            $this->updateStock($item, $quantity, 'PH');
+                            $this->updateStock($item, $quantity, 'PH', $size); // Pass size
                             $this->updateTransferStock($item, $quantity, 'PH');
                         } elseif ($request->voucher_type === 'PK') {
                             $this->updateTransferStock($item, $quantity, 'PK'); // Decrease transfer_stocks
@@ -950,6 +966,7 @@ class VoucherService
                         $averageHpp = $this->calculateAverageHpp($item);
                         $transactionsToCreate[] = [
                             'description' => "HPP {$item}",
+                            'size' => $transaction['size'] ?? null,
                             'quantity' => $quantity,
                             'nominal' => $averageHpp,
                         ];
@@ -960,6 +977,7 @@ class VoucherService
             foreach ($transactionsToCreate as $transaction) {
                 $voucher->transactions()->create([
                     'description' => $transaction['description'],
+                    'size' => $transaction['size'] ?? null,
                     'quantity' => floatval($transaction['quantity']),
                     'nominal' => floatval($transaction['nominal']),
                 ]);
@@ -1015,7 +1033,13 @@ class VoucherService
             });
 
             foreach ($transactionQuantities as $description => $totalQuantity) {
-                $this->reverseStock($description, $totalQuantity, $voucherToDelete->voucher_type);
+                $transaction = $voucherToDelete->transactions()->where('description', $description)->first();
+                $this->reverseStock(
+                    $description,
+                    $totalQuantity,
+                    $voucherToDelete->voucher_type,
+                    $transaction->size ?? null // Pass size
+                );
 
                 // Clean up empty stock records
                 foreach ([Stock::class, TransferStock::class, UsedStock::class] as $model) {

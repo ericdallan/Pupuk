@@ -13,7 +13,7 @@ class UsedStock extends Model
 
     protected $fillable = [
         'item',
-        'unit',
+        'size',
         'quantity',
     ];
 

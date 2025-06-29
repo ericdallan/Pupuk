@@ -107,7 +107,7 @@
                                     <label class="form-check-label" for="useInvoiceYes">Ya</label>
                                 </div>
                                 <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="radio" id="useInvoiceNo" name="use_invoice" value="no">
+                                    <input class="form-check-input" type="radio" type="radio" id="useInvoiceNo" name="use_invoice" value="no">
                                     <label class="form-check-label" for="useInvoiceNo">Tidak</label>
                                 </div>
                             </div>
@@ -151,11 +151,12 @@
                                 <table class="table table-bordered" id="transactionTable">
                                     <thead>
                                         <tr class="text-center">
-                                            <th colspan="4">Rincian Transaksi</th>
+                                            <th colspan="5">Rincian Transaksi</th>
                                             <th style="width: 80px;">Action</th>
                                         </tr>
                                         <tr class="text-center">
                                             <th>Deskripsi</th>
+                                            <th>Ukuran</th>
                                             <th>Kuantitas</th>
                                             <th>Nominal</th>
                                             <th>Total</th>
@@ -166,6 +167,9 @@
                                         <tr data-row-index="0">
                                             <td>
                                                 <input type="text" class="form-control descriptionInput" name="transactions[0][description]">
+                                            </td>
+                                            <td>
+                                                <input type="text" class="form-control sizeInput" name="transactions[0][size]">
                                             </td>
                                             <td>
                                                 <input type="number" min="0.01" step="0.01" class="form-control quantityInput" name="transactions[0][quantity]" value="1">
@@ -327,6 +331,25 @@
             },
         };
 
+        // Function to toggle size input disabled state
+        function toggleSizeInputState() {
+            const useStock = document.querySelector('input[name="use_stock"]:checked')?.value || 'no';
+            const sizeInputs = transactionTableBody.querySelectorAll('.sizeInput');
+            sizeInputs.forEach(input => {
+                if (input.tagName.toLowerCase() === 'select') {
+                    input.disabled = useStock !== 'yes';
+                    if (useStock !== 'yes') {
+                        input.value = ''; // Clear value when disabled
+                    }
+                } else if (input.tagName.toLowerCase() === 'input') {
+                    input.disabled = useStock !== 'yes';
+                    if (useStock !== 'yes') {
+                        input.value = ''; // Clear value when disabled
+                    }
+                }
+            });
+        }
+
         // Function to update voucherType options based on use_stock
         function updateVoucherTypeOptions() {
             const useStock = document.querySelector('input[name="use_stock"]:checked')?.value || 'no';
@@ -354,29 +377,27 @@
                 });
             }
 
-            if (currentValue && voucherTypeSelect.querySelector(`option[value="${currentValue}"]`)) {
-                voucherTypeSelect.value = currentValue;
-                deskripsiVoucherTextarea.value = voucherTypes[currentValue]?.description || '';
-            } else {
-                voucherTypeSelect.value = '';
-                deskripsiVoucherTextarea.value = '';
-            }
-
+            voucherTypeSelect.value = currentValue && voucherTypeSelect.querySelector(`option[value="${currentValue}"]`) ? currentValue : '';
+            deskripsiVoucherTextarea.value = voucherTypes[voucherTypeSelect.value]?.description || '';
             refreshTransactionTable();
             updateAllCalculationsAndValidations();
             updateAddItemButtonVisibility();
+            toggleSizeInputState();
         }
 
-        useStockYes.addEventListener('change', updateVoucherTypeOptions);
-        useStockNo.addEventListener('change', updateVoucherTypeOptions);
+        // Event listeners for useStock radio buttons
+        useStockYes.addEventListener('change', () => {
+            updateVoucherTypeOptions();
+            toggleSizeInputState();
+        });
+        useStockNo.addEventListener('change', () => {
+            updateVoucherTypeOptions();
+            toggleSizeInputState();
+        });
 
         function isSubsidiaryCodeUsed() {
             const accountCodeInputs = voucherDetailsTableBody.querySelectorAll('.accountCodeInput');
-            for (let input of accountCodeInputs) {
-                const code = input.value.trim();
-                if (subsidiaries.some(s => s.subsidiary_code === code)) return true;
-            }
-            return false;
+            return Array.from(accountCodeInputs).some(input => subsidiaries.some(s => s.subsidiary_code === input.value.trim()));
         }
 
         function updateAccountCodeDatalist() {
@@ -584,26 +605,23 @@
 
         function updateInvoiceField() {
             const useInvoice = document.querySelector('input[name="use_invoice"]:checked')?.value || 'no';
-            if (useInvoice === 'yes') {
-                const useExistingInvoice = document.querySelector('input[name="use_existing_invoice"]:checked')?.value || 'no';
-                invoiceFieldContainer.innerHTML = '';
-                const invoiceLabel = document.createElement('label');
-                invoiceLabel.htmlFor = 'invoice';
-                invoiceLabel.className = 'col-sm-3 col-form-label';
-                invoiceLabel.textContent = 'Nomor Invoice:';
-                const invoiceInputDiv = document.createElement('div');
-                invoiceInputDiv.className = 'col-sm-9';
-                let invoiceInput;
-                if (useExistingInvoice === 'yes') {
-                    invoiceInput = createInvoiceDropdown();
-                } else {
-                    invoiceInput = createInvoiceInput();
-                }
-                invoiceInput.disabled = false;
-                invoiceInputDiv.appendChild(invoiceInput);
-                invoiceFieldContainer.appendChild(invoiceLabel);
-                invoiceFieldContainer.appendChild(invoiceInputDiv);
+            invoiceFieldContainer.innerHTML = '';
+            const invoiceLabel = document.createElement('label');
+            invoiceLabel.htmlFor = 'invoice';
+            invoiceLabel.className = 'col-sm-3 col-form-label';
+            invoiceLabel.textContent = 'Nomor Invoice:';
+            const invoiceInputDiv = document.createElement('div');
+            invoiceInputDiv.className = 'col-sm-9';
+            let invoiceInput;
+            if (useInvoice === 'yes' && document.querySelector('input[name="use_existing_invoice"]:checked')?.value === 'yes') {
+                invoiceInput = createInvoiceDropdown();
+            } else {
+                invoiceInput = createInvoiceInput();
             }
+            invoiceInput.disabled = useInvoice !== 'yes';
+            invoiceInputDiv.appendChild(invoiceInput);
+            invoiceFieldContainer.appendChild(invoiceLabel);
+            invoiceFieldContainer.appendChild(invoiceInputDiv);
             updateAccountCodeDatalist();
         }
 
@@ -671,29 +689,185 @@
             updateDueDateField();
         });
 
+        function createSizeInputWithDropdown(index, selectedItem) {
+            const container = document.createElement('div');
+            container.className = 'input-group';
+
+            const select = document.createElement('select');
+            select.className = 'form-control sizeInput';
+            select.style.width = '50%';
+            select.name = `transactions[${index}][size]`;
+
+            const defaultOption = document.createElement('option');
+            defaultOption.value = '';
+            defaultOption.textContent = 'Pilih Ukuran';
+            select.appendChild(defaultOption);
+
+            if (selectedItem && stocks && Array.isArray(stocks) && stocks.length > 0) {
+                const sizesWithQuantity = stocks
+                    .filter(stock => stock.item === selectedItem && stock.size && stock.quantity)
+                    .map(stock => ({
+                        size: stock.size,
+                        quantity: stock.quantity
+                    }))
+                    .filter(item => item.size !== null && item.size !== undefined);
+
+                if (sizesWithQuantity.length > 0) {
+                    sizesWithQuantity.forEach(item => {
+                        const option = document.createElement('option');
+                        option.value = item.size;
+                        option.textContent = `${item.size} (Stok: ${item.quantity})`;
+                        select.appendChild(option);
+                    });
+                }
+            }
+
+            select.addEventListener('change', function() {
+                const input = container.querySelector('input');
+                input.value = this.value;
+                updateAllCalculationsAndValidations();
+            });
+
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.className = 'form-control sizeInput';
+            input.style.width = '50%';
+            input.name = `transactions[${index}][size]`;
+            input.addEventListener('input', function() {
+                select.value = '';
+                updateAllCalculationsAndValidations();
+            });
+
+            container.appendChild(select);
+            container.appendChild(input);
+            return container;
+        }
+
+        function createSizeDropdown(index, selectedItem) {
+            const select = document.createElement('select');
+            select.className = 'form-control sizeInput';
+            select.name = `transactions[${index}][size]`;
+
+            const defaultOption = document.createElement('option');
+            defaultOption.value = '';
+            defaultOption.textContent = 'Pilih Ukuran';
+            select.appendChild(defaultOption);
+
+            if (selectedItem && stocks && Array.isArray(stocks) && stocks.length > 0) {
+                const sizesWithQuantity = stocks
+                    .filter(stock => stock.item === selectedItem && stock.size && stock.quantity)
+                    .map(stock => ({
+                        size: stock.size,
+                        quantity: stock.quantity
+                    }))
+                    .filter(item => item.size !== null && item.size !== undefined);
+
+                if (sizesWithQuantity.length > 0) {
+                    sizesWithQuantity.forEach(item => {
+                        const option = document.createElement('option');
+                        option.value = item.size;
+                        option.textContent = `${item.size} (${item.quantity})`;
+                        select.appendChild(option);
+                    });
+                }
+            }
+
+            select.disabled = document.querySelector('input[name="use_stock"]:checked')?.value !== 'yes';
+            return select;
+        }
+
+        function updateSizeDropdown(index, selectedItem) {
+            const row = transactionTableBody.querySelector(`tr[data-row-index="${index}"]`);
+            if (!row) return;
+
+            const sizeCell = row.querySelector('td:nth-child(2)');
+            if (!sizeCell) return;
+
+            let currentSizeInput = sizeCell.querySelector('.sizeInput');
+            const voucherType = voucherTypeSelect.value;
+            const useStock = document.querySelector('input[name="use_stock"]:checked')?.value || 'no';
+            let newSizeElement;
+
+            if (useStock === 'yes' && (voucherType === 'PB' || voucherType === 'PJ' || voucherType === 'PH' || voucherType === 'PK')) {
+                if (voucherType === 'PB') {
+                    newSizeElement = createSizeInputWithDropdown(index, selectedItem);
+                } else {
+                    newSizeElement = createSizeDropdown(index, selectedItem);
+                }
+            } else {
+                newSizeElement = document.createElement('input');
+                newSizeElement.type = 'text';
+                newSizeElement.className = 'form-control sizeInput';
+                newSizeElement.name = `transactions[${index}][size]`;
+                newSizeElement.disabled = true;
+            }
+
+            // Preserve previous size value if applicable
+            let previousValue = '';
+            if (currentSizeInput) {
+                previousValue = currentSizeInput.value || '';
+            }
+
+            // Clear the sizeCell content
+            while (sizeCell.firstChild) {
+                sizeCell.removeChild(sizeCell.firstChild);
+            }
+
+            // Append the new size element
+            sizeCell.appendChild(newSizeElement);
+
+            // Restore the previous value if it exists and is valid
+            if (previousValue) {
+                if (newSizeElement.tagName === 'SELECT') {
+                    const options = newSizeElement.querySelectorAll('option');
+                    const validOption = Array.from(options).find(option => option.value === previousValue);
+                    if (validOption) {
+                        newSizeElement.value = previousValue;
+                    }
+                } else if (newSizeElement.tagName === 'DIV') {
+                    const select = newSizeElement.querySelector('select');
+                    const input = newSizeElement.querySelector('input');
+                    const validOption = select && Array.from(select.querySelectorAll('option')).find(option => option.value === previousValue);
+                    if (validOption) {
+                        select.value = previousValue;
+                        input.value = previousValue;
+                    } else {
+                        input.value = previousValue;
+                    }
+                } else {
+                    newSizeElement.value = previousValue;
+                }
+            }
+
+            attachTransactionInputListeners();
+        }
+
         function createStockDropdown(index) {
             const select = document.createElement('select');
             select.className = 'form-control descriptionInput';
             select.name = `transactions[${index}][description]`;
-            select.dataset.listenerAttached = 'false';
 
             const defaultOption = document.createElement('option');
             defaultOption.value = '';
             defaultOption.textContent = 'Pilih Item Stok';
             select.appendChild(defaultOption);
 
-            let stockData = [];
-            const voucherType = voucherTypeSelect.value;
-            if (voucherType === 'PH') stockData = stocks.filter(stock => !stock.item.startsWith('HPP '));
-            else if (voucherType === 'PK') stockData = transferStocks.filter(stock => !stock.item.startsWith('HPP '));
-            else if (voucherType === 'PJ') stockData = usedStocks.filter(stock => !stock.item.startsWith('HPP '));
-            else if (voucherType === 'PB') stockData = stocks.filter(stock => !stock.item.startsWith('HPP '));
+            if (stocks && Array.isArray(stocks)) {
+                const uniqueItems = [...new Set(stocks
+                    .filter(stock => !stock.item.startsWith('HPP '))
+                    .map(stock => stock.item))];
 
-            stockData.forEach(stock => {
-                const option = document.createElement('option');
-                option.value = stock.item;
-                option.textContent = `${stock.item} (Stok: ${stock.quantity})`;
-                select.appendChild(option);
+                uniqueItems.forEach(item => {
+                    const option = document.createElement('option');
+                    option.value = item;
+                    option.textContent = item;
+                    select.appendChild(option);
+                });
+            }
+
+            select.addEventListener('change', function(event) {
+                handleStockChange(index, event);
+                updateSizeDropdown(index, this.value);
             });
 
             return select;
@@ -708,30 +882,18 @@
         }
 
         function calculateAverageHpp(item) {
-            if (!transactions || !Array.isArray(transactions) || transactions.length === 0) {
-                console.log('No transactions data available, returning 0');
-                return 0;
-            }
+            if (!transactions || !Array.isArray(transactions) || transactions.length === 0) return 0;
 
             const matchingTransactions = transactions.filter(t => t.description === item && t.voucher_type === 'PB');
-            if (matchingTransactions.length === 0) {
-                console.log(`No matching purchase transactions for ${item}, returning 0`);
-                return 0;
-            }
+            if (matchingTransactions.length === 0) return 0;
 
             const totalNominal = matchingTransactions.reduce((sum, t) => sum + (parseFloat(t.nominal) || 0), 0);
-            const transactionCount = matchingTransactions.length;
-            const averageHpp = transactionCount > 0 ? totalNominal / transactionCount : 0;
-            console.log(`Matching purchase transactions for ${item}:`, matchingTransactions);
-            console.log(`Total Nominal: ${totalNominal}, Transaction Count: ${transactionCount}`);
-            console.log(`Calculated average HPP for ${item}: ${averageHpp}`);
-            return averageHpp;
+            return matchingTransactions.length > 0 ? totalNominal / matchingTransactions.length : 0;
         }
 
         function addHppRow(currentIndex, selectedItem, quantity) {
             if (!selectedItem || voucherTypeSelect.value !== 'PJ') return;
 
-            const currentRow = transactionTableBody.querySelector(`tr[data-row-index="${currentIndex}"]`);
             const newIndex = transactionTableBody.querySelectorAll('tr').length;
             const hppRow = document.createElement('tr');
             hppRow.dataset.rowIndex = newIndex;
@@ -743,6 +905,16 @@
             descriptionInput.readOnly = true;
             descriptionCell.appendChild(descriptionInput);
             hppRow.appendChild(descriptionCell);
+
+            const sizeCell = document.createElement('td');
+            const sizeInput = document.createElement('input');
+            sizeInput.type = 'text';
+            sizeInput.className = 'form-control sizeInput';
+            sizeInput.name = `transactions[${newIndex}][size]`;
+            sizeInput.readOnly = true;
+            sizeInput.disabled = document.querySelector('input[name="use_stock"]:checked')?.value !== 'yes';
+            sizeCell.appendChild(sizeInput);
+            hppRow.appendChild(sizeCell);
 
             const quantityCell = document.createElement('td');
             const quantityInput = document.createElement('input');
@@ -766,7 +938,6 @@
             const averageHpp = calculateAverageHpp(selectedItem);
             nominalInput.value = averageHpp.toFixed(2);
             nominalInput.readOnly = true;
-            console.log('Set HPP nominal to:', nominalInput.value, 'for item:', selectedItem);
             nominalCell.appendChild(nominalInput);
             hppRow.appendChild(nominalCell);
 
@@ -793,6 +964,7 @@
             actionCell.appendChild(deleteButton);
             hppRow.appendChild(actionCell);
 
+            const currentRow = transactionTableBody.querySelector(`tr[data-row-index="${currentIndex}"]`);
             if (currentRow.nextSibling) transactionTableBody.insertBefore(hppRow, currentRow.nextSibling);
             else transactionTableBody.appendChild(hppRow);
 
@@ -810,6 +982,10 @@
                 if (nextRow.dataset.isHppRow === 'true') {
                     const descriptionInput = nextRow.querySelector('.descriptionInput');
                     descriptionInput.value = `HPP ${selectedItem}`;
+                    const sizeInput = nextRow.querySelector('.sizeInput');
+                    sizeInput.value = '';
+                    sizeInput.readOnly = true;
+                    sizeInput.disabled = document.querySelector('input[name="use_stock"]:checked')?.value !== 'yes';
                     const quantityInput = nextRow.querySelector('.quantityInput');
                     quantityInput.value = quantity;
                     quantityInput.readOnly = true;
@@ -822,7 +998,6 @@
                         minimumFractionDigits: 2,
                         maximumFractionDigits: 2
                     });
-                    console.log('Updated HPP row for', selectedItem, 'with nominal:', averageHpp, 'and quantity:', quantity);
                     updateAllCalculationsAndValidations();
                     return;
                 }
@@ -834,8 +1009,6 @@
 
         function handleStockChange(index, event) {
             const selectedItem = event.target.value;
-            console.log('Dropdown changed to:', selectedItem, 'at index:', index);
-
             const row = event.target.closest('tr');
             const quantity = parseFloat(row.querySelector('.quantityInput')?.value) || 1;
 
@@ -875,20 +1048,17 @@
             let descriptionElement;
             const voucherType = voucherTypeSelect.value;
             const useStock = document.querySelector('input[name="use_stock"]:checked')?.value || 'no';
+            let initialSelectedItem = '';
 
             if (useStock === 'yes' && (voucherType === 'PJ' || voucherType === 'PB' || voucherType === 'PH' || voucherType === 'PK')) {
                 if (voucherType === 'PJ' || voucherType === 'PH') {
                     descriptionElement = createStockDropdown(index);
-                    if (descriptionElement.dataset.listenerAttached === 'false') {
-                        descriptionElement.addEventListener('change', handleStockChange.bind(null, index));
-                        descriptionElement.dataset.listenerAttached = 'true';
-                    }
+                    initialSelectedItem = (descriptionElement.tagName === 'SELECT' && descriptionElement.value) || '';
                 } else if (voucherType === 'PB' || voucherType === 'PK') {
                     descriptionElement = document.createElement('div');
                     descriptionElement.className = 'input-group';
 
                     const select = createStockDropdown(index);
-                    select.className = 'form-control';
                     select.style.width = '50%';
 
                     const input = createDescriptionInput(index);
@@ -897,28 +1067,36 @@
 
                     select.addEventListener('change', function() {
                         input.value = this.value;
+                        updateSizeDropdown(index, this.value);
                         updateAllCalculationsAndValidations();
                     });
 
                     input.addEventListener('input', function() {
                         select.value = '';
+                        updateSizeDropdown(index, '');
                         updateAllCalculationsAndValidations();
                     });
 
                     descriptionElement.appendChild(select);
                     descriptionElement.appendChild(input);
+                    initialSelectedItem = (select.value) || '';
                 }
             } else {
                 descriptionElement = createDescriptionInput(index);
             }
-
             descriptionCell.appendChild(descriptionElement);
             row.appendChild(descriptionCell);
+
+            const sizeCell = document.createElement('td');
+            const sizeElement = createSizeDropdown(index, initialSelectedItem);
+            sizeCell.appendChild(sizeElement);
+            row.appendChild(sizeCell);
 
             const quantityCell = document.createElement('td');
             const quantityInput = document.createElement('input');
             quantityInput.type = 'number';
-            quantityInput.min = '1';
+            quantityInput.min = '0.01';
+            quantityInput.step = '0.01';
             quantityInput.className = 'form-control quantityInput';
             quantityInput.name = `transactions[${index}][quantity]`;
             quantityInput.value = '1';
@@ -929,6 +1107,7 @@
             const nominalInput = document.createElement('input');
             nominalInput.type = 'number';
             nominalInput.min = '0';
+            nominalInput.step = '0.01';
             nominalInput.className = 'form-control nominalInput';
             nominalInput.name = `transactions[${index}][nominal]`;
             nominalCell.appendChild(nominalInput);
@@ -983,10 +1162,20 @@
             descriptionCell.appendChild(descriptionInput);
             row.appendChild(descriptionCell);
 
+            const sizeCell = document.createElement('td');
+            const sizeInput = document.createElement('input');
+            sizeInput.type = 'text';
+            sizeInput.className = 'form-control sizeInput';
+            sizeInput.name = `transactions[${index}][size]`;
+            sizeInput.disabled = document.querySelector('input[name="use_stock"]:checked')?.value !== 'yes';
+            sizeCell.appendChild(sizeInput);
+            row.appendChild(sizeCell);
+
             const quantityCell = document.createElement('td');
             const quantityInput = document.createElement('input');
             quantityInput.type = 'number';
-            quantityInput.min = '1';
+            quantityInput.min = '0.01';
+            quantityInput.step = '0.01';
             quantityInput.className = 'form-control quantityInput';
             quantityInput.name = `transactions[${index}][quantity]`;
             quantityInput.value = '1';
@@ -1000,9 +1189,8 @@
             nominalInput.step = '0.01';
             nominalInput.className = 'form-control nominalInput';
             nominalInput.name = `transactions[${index}][nominal]`;
-            // Set nominal to the accumulated total of non-new-item rows
             nominalInput.value = calculateNonNewItemTotals().toFixed(2);
-            nominalInput.readOnly = true; // Make it read-only to reflect calculated value
+            nominalInput.readOnly = true;
             nominalCell.appendChild(nominalInput);
             row.appendChild(nominalCell);
 
@@ -1012,7 +1200,6 @@
             totalInput.className = 'form-control totalInput';
             totalInput.name = `transactions[${index}][total]`;
             totalInput.readOnly = true;
-            // Calculate total based on quantity and nominal
             const quantity = parseFloat(quantityInput.value) || 1;
             totalInput.value = (quantity * parseFloat(nominalInput.value)).toLocaleString('id-ID', {
                 minimumFractionDigits: 2,
@@ -1035,17 +1222,13 @@
 
         function updateNewItemNominal() {
             transactionTableBody.querySelectorAll('tr[data-is-new-item="true"]').forEach(row => {
-                const index = parseInt(row.dataset.rowIndex);
                 const nominalInput = row.querySelector('.nominalInput');
                 const quantityInput = row.querySelector('.quantityInput');
                 const totalInput = row.querySelector('.totalInput');
 
                 if (nominalInput && totalInput) {
-                    // Update nominal with accumulated total of non-new-item rows
                     const newNominal = calculateNonNewItemTotals().toFixed(2);
                     nominalInput.value = newNominal;
-
-                    // Update total based on new nominal and quantity
                     const quantity = parseFloat(quantityInput.value) || 1;
                     totalInput.value = (quantity * parseFloat(newNominal)).toLocaleString('id-ID', {
                         minimumFractionDigits: 2,
@@ -1060,10 +1243,15 @@
                 row.dataset.rowIndex = index;
                 row.querySelectorAll('[name*="transactions["]').forEach(element => {
                     element.name = element.name.replace(/transactions\[\d+\]/, `transactions[${index}]`);
+                    if (element.tagName.toLowerCase() === 'select') {
+                        element.removeEventListener('change', handleStockChange);
+                        element.addEventListener('change', handleStockChange.bind(null, index));
+                    }
                 });
             });
             attachTransactionRemoveButtonListeners();
             attachTransactionInputListeners();
+            toggleSizeInputState();
         }
 
         function attachTransactionRemoveButtonListeners() {
@@ -1073,37 +1261,38 @@
                 const isNewItemRow = row.dataset.isNewItem === 'true';
                 button.disabled = isHppRow;
 
-                button.addEventListener('click', function() {
-                    const totalRows = transactionTableBody.querySelectorAll('tr').length;
-                    if (totalRows > 1) {
-                        const row = this.closest('tr');
-                        const rowIndex = parseInt(row.dataset.rowIndex);
-                        const isHppRow = row.dataset.isHppRow === 'true';
-                        const voucherType = voucherTypeSelect.value;
-
-                        if (voucherType === 'PJ' && !isHppRow) {
-                            const description = row.querySelector('.descriptionInput:not([type="text"])')?.value || row.querySelector('.descriptionInput[type="text"]')?.value || '';
-                            let nextRow = row.nextSibling;
-                            while (nextRow) {
-                                if (nextRow.dataset.isHppRow === 'true' && nextRow.querySelector('.descriptionInput')?.value === `HPP ${description}`) {
-                                    nextRow.remove();
-                                    break;
-                                }
-                                nextRow = nextRow.nextSibling;
-                            }
-                        }
-
-                        row.remove();
-                        updateTransactionRowIndices();
-                        updateAllCalculationsAndValidations();
-                        if (isNewItemRow) {
-                            updateAddItemButtonState();
-                        }
-                    } else {
-                        alert("Tidak dapat menghapus baris transaksi terakhir.");
-                    }
-                });
+                button.removeEventListener('click', handleRemoveTransactionRow);
+                button.addEventListener('click', handleRemoveTransactionRow);
             });
+        }
+
+        function handleRemoveTransactionRow(event) {
+            const totalRows = transactionTableBody.querySelectorAll('tr').length;
+            if (totalRows > 1) {
+                const row = event.target.closest('tr');
+                const rowIndex = parseInt(row.dataset.rowIndex);
+                const isHppRow = row.dataset.isHppRow === 'true';
+                const voucherType = voucherTypeSelect.value;
+
+                if (voucherType === 'PJ' && !isHppRow) {
+                    const description = row.querySelector('.descriptionInput:not([type="text"])')?.value || row.querySelector('.descriptionInput[type="text"]')?.value || '';
+                    let nextRow = row.nextSibling;
+                    while (nextRow) {
+                        if (nextRow.dataset.isHppRow === 'true' && nextRow.querySelector('.descriptionInput')?.value === `HPP ${description}`) {
+                            nextRow.remove();
+                            break;
+                        }
+                        nextRow = nextRow.nextSibling;
+                    }
+                }
+
+                row.remove();
+                updateTransactionRowIndices();
+                updateAllCalculationsAndValidations();
+                updateAddItemButtonState();
+            } else {
+                alert("Tidak dapat menghapus baris transaksi terakhir.");
+            }
         }
 
         function calculateRowTotal(row) {
@@ -1153,24 +1342,16 @@
             if (!descriptionInput || !quantityInput) {
                 validationInput.value = 'Elemen input stok atau kuantitas tidak ditemukan di baris ini.';
                 saveVoucherBtn.disabled = true;
-                console.log('Validation failed: Row structure:', row.outerHTML);
                 return {
                     isValid: false,
                     message: validationInput.value
                 };
             }
 
-            let description = '';
-            if (descriptionInput.tagName.toLowerCase() === 'select') {
-                description = descriptionInput.value?.trim() || '';
-            } else {
-                description = descriptionInput.value?.trim() || '';
-            }
+            let description = descriptionInput.tagName.toLowerCase() === 'select' ? descriptionInput.value?.trim() : descriptionInput.value?.trim() || '';
             const quantity = parseFloat(quantityInput.value) || 0;
             const isHppRow = row.dataset.isHppRow === 'true';
             const isNewItemRow = row.dataset.isNewItem === 'true';
-
-            console.log('Validating: VoucherType=', voucherType, 'Description=', description, 'Quantity=', quantity, 'IsHppRow=', isHppRow, 'IsNewItemRow=', isNewItemRow);
 
             if (isHppRow || !['PH', 'PK', 'PJ'].includes(voucherType)) {
                 return {
@@ -1195,12 +1376,9 @@
                 tableName = 'Stok Pemakaian';
             }
 
-            console.log('Stock Data for', tableName, ':', stockData);
-
             if (!stockData || !Array.isArray(stockData) || stockData.length === 0) {
                 validationInput.value = `Data tabel ${tableName} kosong atau tidak tersedia.`;
                 saveVoucherBtn.disabled = true;
-                console.log(`Stock data for ${tableName} is empty or undefined:`, stockData);
                 return {
                     isValid: false,
                     message: validationInput.value
@@ -1209,10 +1387,7 @@
 
             if (!isNewItemRow) {
                 const cleanDescription = description.replace(/\(Stok: \d+\)/, '').trim().toLowerCase();
-                console.log('Clean Description:', cleanDescription);
                 const stock = stockData.find(s => s.item?.toLowerCase().replace(/\(stok: \d+\)/, '').trim() === cleanDescription);
-
-                console.log('Stock Found:', stock);
 
                 if (!description) {
                     validationInput.value = 'Item belum dipilih di baris ini.';
@@ -1223,9 +1398,8 @@
                     };
                 }
                 if (!stock) {
-                    validationInput.value = `Item ${description} tidak ditemukan di tabel ${tableName}. Available items:`, stockData.map(s => s.item);
+                    validationInput.value = `Item ${description} tidak ditemukan di tabel ${tableName}.`;
                     saveVoucherBtn.disabled = true;
-                    console.log(`Stock not found for item: ${description}, Cleaned: ${cleanDescription}, Available items:`, stockData.map(s => s.item));
                     return {
                         isValid: false,
                         message: validationInput.value
@@ -1234,7 +1408,6 @@
                 if (stock.quantity < quantity) {
                     validationInput.value = `Kuantitas untuk item ${description} melebihi stok tersedia di tabel ${tableName}. Tersedia: ${stock.quantity}, Dibutuhkan: ${quantity}`;
                     saveVoucherBtn.disabled = true;
-                    console.log(`Insufficient stock for ${description}: Available ${stock.quantity}, Needed ${quantity}`);
                     return {
                         isValid: false,
                         message: validationInput.value
@@ -1242,11 +1415,9 @@
                 }
             }
 
-            // Success message for PK
             if (voucherType === 'PK' && !isNewItemRow && stock.quantity >= quantity) {
                 validationInput.value = `Stok ${description} cukup untuk dipindahkan ke ${targetTableName}. Tersedia: ${stock.quantity}, Dibutuhkan: ${quantity}`;
                 saveVoucherBtn.disabled = false;
-                console.log('PK Success Message Set:', validationInput.value);
                 return {
                     isValid: true,
                     message: validationInput.value
@@ -1260,16 +1431,10 @@
         }
 
         function attachTransactionInputListeners() {
-            const transactionInputs = transactionTableBody.querySelectorAll('.quantityInput, .nominalInput, .descriptionInput');
+            const transactionInputs = transactionTableBody.querySelectorAll('.quantityInput, .nominalInput, .descriptionInput, .sizeInput');
             transactionInputs.forEach(input => {
                 input.removeEventListener('input', handleTransactionInput);
                 input.addEventListener('input', handleTransactionInput);
-
-                // Tambahkan event listener untuk <select>
-                if (input.tagName.toLowerCase() === 'select') {
-                    input.removeEventListener('change', handleTransactionInput);
-                    input.addEventListener('change', handleTransactionInput);
-                }
             });
         }
 
@@ -1284,10 +1449,12 @@
             const transactions = Array.from(rows).map(row => {
                 const descriptionInput = row.querySelector('.descriptionInput[type="text"]');
                 const descriptionSelect = row.querySelector('.descriptionInput:not([type="text"])');
+                const sizeInput = row.querySelector('.sizeInput');
                 const quantity = row.querySelector('.quantityInput')?.value || '1';
                 const nominal = row.querySelector('.nominalInput')?.value || '0';
                 return {
                     description: descriptionInput?.value || descriptionSelect?.value || '',
+                    size: sizeInput?.value || '',
                     quantity,
                     nominal,
                     isHppRow: row.dataset.isHppRow === 'true',
@@ -1303,10 +1470,15 @@
                 transactionTableBody.appendChild(newRow);
                 const rowDescriptionInput = newRow.querySelector('.descriptionInput[type="text"]');
                 const rowDescriptionSelect = newRow.querySelector('.descriptionInput:not([type="text"])');
+                const rowSizeInput = newRow.querySelector('.sizeInput');
                 const rowQuantityInput = newRow.querySelector('.quantityInput');
                 const rowNominalInput = newRow.querySelector('.nominalInput');
                 if (rowDescriptionInput) rowDescriptionInput.value = t.description;
-                if (rowDescriptionSelect) rowDescriptionSelect.value = t.description;
+                if (rowDescriptionSelect) {
+                    rowDescriptionSelect.value = t.description;
+                    updateSizeDropdown(index, t.description);
+                }
+                if (rowSizeInput) rowSizeInput.value = t.size;
                 rowQuantityInput.value = t.quantity;
                 rowNominalInput.value = t.nominal;
 
@@ -1320,9 +1492,9 @@
                 transactionTableBody.appendChild(newRow);
             }
 
-            // Pastikan semua baris memiliki listener dan elemen yang diperlukan
             attachTransactionRemoveButtonListeners();
             attachTransactionInputListeners();
+            toggleSizeInputState();
             updateAllCalculationsAndValidations();
         }
 
@@ -1332,18 +1504,17 @@
             transactionTableBody.appendChild(newRow);
             attachTransactionRemoveButtonListeners();
             attachTransactionInputListeners();
+            toggleSizeInputState();
             updateAllCalculationsAndValidations();
         });
 
-        // Add new button and functionality for "Tambah Nama Barang"
         const addItemButton = document.createElement('button');
         addItemButton.type = 'button';
         addItemButton.id = 'addItemRowBtn';
         addItemButton.className = 'btn btn-primary';
         addItemButton.textContent = 'Tambah Nama Barang';
         addItemButton.style.marginLeft = '10px';
-        addItemButton.style.display = 'none'; // Hidden by default
-
+        addItemButton.style.display = 'none';
         addTransactionRowBtn.parentNode.insertBefore(addItemButton, addTransactionRowBtn.nextSibling);
 
         function updateAddItemButtonVisibility() {
@@ -1363,16 +1534,17 @@
             transactionTableBody.appendChild(newRow);
             attachTransactionRemoveButtonListeners();
             attachTransactionInputListeners();
+            toggleSizeInputState();
             updateAddItemButtonState();
             updateAllCalculationsAndValidations();
         });
 
         voucherTypeSelect.addEventListener('change', function() {
             refreshTransactionTable();
-            const selectedValue = this.value;
-            deskripsiVoucherTextarea.value = voucherTypes[selectedValue]?.description || '';
+            deskripsiVoucherTextarea.value = voucherTypes[this.value]?.description || '';
             updateAllCalculationsAndValidations();
             updateAddItemButtonVisibility();
+            toggleSizeInputState();
         });
 
         function calculateTotalNominal() {
@@ -1472,7 +1644,7 @@
                 }
             });
 
-            updateNewItemNominal(); // Recalculate nominal for new item rows
+            updateNewItemNominal();
 
             if (allRowsValid && stockValidationMessage) {
                 validationInput.value = stockValidationMessage;
@@ -1484,7 +1656,6 @@
             }
         }
 
-        // Ensure validation runs on form changes
         ['change', 'input'].forEach(event => {
             transactionTableBody.addEventListener(event, updateAllCalculationsAndValidations, true);
             voucherDetailsTableBody.addEventListener(event, updateAllCalculationsAndValidations, true);
@@ -1502,7 +1673,6 @@
                 document.getElementById('voucherDay').value = days[date.getDay()];
             } else document.getElementById('voucherDay').value = "";
         }
-        document.getElementById('voucherDate').addEventListener('change', updateVoucherDay);
 
         function setTodayVoucherDate() {
             const today = new Date();
@@ -1521,6 +1691,7 @@
             document.getElementById('dueDate').value = `${year}-${month}-${day}`;
         }
 
+        // Initial setup
         attachTransactionInputListeners();
         attachTransactionRemoveButtonListeners();
         attachVoucherDetailRemoveButtonListeners();
@@ -1532,5 +1703,6 @@
         updateAccountCodeDatalist();
         updateVoucherTypeOptions();
         refreshTransactionTable();
+        toggleSizeInputState();
     });
 </script>

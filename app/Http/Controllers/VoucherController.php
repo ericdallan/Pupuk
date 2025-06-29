@@ -36,10 +36,10 @@ class VoucherController extends Controller
     {
         try {
             $data = $this->voucherService->prepareVoucherPageData($request);
-            // Tambahkan data stok dan transaksi untuk frontend
-            $data['stocks'] = Stock::select(['item', 'quantity'])->get();
-            $data['transferStocks'] = TransferStock::select(['item', 'quantity'])->get();
-            $data['usedStocks'] = UsedStock::select(['item', 'quantity'])->get();
+            // Include 'size' in the select query
+            $data['stocks'] = Stock::select(['item', 'size', 'quantity'])->get();
+            $data['transferStocks'] = TransferStock::select(['item', 'size', 'quantity'])->get();
+            $data['usedStocks'] = UsedStock::select(['item', 'size', 'quantity'])->get();
             $data['transactionsData'] = Transactions::join('vouchers', 'transactions.voucher_id', '=', 'vouchers.id')
                 ->where('vouchers.voucher_type', 'PB')
                 ->select(['transactions.description', 'transactions.nominal'])
@@ -139,6 +139,16 @@ class VoucherController extends Controller
             'total_credit' => 'required|numeric|min:0',
             'transactions' => 'required_if:voucher_type,PB,PK,PH,PJ|array|min:1',
             'transactions.*.description' => 'required|string|max:255',
+            'transactions.*.size' => [
+                'nullable', // Make size optional
+                'string',
+                'max:255',
+                function ($attribute, $value, $fail) use ($request) {
+                    if ($request->use_stock === 'yes' && in_array($request->voucher_type, ['PB', 'PJ', 'PH', 'PK']) && empty($value)) {
+                        $fail('Ukuran wajib diisi ketika menggunakan stok untuk tipe voucher PB, PJ, PH, atau PK.');
+                    }
+                },
+            ],
             'transactions.*.quantity' => 'required|numeric|min:0.01',
             'transactions.*.nominal' => 'required|numeric|min:0',
             'voucher_details' => 'required|array|min:1',
@@ -431,10 +441,9 @@ class VoucherController extends Controller
     {
         try {
             $data = $this->voucherService->prepareVoucherEditData($id);
-            // Tambahkan data stok untuk edit
-            $data['stocks'] = Stock::select(['item', 'quantity'])->get();
-            $data['transferStocks'] = TransferStock::select(['item', 'quantity'])->get();
-            $data['usedStocks'] = UsedStock::select(['item', 'quantity'])->get();
+            $data['stocks'] = Stock::select(['item', 'size', 'quantity'])->get();
+            $data['transferStocks'] = TransferStock::select(['item', 'size', 'quantity'])->get();
+            $data['usedStocks'] = UsedStock::select(['item', 'size', 'quantity'])->get();
             $data['transactionsData'] = Transactions::where('voucher_type', 'PB')
                 ->select(['description', 'nominal', 'voucher_type'])
                 ->get();
