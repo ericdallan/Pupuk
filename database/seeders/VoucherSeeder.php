@@ -17,7 +17,7 @@ class VoucherSeeder extends Seeder
         // Insert into vouchers table
         DB::table('vouchers')->insert([
             'id' => 1,
-            'voucher_number' => 'PB-00000002',
+            'voucher_number' => 'PB-00000001',
             'voucher_type' => 'PB',
             'voucher_date' => Carbon::now()->toDateString(),
             'voucher_day' => Carbon::now()->locale('id')->dayName,

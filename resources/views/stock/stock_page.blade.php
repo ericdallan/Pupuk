@@ -95,15 +95,15 @@
                         @endif
                         <td>{{ $stock->size ?? 'Unknown Size' }}</td>
                         <td>{{ $stock->quantity ?? 0 }}</td>
-                        <td>{{ number_format($stock->average_hpp ?? 0, 2) }}</td>
+                        <td>{{ number_format($stock->average_hpp ?? 0, 2, ',', '.') }}</td>
                         <td>{{ $stock->opening_qty ?? 0 }}</td>
-                        <td>{{ number_format($stock->opening_hpp ?? 0, 2) }}</td>
+                        <td>{{ number_format($stock->opening_hpp ?? 0, 2, ',', '.') }}</td>
                         <td>{{ $stock->incoming_qty ?? 0 }}</td>
-                        <td>{{ number_format($stock->incoming_hpp ?? 0, 2) }}</td>
+                        <td>{{ number_format($stock->incoming_hpp ?? 0, 2, ',', '.') }}</td>
                         <td>{{ $stock->outgoing_qty ?? 0 }}</td>
-                        <td>{{ number_format($stock->outgoing_hpp ?? 0, 2) }}</td>
+                        <td>{{ number_format($stock->outgoing_hpp ?? 0, 2, ',', '.') }}</td>
                         <td>{{ $stock->final_stock_qty ?? 0 }}</td>
-                        <td>{{ number_format($stock->average_hpp ?? 0, 2) }}</td>
+                        <td>{{ number_format($stock->final_hpp ?? 0, 2, ',', '.') }}</td>
                         <td>
                             @if ($stock->id)
                             <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#detailModal{{ $stock->id }}">Detail</button>
@@ -172,15 +172,15 @@
                         @endif
                         <td>{{ $stock->size ?? 'Unknown Size' }}</td>
                         <td>{{ $stock->quantity ?? 0 }}</td>
-                        <td>{{ number_format($stock->average_hpp ?? 0, 2) }}</td>
+                        <td>{{ number_format($stock->average_hpp ?? 0, 2, ',', '.') }}</td>
                         <td>{{ $stock->opening_qty ?? 0 }}</td>
-                        <td>{{ number_format($stock->opening_hpp ?? 0, 2) }}</td>
+                        <td>{{ number_format($stock->opening_hpp ?? 0, 2, ',', '.') }}</td>
                         <td>{{ $stock->incoming_qty ?? 0 }}</td>
-                        <td>{{ number_format($stock->incoming_hpp ?? 0, 2) }}</td>
+                        <td>{{ number_format($stock->incoming_hpp ?? 0, 2, ',', '.') }}</td>
                         <td>{{ $stock->outgoing_qty ?? 0 }}</td>
-                        <td>{{ number_format($stock->outgoing_hpp ?? 0, 2) }}</td>
+                        <td>{{ number_format($stock->outgoing_hpp ?? 0, 2, ',', '.') }}</td>
                         <td>{{ $stock->final_stock_qty ?? 0 }}</td>
-                        <td>{{ number_format($stock->average_hpp ?? 0, 2) }}</td>
+                        <td>{{ number_format($stock->final_hpp ?? 0, 2, ',', '.') }}</td>
                         <td>
                             @if ($stock->id)
                             <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#detailModal{{ $stock->id }}">Detail</button>
@@ -249,15 +249,15 @@
                         @endif
                         <td>{{ $stock->size ?? 'Unknown Size' }}</td>
                         <td>{{ $stock->quantity ?? 0 }}</td>
-                        <td>{{ number_format($stock->average_hpp ?? 0, 2) }}</td>
+                        <td>{{ number_format($stock->average_hpp ?? 0, 2, ',', '.') }}</td>
                         <td>{{ $stock->opening_qty ?? 0 }}</td>
-                        <td>{{ number_format($stock->opening_hpp ?? 0, 2) }}</td>
+                        <td>{{ number_format($stock->opening_hpp ?? 0, 2, ',', '.') }}</td>
                         <td>{{ $stock->incoming_qty ?? 0 }}</td>
-                        <td>{{ number_format($stock->incoming_hpp ?? 0, 2) }}</td>
+                        <td>{{ number_format($stock->incoming_hpp ?? 0, 2, ',', '.') }}</td>
                         <td>{{ $stock->outgoing_qty ?? 0 }}</td>
-                        <td>{{ number_format($stock->outgoing_hpp ?? 0, 2) }}</td>
+                        <td>{{ number_format($stock->outgoing_hpp ?? 0, 2, ',', '.') }}</td>
                         <td>{{ $stock->final_stock_qty ?? 0 }}</td>
-                        <td>{{ number_format($stock->average_hpp ?? 0, 2) }}</td>
+                        <td>{{ number_format($stock->final_hpp ?? 0, 2, ',', '.') }}</td>
                         <td>
                             @if ($stock->id)
                             <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#detailModal{{ $stock->id }}">Detail</button>
@@ -340,7 +340,7 @@ collect($usedStockData)->flatten()->toArray() ?? []
                                         @endif
                                     </td>
                                     <td>{{ $transaction->quantity ?? 0 }}</td>
-                                    <td>{{ number_format($transaction->nominal ?? 0, 2) }}</td>
+                                    <td>{{ number_format($transaction->nominal ?? 0, 2, ',', '.') }}</td>
                                     <td>{{ \Carbon\Carbon::parse($transaction->created_at ?? now())->format('d-m-Y') }}</td>
                                 </tr>
                                 @endif
@@ -360,8 +360,6 @@ collect($usedStockData)->flatten()->toArray() ?? []
     </div>
 </div>
 @endforeach
-@else
-<!-- Optional: Add a message if no modals are needed -->
 @endif
 
 <!-- Create Recipe Modal -->
@@ -461,10 +459,18 @@ collect($usedStockData)->flatten()->toArray() ?? []
                                 html += `
                                 <tr>
                                     <td>${index + 1}</td>
-                                    <td>${transaction.description}</td>
-                                    <td>${transaction.voucher_type || 'Unknown'}</td>
+                                    <td>${transaction.description || 'No Description'}</td>
+                                    <td>${(() => {
+                                        switch (transaction.voucher_type) {
+                                            case 'PJ': return 'Penjualan';
+                                            case 'PB': return 'Pembelian';
+                                            case 'PH': return 'Pemindahan';
+                                            case 'PK': return 'Pemakaian';
+                                            default: return transaction.voucher_type || 'Unknown';
+                                        }
+                                    })()}</td>
                                     <td>${transaction.quantity || 0}</td>
-                                    <td>${number_format(transaction.nominal ?? 0, 2)}</td>
+                                    <td>${number_format(transaction.nominal || 0, 2)}</td>
                                     <td>${transaction.created_at || ''}</td>
                                 </tr>
                             `;
@@ -528,19 +534,21 @@ collect($usedStockData)->flatten()->toArray() ?? []
                 e.target.closest('.ingredient-row').remove();
                 ingredientCount--;
                 if (ingredientCount === 0) {
-                    document.querySelectorAll('.remove-ingredient')[0].style.display = 'none';
+                    document.querySelectorAll('.remove-ingredient').forEach(button => {
+                        button.style.display = 'none';
+                    });
                 }
             }
         });
 
         // Initialize number_format if not defined
         if (typeof number_format === 'undefined') {
-            number_format = function(number, decimals, dec_point, thousands_sep) {
+            window.number_format = function(number, decimals, dec_point, thousands_sep) {
                 number = (number + '').replace(/[^0-9+\-Ee.]/g, '');
                 var n = !isFinite(+number) ? 0 : +number,
                     prec = !isFinite(+decimals) ? 2 : Math.abs(decimals),
-                    sep = (typeof thousands_sep === 'undefined') ? ',' : thousands_sep,
-                    dec = (typeof dec_point === 'undefined') ? '.' : dec_point,
+                    sep = (typeof thousands_sep === 'undefined') ? '.' : thousands_sep,
+                    dec = (typeof dec_point === 'undefined') ? ',' : dec_point,
                     s = '',
                     toFixedFix = function(n, prec) {
                         var k = Math.pow(10, prec);

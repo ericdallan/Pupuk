@@ -26,153 +26,34 @@ class StockService
         $endDate = Carbon::parse($endDate)->endOfDay();
 
         if ($endDate->isFuture()) {
-            $endDate = Carbon::today()->endOfDay();
+            $endDate = Carbon::now()->endOfDay();
         }
 
         if ($startDate->gt($endDate)) {
             $startDate = $endDate->copy()->startOfYear();
         }
 
-        // Fetch all relevant items and sizes
-        $stocks = DB::table('stocks')->select('item', 'size')->distinct()->get();
-        $transferStocks = DB::table('transfer_stocks')->select('item', 'size')->distinct()->get();
-        $usedStocks = DB::table('used_stocks')->select('item', 'size')->distinct()->get();
-
-        $allStockRecords = $stocks->merge($transferStocks)->merge($usedStocks);
-        $stockKeys = $allStockRecords->map(function ($stock) {
-            return $stock->item . '|' . $stock->size;
-        })->unique()->all();
-
-        // Fetch all transactions with count of transactions per group
-        $allTransactions = DB::table('transactions')
-            ->select(
-                'transactions.description as item',
-                'transactions.size',
-                DB::raw('COALESCE(SUM(transactions.nominal), 0) as total_nominal'),
-                DB::raw('COUNT(*) as transaction_count') // Add count of transactions per group
-            )
-            ->join('vouchers', 'transactions.voucher_id', '=', 'vouchers.id')
-            ->where('vouchers.voucher_type', 'PB')
-            ->where('transactions.description', 'NOT LIKE', 'HPP %')
-            ->whereIn(DB::raw('CONCAT(transactions.description, \'|\', transactions.size)'), $stockKeys)
-            ->whereBetween('transactions.created_at', [$startDate, $endDate])
-            ->groupBy('transactions.description', 'transactions.size')
+        // Fetch all relevant items and sizes from transactions
+        $allStockRecords = DB::table('transactions')
+            ->select('description as item', 'size')
+            ->where('description', 'NOT LIKE', 'HPP %')
+            ->distinct()
             ->get();
 
-        Log::info('All Transactions Fetched', ['count' => $allTransactions->count(), 'sample' => $allTransactions->take(5)->toArray()]);
+        $stockKeys = $allStockRecords->map(function ($stock) {
+            return $stock->item . '|' . ($stock->size ?? '');
+        })->unique()->all();
 
-        $hppAverages = [];
-        foreach ($allTransactions as $transaction) {
-            $description = $transaction->item ?? 'Unknown';
-            $size = $transaction->size ?? 'Unknown';
-            $totalNominal = $transaction->total_nominal ?? 0;
-            $transactionCount = $transaction->transaction_count ?? 1; // Use the count from the query
+        // Ambil saldo awal dari transaksi pertama berdasarkan voucher_id
+        $openingBalances = $this->getOpeningBalances($stockKeys, $startDate);
 
-            $key = $description . '|' . $size;
-            if (!isset($hppAverages[$key])) {
-                $hppAverages[$key] = ['total_nominal' => 0, 'count' => 0];
-            }
-            $hppAverages[$key]['total_nominal'] += $totalNominal;
-            $hppAverages[$key]['count'] += $transactionCount; // Add the count of transactions
-        }
+        // Fetch HPP averages berdasarkan rata-rata nominal per transaksi
+        $hppAverages = $this->getHppAverages($stockKeys, $startDate, $endDate);
 
-        foreach ($hppAverages as $key => $data) {
-            $hppAverages[$key]['average_hpp'] = $data['count'] > 0 ? $data['total_nominal'] / $data['count'] : 0;
-            Log::debug('Calculated HPP Average', ['key' => $key, 'total_nominal' => $data['total_nominal'], 'count' => $data['count'], 'average_hpp' => $hppAverages[$key]['average_hpp']]);
-        }
-
-        // Rest of the method remains unchanged...
-        $openingBalances = DB::table('transactions as t1')
-            ->select(
-                't1.description as item',
-                't1.size as size',
-                DB::raw('COALESCE(SUM(CASE WHEN t1.quantity > 0 THEN t1.quantity ELSE 0 END), 0) as opening_qty'),
-                DB::raw('COALESCE(SUM(t1.nominal), 0) as opening_hpp')
-            )
-            ->join('vouchers', 't1.voucher_id', '=', 'vouchers.id')
-            ->where('t1.description', 'NOT LIKE', 'HPP %')
-            ->whereIn(DB::raw('CONCAT(t1.description, \'|\', t1.size)'), $stockKeys)
-            ->where('t1.created_at', '<', $startDate)
-            ->groupBy('t1.description', 't1.size')
-            ->get()
-            ->keyBy(function ($item) {
-                return $item->item . '|' . $item->size;
-            });
-
-        $stockData = DB::table('stocks')
-            ->select(
-                'stocks.id',
-                'stocks.item',
-                'stocks.size',
-                'stocks.quantity',
-                'transactions.created_at',
-                'transactions.description',
-                'transactions.quantity as transaction_quantity',
-                'transactions.nominal',
-                'vouchers.voucher_type'
-            )
-            ->leftJoin('transactions', function ($join) {
-                $join->on('stocks.item', '=', 'transactions.description')
-                    ->on('stocks.size', '=', 'transactions.size');
-            })
-            ->leftJoin('vouchers', 'transactions.voucher_id', '=', 'vouchers.id')
-            ->where('transactions.description', 'NOT LIKE', 'HPP %')
-            ->whereIn(DB::raw('CONCAT(stocks.item, \'|\', stocks.size)'), $stockKeys)
-            ->whereBetween('transactions.created_at', [$startDate, $endDate])
-            ->get()
-            ->groupBy(function ($item) {
-                return $item->item . '|' . $item->size;
-            });
-
-        $transferStockData = DB::table('transfer_stocks')
-            ->select(
-                'transfer_stocks.id',
-                'transfer_stocks.item',
-                'transfer_stocks.size',
-                'transfer_stocks.quantity',
-                'transactions.created_at',
-                'transactions.description',
-                'transactions.quantity as transaction_quantity',
-                'transactions.nominal',
-                'vouchers.voucher_type'
-            )
-            ->leftJoin('transactions', function ($join) {
-                $join->on('transfer_stocks.item', '=', 'transactions.description')
-                    ->on('transfer_stocks.size', '=', 'transactions.size');
-            })
-            ->leftJoin('vouchers', 'transactions.voucher_id', '=', 'vouchers.id')
-            ->where('transactions.description', 'NOT LIKE', 'HPP %')
-            ->whereIn(DB::raw('CONCAT(transfer_stocks.item, \'|\', transfer_stocks.size)'), $stockKeys)
-            ->whereBetween('transactions.created_at', [$startDate, $endDate])
-            ->get()
-            ->groupBy(function ($item) {
-                return $item->item . '|' . $item->size;
-            });
-
-        $usedStockData = DB::table('used_stocks')
-            ->select(
-                'used_stocks.id',
-                'used_stocks.item',
-                'used_stocks.size',
-                'used_stocks.quantity',
-                'transactions.created_at',
-                'transactions.description',
-                'transactions.quantity as transaction_quantity',
-                'transactions.nominal',
-                'vouchers.voucher_type'
-            )
-            ->leftJoin('transactions', function ($join) {
-                $join->on('used_stocks.item', '=', 'transactions.description')
-                    ->on('used_stocks.size', '=', 'transactions.size');
-            })
-            ->leftJoin('vouchers', 'transactions.voucher_id', '=', 'vouchers.id')
-            ->where('transactions.description', 'NOT LIKE', 'HPP %')
-            ->whereIn(DB::raw('CONCAT(used_stocks.item, \'|\', used_stocks.size)'), $stockKeys)
-            ->whereBetween('transactions.created_at', [$startDate, $endDate])
-            ->get()
-            ->groupBy(function ($item) {
-                return $item->item . '|' . $item->size;
-            });
+        // Ambil transaksi stok
+        $stockData = $this->getStockTransactions('stocks', $stockKeys, $startDate, $endDate);
+        $transferStockData = $this->getStockTransactions('transfer_stocks', $stockKeys, $startDate, $endDate);
+        $usedStockData = $this->getStockTransactions('used_stocks', $stockKeys, $startDate, $endDate);
 
         $stockMap = $this->processGroupedStockData($stockData, $openingBalances, $hppAverages, 'stocks');
         $transferStockMap = $this->processGroupedStockData($transferStockData, $openingBalances, $hppAverages, 'transfer_stocks');
@@ -187,14 +68,118 @@ class StockService
         ];
     }
 
+
+    // Alternative simpler version if the above doesn't work
+    private function getOpeningBalances(array $stockKeys, Carbon $startDate): Collection
+    {
+        Log::debug("=== DETAILED DEBUG ===");
+        Log::debug("Stock Keys:", $stockKeys);
+        Log::debug("Start Date:", [$startDate->format('Y-m-d H:i:s')]);
+
+        // Adjust startDate to include all transactions (e.g., current date)
+        $startDate = Carbon::now(); // Or set to '2025-06-30' to include all logged transactions
+
+        $vouchers = DB::table('vouchers')->get(['id', 'voucher_type']);
+        Log::debug("All Vouchers:", $vouchers->toArray());
+
+        $allTransactions = DB::table('transactions')
+            ->select('id', 'voucher_id', 'description', 'size', 'quantity', 'nominal', 'created_at')
+            ->get();
+        Log::debug("All Transactions:", $allTransactions->toArray());
+
+        $openingBalances = collect();
+
+        foreach ($stockKeys as $key) {
+            $itemSize = explode('|', $key);
+            $item = $itemSize[0];
+            $size = $itemSize[1] ?? '';
+
+            // Get the first transaction for the item and size
+            $transaction = DB::table('transactions as t1')
+                ->select('t1.quantity as total_quantity', 't1.nominal as avg_nominal')
+                ->join('vouchers', 't1.voucher_id', '=', 'vouchers.id')
+                ->where('t1.description', $item)
+                ->where('t1.size', $size)
+                ->where('t1.description', 'NOT LIKE', 'HPP %')
+                ->where('vouchers.voucher_type', 'PB')
+                ->where('t1.created_at', '<=', $startDate)
+                ->orderBy('t1.created_at', 'asc') // Order by earliest transaction
+                ->first();
+
+            Log::debug("Query for $key:", $transaction ? (array)$transaction : ['not found']);
+
+            $openingBalances->put($key, (object) [
+                'item' => $item,
+                'size' => $size,
+                'opening_qty' => $transaction ? $transaction->total_quantity : 0,
+                'opening_hpp' => $transaction ? $transaction->avg_nominal : 0
+            ]);
+        }
+
+        return $openingBalances;
+    }
+
     /**
-     * Process stock data for a specific table
-     *
-     * @param Collection $stockData
-     * @param Collection $openingBalances
-     * @param array $hppAverages
-     * @param string $tableName
-     * @return array
+     * Ambil rata-rata HPP berdasarkan nominal per transaksi
+     */
+    private function getHppAverages(array $stockKeys, Carbon $startDate, Carbon $endDate): array
+    {
+        $transactions = DB::table('transactions')
+            ->select(
+                'transactions.description as item',
+                'transactions.size',
+                DB::raw('COALESCE(AVG(transactions.nominal), 0) as average_hpp')
+            )
+            ->join('vouchers', 'transactions.voucher_id', '=', 'vouchers.id')
+            ->where('vouchers.voucher_type', 'PB')
+            ->where('transactions.description', 'NOT LIKE', 'HPP %')
+            ->whereIn(DB::raw('CONCAT(transactions.description, \'|\', COALESCE(transactions.size, ""))'), $stockKeys)
+            ->whereBetween('transactions.created_at', [$startDate, $endDate])
+            ->groupBy('transactions.description', 'transactions.size')
+            ->get();
+
+        $hppAverages = [];
+        foreach ($transactions as $transaction) {
+            $key = $transaction->item . '|' . ($transaction->size ?? '');
+            $hppAverages[$key] = ['average_hpp' => $transaction->average_hpp];
+        }
+
+        return $hppAverages;
+    }
+
+    /**
+     * Ambil transaksi stok dari tabel tertentu
+     */
+    private function getStockTransactions(string $tableName, array $stockKeys, Carbon $startDate, Carbon $endDate): Collection
+    {
+        return DB::table($tableName)
+            ->select(
+                $tableName . '.id',
+                $tableName . '.item',
+                $tableName . '.size',
+                'transactions.created_at',
+                'transactions.description',
+                'transactions.quantity as transaction_quantity',
+                'transactions.nominal',
+                'vouchers.id',
+                'vouchers.voucher_type'
+            )
+            ->leftJoin('transactions', function ($join) use ($tableName) {
+                $join->on($tableName . '.item', '=', 'transactions.description')
+                    ->on($tableName . '.size', '=', 'transactions.size');
+            })
+            ->leftJoin('vouchers', 'transactions.voucher_id', '=', 'vouchers.id')
+            ->where('transactions.description', 'NOT LIKE', 'HPP %')
+            ->whereIn(DB::raw('CONCAT(' . $tableName . '.item, \'|\', COALESCE(' . $tableName . '.size, ""))'), $stockKeys)
+            ->whereBetween('transactions.created_at', [$startDate, $endDate])
+            ->get()
+            ->groupBy(function ($item) {
+                return $item->item . '|' . ($item->size ?? '');
+            });
+    }
+
+    /**
+     * Proses data stok yang dikelompokkan
      */
     private function processGroupedStockData(Collection $stockData, Collection $openingBalances, array $hppAverages, string $tableName): array
     {
@@ -202,7 +187,7 @@ class StockService
         foreach ($stockData as $key => $records) {
             $itemSize = explode('|', $key);
             $item = $itemSize[0];
-            $size = $itemSize[1];
+            $size = $itemSize[1] ?? '';
 
             if (!isset($stockMap[$item])) {
                 $stockMap[$item] = [];
@@ -212,67 +197,33 @@ class StockService
             $openingBalance = $openingBalances->get($stockKey, (object) ['opening_qty' => 0, 'opening_hpp' => 0]);
             $hppEntry = $hppAverages[$stockKey] ?? ['average_hpp' => 0];
 
-            // Log::debug('Processing Stock Entry', ['key' => $key, 'item' => $item, 'size' => $size, 'record_count' => $records->count()]);
-
-            // Calculate specific HPP and quantities for each category
             $incomingTransactions = $records->where('voucher_type', 'PB');
             $outgoingTransactions = $records->whereIn('voucher_type', ['PJ', 'PK', 'PH']);
 
-            // Log::debug('Transaction Breakdown', [
-            //     'incoming_count' => $incomingTransactions->count(),
-            //     'outgoing_count' => $outgoingTransactions->count(),
-            //     'sample_incoming' => $incomingTransactions->take(2)->toArray(),
-            //     'sample_outgoing' => $outgoingTransactions->take(2)->toArray(),
-            // ]);
+            $incomingQty = $incomingTransactions->sum('transaction_quantity') ?? 0;
+            $outgoingQty = $outgoingTransactions->sum('transaction_quantity') ?? 0;
 
-            $incomingQty = $incomingTransactions->sum(function ($transaction) {
-                return $transaction->transaction_quantity > 0 ? $transaction->transaction_quantity : 0;
-            }) ?? 0;
-            $incomingNominal = $incomingTransactions->sum(function ($transaction) {
-                return $transaction->nominal ?? 0;
-            }) ?? 0;
-            $outgoingQty = $outgoingTransactions->sum(function ($transaction) {
-                return $transaction->transaction_quantity > 0 ? $transaction->transaction_quantity : 0;
-            }) ?? 0;
-            $outgoingNominal = $outgoingTransactions->sum(function ($transaction) {
-                return $transaction->nominal ?? 0;
-            }) ?? 0;
+            // Hitung final_hpp berdasarkan rata-rata tertimbang
+            $totalQty = ($openingBalance->opening_qty ?? 0) + $incomingQty;
+            $totalValue = ($openingBalance->opening_qty ?? 0) * $openingBalance->opening_hpp + $incomingQty * $hppEntry['average_hpp'];
+            $final_hpp = $totalQty > 0 ? $totalValue / $totalQty : ($hppEntry['average_hpp'] ?? 0);
 
-            // Log::debug('Calculated Quantities and Nominals', [
-            //     'incoming_qty' => $incomingQty,
-            //     'incoming_nominal' => $incomingNominal,
-            //     'outgoing_qty' => $outgoingQty,
-            //     'outgoing_nominal' => $outgoingNominal,
-            // ]);
-
-            // HPP calculated as total nominal without division by quantity
-            $opening_hpp = $openingBalance->opening_hpp; // Total nominal from opening balances
-            $incoming_hpp = $incomingNominal; // Total nominal for incoming transactions
-            $outgoing_hpp = $outgoingNominal; // Total nominal for outgoing transactions
-            // Final HPP can be a cumulative total or based on a specific logic (e.g., last nominal); here using total nominal approach
-            $final_hpp = $opening_hpp + $incoming_hpp - $outgoing_hpp; // Simplified cumulative HPP
-
-            // Log::info('Calculated HPP Values', [
-            //     'opening_hpp' => $opening_hpp,
-            //     'incoming_hpp' => $incoming_hpp,
-            //     'outgoing_hpp' => $outgoing_hpp,
-            //     'final_hpp' => $final_hpp,
-            //     'fallback_average_hpp' => $hppEntry['average_hpp'],
-            // ]);
+            // Hitung final_stock_qty berdasarkan opening, incoming, dan outgoing
+            $finalStockQty = ($openingBalance->opening_qty ?? 0) + $incomingQty - $outgoingQty;
 
             $entry = (object) [
                 'id' => $records->first()->id ?? null,
                 'item' => $item,
                 'size' => $size,
-                'quantity' => $records->sum('quantity') ?? 0,
-                'opening_qty' => $openingBalance->opening_qty ?? 0,
-                'opening_hpp' => $opening_hpp,
+                'quantity' => $this->getCurrentStockQuantity($tableName, $item, $size),
+                'opening_qty' => $openingBalance->opening_qty,
+                'opening_hpp' => $openingBalance->opening_hpp,
                 'incoming_qty' => $incomingQty,
-                'incoming_hpp' => $incoming_hpp,
+                'incoming_hpp' => $hppEntry['average_hpp'],
                 'outgoing_qty' => $outgoingQty,
-                'outgoing_hpp' => $outgoing_hpp,
-                'final_stock_qty' => 0,
-                'final_hpp' => $final_hpp, // Added final HPP
+                'outgoing_hpp' => $hppEntry['average_hpp'],
+                'final_stock_qty' => $finalStockQty,
+                'final_hpp' => $final_hpp,
                 'average_hpp' => $hppEntry['average_hpp'],
                 'transactions' => $records->map(function ($record) {
                     return (object) [
@@ -286,7 +237,6 @@ class StockService
                 'table_name' => $tableName
             ];
 
-            $entry->final_stock_qty = ($entry->opening_qty ?? 0) + ($entry->incoming_qty ?? 0) - ($entry->outgoing_qty ?? 0);
             $stockMap[$item][] = $entry;
         }
 
@@ -294,11 +244,18 @@ class StockService
     }
 
     /**
+     * Ambil kuantitas stok saat ini
+     */
+    private function getCurrentStockQuantity(string $tableName, string $item, string $size): int
+    {
+        return DB::table($tableName)
+            ->where('item', $item)
+            ->where('size', $size)
+            ->sum('quantity') ?? 0;
+    }
+
+    /**
      * Prepare data for stock export
-     *
-     * @param string $startDate
-     * @param string $endDate
-     * @return array
      */
     public function prepareExportData(string $startDate, string $endDate): array
     {
@@ -306,7 +263,7 @@ class StockService
         $endDate = Carbon::parse($endDate)->endOfDay();
 
         if ($endDate->isFuture()) {
-            $endDate = Carbon::today()->endOfDay();
+            $endDate = Carbon::now()->endOfDay();
         }
 
         if ($startDate->gt($endDate)) {
@@ -325,10 +282,6 @@ class StockService
 
     /**
      * Fetch transactions for a specific stock item
-     *
-     * @param int $stockId
-     * @param string $filter
-     * @return Collection
      */
     public function getTransactions(int $stockId, string $filter): Collection
     {
@@ -336,7 +289,6 @@ class StockService
 
         $stock = DB::table('stocks')->where('id', $stockId)->first();
         if (!$stock) {
-            // Log::warning('Stock not found', ['stockId' => $stockId]);
             return collect([]);
         }
 
@@ -349,8 +301,6 @@ class StockService
             ->select('transactions.description', 'transactions.size', 'vouchers.voucher_type', 'transactions.quantity', 'transactions.nominal', 'transactions.created_at')
             ->get();
 
-        // Log::info('Transactions Fetched for Stock', ['stockId' => $stockId, 'count' => $transactions->count(), 'sample' => $transactions->take(5)->toArray()]);
-
         return $transactions->map(function ($transaction) {
             $transaction->created_at = Carbon::parse($transaction->created_at)->format('d-m-Y');
             return (object) $transaction;
@@ -359,23 +309,17 @@ class StockService
 
     /**
      * Prepare data for transfer form PDF
-     *
-     * @param string $tableFilter
-     * @return array
      */
     public function prepareTransferFormData(string $tableFilter): array
     {
-        $transferStockData = DB::table('transfer_stocks')
-            ->select('id', 'item', 'size', 'quantity')
-            ->when($tableFilter !== 'all', function ($query) use ($tableFilter) {
-                if ($tableFilter === 'transfer_stocks') {
-                    return $query;
-                }
-                return $query->whereRaw('1 = 0'); // Return empty if filter is not 'all' or 'transfer_stocks'
-            })
-            ->get();
+        $query = DB::table('transfer_stocks')
+            ->select('id', 'item', 'size', 'quantity');
 
-        // Log::info('Transfer Form Data Prepared', ['tableFilter' => $tableFilter, 'count' => $transferStockData->count()]);
+        if ($tableFilter !== 'all' && $tableFilter !== 'transfer_stocks') {
+            $query->whereRaw('1 = 0'); // No results if not 'all' or 'transfer_stocks'
+        }
+
+        $transferStockData = $query->get();
 
         return [
             'transferStockData' => $transferStockData,
