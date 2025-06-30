@@ -6,22 +6,17 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::create('recipes', function (Blueprint $table) {
             $table->id();
-            $table->string('product_name'); // Nama produk jadi
-            $table->json('ingredients')->nullable(); // [{"transfer_stock_id": 1, "quantity": 1}, {"transfer_stock_id": 2, "quantity": 1}]
+            $table->string('product_name'); // Nama barang jadi
+            $table->unsignedBigInteger('used_stock_id')->nullable(); // Foreign key to used_stocks
+            $table->foreign('used_stock_id')->references('id')->on('used_stocks')->onDelete('set null');
             $table->timestamps();
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('recipes');

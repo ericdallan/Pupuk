@@ -3,22 +3,14 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class UsedStock extends Model
 {
-    use HasFactory;
-
     protected $table = 'used_stocks';
+    protected $fillable = ['item', 'size', 'quantity'];
 
-    protected $fillable = [
-        'item',
-        'size',
-        'quantity',
-    ];
-
-    public function transactions()
+    public function recipe()
     {
-        return $this->hasMany(Transaction::class);
+        return $this->hasOne(Recipes::class, 'used_stock_id', 'id'); // Inverse relationship
     }
 }

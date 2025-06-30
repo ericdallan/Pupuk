@@ -8,6 +8,9 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 use App\Imports\StockImport;
 use Maatwebsite\Excel\Facades\Excel;
+use App\Models\UsedStock;
+use App\Models\Recipes;
+use App\Models\TransferStock;
 
 class StockService
 {
@@ -21,6 +24,7 @@ class StockService
     {
         $startDate = $data['start_date'] ?? Carbon::today()->startOfYear()->toDateString();
         $endDate = $data['end_date'] ?? Carbon::today()->toDateString();
+        $tableFilter = $data['table_filter'] ?? 'all';
 
         $startDate = Carbon::parse($startDate)->startOfDay();
         $endDate = Carbon::parse($endDate)->endOfDay();
@@ -51,9 +55,15 @@ class StockService
         $hppAverages = $this->getHppAverages($stockKeys, $startDate, $endDate);
 
         // Ambil transaksi stok
-        $stockData = $this->getStockTransactions('stocks', $stockKeys, $startDate, $endDate);
-        $transferStockData = $this->getStockTransactions('transfer_stocks', $stockKeys, $startDate, $endDate);
-        $usedStockData = $this->getStockTransactions('used_stocks', $stockKeys, $startDate, $endDate);
+        if ($tableFilter === 'all' || $tableFilter === 'stocks') {
+            $stockData = $this->getStockTransactions('stocks', $stockKeys, $startDate, $endDate);
+        }
+        if ($tableFilter === 'all' || $tableFilter === 'transfer_stocks') {
+            $transferStockData = $this->getStockTransactions('transfer_stocks', $stockKeys, $startDate, $endDate);
+        }
+        if ($tableFilter === 'all' || $tableFilter === 'used_stocks') {
+            $usedStockData = $this->getStockTransactions('used_stocks', $stockKeys, $startDate, $endDate);
+        }
 
         $stockMap = $this->processGroupedStockData($stockData, $openingBalances, $hppAverages, 'stocks');
         $transferStockMap = $this->processGroupedStockData($transferStockData, $openingBalances, $hppAverages, 'transfer_stocks');
@@ -68,13 +78,84 @@ class StockService
         ];
     }
 
+    /**
+     * Store a new recipe without reducing transfer_stocks
+     *
+     * @param string $productName
+     * @param array $transferStockIds
+     * @param array $quantities
+     * @return void
+     * @throws \Exception
+     */
+    public function storeRecipe(string $productName, array $transferStockIds, array $quantities, string $productSize): void
+    {
+        // Periksa ketersediaan stok
+        foreach ($transferStockIds as $index => $stockId) {
+            $transferStock = TransferStock::find($stockId);
+            if (!$transferStock) {
+                Log::warning('Transfer stock not found:', ['stock_id' => $stockId]);
+                throw new \Exception("Bahan baku dengan ID $stockId tidak ditemukan.");
+            }
+            if ($transferStock->quantity < $quantities[$index]) {
+                Log::warning('Insufficient stock for transfer stock:', [
+                    'stock_id' => $stockId,
+                    'item' => $transferStock->item,
+                    'available_quantity' => $transferStock->quantity,
+                    'requested_quantity' => $quantities[$index],
+                ]);
+                throw new \Exception("Stok untuk {$transferStock->item} ({$transferStock->size}) tidak cukup. Tersedia: {$transferStock->quantity}, diminta: {$quantities[$index]}.");
+            }
+        }
 
-    // Alternative simpler version if the above doesn't work
+        DB::beginTransaction();
+
+        try {
+            // Buat entri UsedStock untuk barang jadi
+            $usedStock = UsedStock::create([
+                'item' => $productName,
+                'size' => $productSize,
+                'quantity' => 0,
+            ]);
+
+            // Buat entri Recipe dan tautkan ke UsedStock
+            $recipe = Recipes::create(['product_name' => $productName, 'used_stock_id' => $usedStock->id]);
+
+            // Kaitkan transfer stocks ke resep via pivot table with item and size
+            for ($i = 0; $i < count($transferStockIds); $i++) {
+                $transferStock = TransferStock::find($transferStockIds[$i]);
+                Log::debug('Attaching ingredient:', [
+                    'recipe_id' => $recipe->id,
+                    'transfer_stock_id' => $transferStockIds[$i],
+                    'quantity' => $quantities[$i],
+                    'item' => $transferStock->item,
+                    'size' => $transferStock->size,
+                ]);
+                $recipe->transferStocks()->attach($transferStockIds[$i], [
+                    'quantity' => $quantities[$i],
+                    'item' => $transferStock->item,
+                    'size' => $transferStock->size,
+                ]);
+            }
+
+            DB::commit();
+
+            Log::info('Recipe created successfully:', [
+                'recipe_id' => $recipe->id,
+                'used_stock_id' => $usedStock->id,
+                'product_name' => $productName,
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Store Recipe Service Error: ' . $e->getMessage(), ['exception' => $e]);
+            throw $e;
+        }
+    }
+
     private function getOpeningBalances(array $stockKeys, Carbon $startDate): Collection
     {
         Log::debug("=== DETAILED DEBUG ===");
-        Log::debug("Stock Keys:", $stockKeys);
-        Log::debug("Start Date:", [$startDate->format('Y-m-d H:i:s')]);
+        // Log::debug("Stock Keys:", $stockKeys);
+        // Log::debug("Start Date:", [$startDate->format('Y-m-d H:i:s')]);
 
         // Adjust startDate to include all transactions (e.g., current date)
         $startDate = Carbon::now(); // Or set to '2025-06-30' to include all logged transactions
@@ -106,7 +187,7 @@ class StockService
                 ->orderBy('t1.created_at', 'asc') // Order by earliest transaction
                 ->first();
 
-            Log::debug("Query for $key:", $transaction ? (array)$transaction : ['not found']);
+            // Log::debug("Query for $key:", $transaction ? (array)$transaction : ['not found']);
 
             $openingBalances->put($key, (object) [
                 'item' => $item,
@@ -152,7 +233,7 @@ class StockService
      */
     private function getStockTransactions(string $tableName, array $stockKeys, Carbon $startDate, Carbon $endDate): Collection
     {
-        return DB::table($tableName)
+        $query = DB::table($tableName)
             ->select(
                 $tableName . '.id',
                 $tableName . '.item',
@@ -171,11 +252,14 @@ class StockService
             ->leftJoin('vouchers', 'transactions.voucher_id', '=', 'vouchers.id')
             ->where('transactions.description', 'NOT LIKE', 'HPP %')
             ->whereIn(DB::raw('CONCAT(' . $tableName . '.item, \'|\', COALESCE(' . $tableName . '.size, ""))'), $stockKeys)
-            ->whereBetween('transactions.created_at', [$startDate, $endDate])
-            ->get()
-            ->groupBy(function ($item) {
-                return $item->item . '|' . ($item->size ?? '');
-            });
+            ->whereBetween('transactions.created_at', [$startDate, $endDate]);
+
+        $results = $query->get();
+        Log::debug("Stock Transactions for $tableName:", $results->toArray());
+
+        return $results->groupBy(function ($item) {
+            return $item->item . '|' . ($item->size ?? '');
+        });
     }
 
     /**

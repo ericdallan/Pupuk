@@ -11,8 +11,6 @@ use App\Exports\StockImportTemplate;
 use App\Imports\StockImport;
 use Maatwebsite\Excel\Facades\Excel;
 use Barryvdh\DomPDF\Facade\Pdf;
-use App\Models\UsedStock;
-use App\Models\Recipe;
 
 class StockController extends Controller
 {
@@ -33,9 +31,17 @@ class StockController extends Controller
     {
         try {
             $data = $this->stockService->prepareStockData($request->all());
+            Log::debug('Stock Page Data:', [
+                'stockData' => $data['stockData'],
+                'transferStockData' => $data['transferStockData'],
+                'usedStockData' => $data['usedStockData'],
+                'startDate' => $data['startDate']->toDateString(),
+                'endDate' => $data['endDate']->toDateString(),
+                'table_filter' => $request->input('table_filter', 'all')
+            ]);
             return view('stock.stock_page', $data);
         } catch (\Exception $e) {
-            Log::error('Stock Page Error: ' . $e->getMessage());
+            Log::error('Stock Page Error: ' . $e->getMessage(), ['exception' => $e]);
             return redirect()->back()->withErrors(['error' => 'Gagal memuat halaman stok']);
         }
     }
@@ -54,7 +60,7 @@ class StockController extends Controller
             $data = $this->stockService->prepareExportData($startDate, $endDate);
             return Excel::download(new StockExport($data['startDate'], $data['endDate'], array_merge($data['stockData'], $data['transferStockData'], $data['usedStockData'])), 'stock_report_' . $data['startDate']->toDateString() . '_to_' . $data['endDate']->toDateString() . '.xlsx');
         } catch (\Exception $e) {
-            // Log::error('Stock Export Error: ' . $e->getMessage());
+            Log::error('Stock Export Error: ' . $e->getMessage(), ['exception' => $e]);
             return redirect()->back()->withErrors(['error' => 'Gagal mengekspor data stok']);
         }
     }
@@ -73,7 +79,7 @@ class StockController extends Controller
             $transactions = $this->stockService->getTransactions((int) $stockId, $filter);
             return response()->json(['transactions' => $transactions]);
         } catch (\Exception $e) {
-            // Log::error('Get Transactions Error: ' . $e->getMessage());
+            Log::error('Get Transactions Error: ' . $e->getMessage(), ['exception' => $e]);
             return response()->json(['transactions' => []], 500);
         }
     }
@@ -90,9 +96,9 @@ class StockController extends Controller
             $tableFilter = $request->input('table_filter', 'all');
             $data = $this->stockService->prepareTransferFormData($tableFilter);
             $pdf = Pdf::loadView('stock.stock_pdf', $data);
-            return $pdf->download('Formuli_Pemindahan_Barang' . now()->format('Y-m-d') . '.pdf');
+            return $pdf->download('Formulir_Pemindahan_Barang_' . now()->format('Y-m-d') . '.pdf');
         } catch (\Exception $e) {
-            // Log::error('Print Transfer Form Error: ' . $e->getMessage());
+            Log::error('Print Transfer Form Error: ' . $e->getMessage(), ['exception' => $e]);
             return redirect()->back()->withErrors(['error' => 'Gagal menghasilkan formulir pemindahan']);
         }
     }
@@ -106,36 +112,37 @@ class StockController extends Controller
     public function storeRecipe(Request $request)
     {
         try {
-            $request->validate([
-                'product_name' => 'required|string|max:255',
+            $validated = $request->validate([
+                'product_name' => 'required|string|max:255|regex:/^[A-Za-z0-9\s]+$/',
+                'product_size' => 'required|string|max:255', // Validation for product_size
                 'transfer_stock_id.*' => 'required|exists:transfer_stocks,id',
                 'quantity.*' => 'required|integer|min:1',
             ]);
 
-            // Create used stock entry for the product
-            $usedStock = UsedStock::create([
-                'item' => $request->product_name,
-                'size' => 'Standar', // Adjust if size is required
-                'quantity' => 1, // Default quantity for the product
+            Log::debug('Store Recipe Input:', [
+                'product_name' => $validated['product_name'],
+                'product_size' => $validated['product_size'],
+                'transfer_stock_ids' => $request->input('transfer_stock_id'),
+                'quantities' => $request->input('quantity'),
             ]);
 
-            // Create recipe entry
-            $recipe = Recipe::create([
-                'used_stock_id' => $usedStock->id,
-            ]);
-
-            // Attach transfer stocks to recipe via pivot table
-            $transferStockIds = $request->input('transfer_stock_id');
-            $quantities = $request->input('quantity');
-
-            for ($i = 0; $i < count($transferStockIds); $i++) {
-                $recipe->transferStocks()->attach($transferStockIds[$i], ['quantity' => $quantities[$i]]);
-            }
+            $this->stockService->storeRecipe(
+                $validated['product_name'],
+                $request->input('transfer_stock_id'),
+                $request->input('quantity'),
+                $validated['product_size']
+            );
 
             return redirect()->back()->with('success', 'Resep berhasil disimpan.');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            Log::error('Store Recipe Validation Error: ' . $e->getMessage(), [
+                'errors' => $e->errors(),
+                'input' => $request->all(),
+            ]);
+            return redirect()->back()->withErrors($e->errors())->withInput();
         } catch (\Exception $e) {
-            // Log::error('Store Recipe Error: ' . $e->getMessage());
-            return redirect()->back()->withErrors(['error' => 'Gagal menyimpan resep.']);
+            Log::error('Store Recipe Error: ' . $e->getMessage(), ['exception' => $e]);
+            return redirect()->back()->withErrors(['error' => 'Gagal menyimpan resep: ' . $e->getMessage()]);
         }
     }
 }

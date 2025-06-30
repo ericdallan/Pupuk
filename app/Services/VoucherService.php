@@ -203,6 +203,7 @@ class VoucherService
      * @param string $item
      * @param float $quantity
      * @param string $voucherType
+     * @param ?string $size
      * @return void
      * @throws \Exception
      */
@@ -218,24 +219,36 @@ class VoucherService
 
         $stock = Stock::where('item', $item)->where('size', $size)->first();
 
-        if (!$stock) {
-            if ($voucherType === 'PB') {
+        if ($voucherType === 'PB') {
+            if ($stock) {
+                // Both item and size match, increment quantity
+                $stock->quantity += $quantity;
+                $stock->save();
+            } else {
+                // Create new stock record for the item
                 Stock::create([
                     'item' => $item,
-                    'size' => $size ?? throw new \Exception("Ukuran wajib diisi untuk item {$item} pada voucher tipe PB."),
+                    'size' => $size,
                     'quantity' => $quantity,
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);
-            } else {
+
+                // Create new stock record for HPP
+                Stock::create([
+                    'item' => "HPP {$item}",
+                    'size' => $size,
+                    'quantity' => $quantity,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+        } elseif ($voucherType === 'PH') {
+            $stock = Stock::where('item', $item)->where('size', $size)->first();
+            if (!$stock) {
                 throw new \Exception("Stok untuk item {$item} dengan ukuran {$size} tidak ditemukan di tabel stocks.");
             }
-        } else {
-            if ($voucherType === 'PB') {
-                $stock->quantity += $quantity;
-            } elseif ($voucherType === 'PH') {
-                $stock->quantity -= $quantity;
-            }
+            $stock->quantity -= $quantity;
             $stock->save();
 
             if ($stock->quantity < 0) {
@@ -245,41 +258,50 @@ class VoucherService
     }
 
     /**
-     * Update stock in transfer_stocks table
+     * Update transfer stock in transfer_stocks table
      *
      * @param string $item
      * @param float $quantity
      * @param string $voucherType
+     * @param ?string $size
      * @return void
      * @throws \Exception
      */
-    private function updateTransferStock(string $item, float $quantity, string $voucherType): void
+    private function updateTransferStock(string $item, float $quantity, string $voucherType, ?string $size = null): void
     {
         if (str_starts_with($item, 'HPP ')) {
             return;
         }
 
-        $transferStock = TransferStock::where('item', $item)->first();
-
-        if (!$transferStock) {
-            // Izinkan pembuatan item baru untuk semua voucherType (PH atau PK) sebagai pengecualian
-            TransferStock::create([
-                'item' => $item,
-                'quantity' => $quantity,
-            ]);
-            $transferStock = TransferStock::where('item', $item)->first(); // Refresh instance
+        if ($voucherType === 'PH' && is_null($size)) {
+            throw new \Exception("Ukuran wajib diisi untuk item {$item} pada voucher tipe PH di tabel transfer_stocks.");
         }
 
-        if ($transferStock) {
-            if ($voucherType === 'PH') {
-                $transferStock->quantity += $quantity;
-            } elseif ($voucherType === 'PK') {
-                $transferStock->quantity -= $quantity; // Decrease quantity for PK
-            }
-            $transferStock->save();
+        $transferStock = TransferStock::where('item', $item)->where('size', $size)->first();
 
-            if ($transferStock->quantity < 0) {
-                throw new \Exception("Stok untuk item {$item} tidak mencukupi di tabel transfer_stocks. Tersedia: {$transferStock->quantity}, Dibutuhkan: {$quantity}.");
+        if ($voucherType === 'PH') {
+            if ($transferStock) {
+                $transferStock->quantity += $quantity;
+                $transferStock->save();
+            } else {
+                TransferStock::create([
+                    'item' => $item,
+                    'size' => $size,
+                    'quantity' => $quantity,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+        } elseif ($voucherType === 'PK') {
+            if ($transferStock) {
+                $transferStock->quantity -= $quantity;
+                $transferStock->save();
+
+                if ($transferStock->quantity < 0) {
+                    throw new \Exception("Stok untuk item {$item} dengan ukuran {$size} tidak mencukupi di tabel transfer_stocks.");
+                }
+            } else {
+                throw new \Exception("Stok untuk item {$item} dengan ukuran {$size} tidak ditemukan di tabel transfer_stocks.");
             }
         }
     }
@@ -437,17 +459,18 @@ class VoucherService
                     }
                 }
 
-                // Add HPP transactions for PK voucher type
-                if ($request->voucher_type === 'PK') {
+                // Add HPP transactions for PB and PK voucher types
+                if (in_array($request->voucher_type, ['PB', 'PK'])) {
                     foreach ($transactionsToCreate as $transaction) {
                         if (!$transaction['is_hpp']) {
                             $item = $transaction['description'];
                             $quantity = $transaction['quantity'];
+                            $size = $transaction['size'] ?? null;
                             $averageHpp = $this->calculateAverageHpp($item);
                             $transactionsToCreate[] = [
                                 'voucher_id' => $voucher->id,
                                 'description' => "HPP {$item}",
-                                'size' => $transaction['size'] ?? null,
+                                'size' => $size,
                                 'quantity' => $quantity,
                                 'nominal' => $averageHpp,
                                 'is_hpp' => true,
@@ -467,27 +490,26 @@ class VoucherService
                     ]);
                 }
             }
-            // Update stock for PB, PH, PK, PJ voucher types
+            // Within the stock update block for PB, PH, PK, PJ voucher types
             if (in_array($request->voucher_type, ['PB', 'PH', 'PK', 'PJ']) && !empty($transactionsToCreate)) {
                 foreach ($transactionsToCreate as $transaction) {
                     if (!$transaction['is_hpp']) {
                         $item = $transaction['description'];
                         $quantity = floatval($transaction['quantity']);
-                        $size = $transaction['size'] ?? null; // Get size from transaction
+                        $size = $transaction['size'] ?? null;
 
                         if ($request->voucher_type === 'PB') {
-                            $this->updateStock($item, $quantity, 'PB', $size); // Pass size
+                            $this->updateStock($item, $quantity, 'PB', $size);
                         } elseif ($request->voucher_type === 'PH') {
-                            $this->updateStock($item, $quantity, 'PH', $size); // Pass size
-                            $this->updateTransferStock($item, $quantity, 'PH');
+                            $this->updateStock($item, $quantity, 'PH', $size);
+                            $this->updateTransferStock($item, $quantity, 'PH', $size); // Pass size
                         } elseif ($request->voucher_type === 'PK') {
-                            $this->updateTransferStock($item, $quantity, 'PK'); // Decrease transfer_stocks
-                            // Add or update used_stocks for new items
-                            $existingTransferStock = TransferStock::where('item', $item)->first();
+                            $this->updateTransferStock($item, $quantity, 'PK', $size); // Pass size
+                            $existingTransferStock = TransferStock::where('item', $item)->where('size', $size)->first();
                             if (!$existingTransferStock) {
-                                $this->updateUsedStock($item, $quantity, 'PK'); // Add new item to used_stocks
+                                $this->updateUsedStock($item, $quantity, 'PK');
                             } else {
-                                $this->updateUsedStock($item, $quantity, 'PK'); // Update existing used_stocks
+                                $this->updateUsedStock($item, $quantity, 'PK');
                             }
                         } elseif ($request->voucher_type === 'PJ') {
                             $this->updateUsedStock($item, $quantity, 'PJ');
@@ -725,6 +747,7 @@ class VoucherService
                 $totalNominal += $quantity * $nominal;
                 $transactionItems[$index] = [
                     'description' => $transaction['description'],
+                    'size' => $transaction['size'] ?? null,
                     'quantity' => $quantity,
                     'nominal' => $nominal,
                     'is_hpp' => str_starts_with($transaction['description'], 'HPP '),
@@ -764,8 +787,8 @@ class VoucherService
                 throw new \Exception('Total debit harus sama dengan total kredit.');
             }
 
-            // Validate PK voucher type for HPP
-            if ($request->voucher_type === 'PK') {
+            // Validate PB and PK voucher types for HPP
+            if (in_array($request->voucher_type, ['PB', 'PK'])) {
                 $stockItems = collect($transactionItems)
                     ->filter(function ($item) {
                         return !$item['is_hpp'];
@@ -780,13 +803,16 @@ class VoucherService
                         if ($stockIndex !== false && $transactionItems[$stockIndex]['quantity'] != $item['quantity']) {
                             throw new \Exception("Kuantitas HPP untuk item {$stockItem} tidak sesuai dengan kuantitas stok.");
                         }
+                        if ($transactionItems[$stockIndex]['size'] != $item['size']) {
+                            throw new \Exception("Ukuran HPP untuk item {$stockItem} tidak sesuai dengan ukuran stok.");
+                        }
                     }
                 }
                 $nonHppCount = collect($transactionItems)->filter(function ($item) {
                     return !$item['is_hpp'];
                 })->count();
                 if ($nonHppCount === 0) {
-                    throw new \Exception('Voucher Pemakaian harus memiliki setidaknya satu transaksi non-HPP.');
+                    throw new \Exception('Voucher Pembelian atau Pemakaian harus memiliki setidaknya satu transaksi non-HPP.');
                 }
             }
 
@@ -796,9 +822,10 @@ class VoucherService
                     if (!str_starts_with($transaction['description'], 'HPP ')) {
                         $item = $transaction['description'];
                         $quantity = floatval($transaction['quantity']);
-                        $stock = Stock::where('item', $item)->first();
+                        $size = $transaction['size'] ?? null;
+                        $stock = Stock::where('item', $item)->where('size', $size)->first();
                         if (!$stock || $stock->quantity < $quantity) {
-                            throw new \Exception("Stok untuk item {$item} tidak mencukupi di tabel stocks. Tersedia: " . ($stock ? $stock->quantity : 0) . ", Dibutuhkan: {$quantity}.");
+                            throw new \Exception("Stok untuk item {$item} dengan ukuran {$size} tidak mencukupi di tabel stocks. Tersedia: " . ($stock ? $stock->quantity : 0) . ", Dibutuhkan: {$quantity}.");
                         }
                     }
                 }
@@ -834,7 +861,7 @@ class VoucherService
                             $transaction->description,
                             floatval($transaction->quantity),
                             $voucher->voucher_type,
-                            $transaction->size // Pass size
+                            $transaction->size
                         );
                     }
                 }
@@ -846,21 +873,20 @@ class VoucherService
                     if (!str_starts_with($transaction['description'], 'HPP ')) {
                         $item = $transaction['description'];
                         $quantity = floatval($transaction['quantity']);
-                        $size = $transaction['size'] ?? null; // Get size from transaction
+                        $size = $transaction['size'] ?? null;
 
                         if ($request->voucher_type === 'PB') {
-                            $this->updateStock($item, $quantity, 'PB', $size); // Pass size
+                            $this->updateStock($item, $quantity, 'PB', $size);
                         } elseif ($request->voucher_type === 'PH') {
-                            $this->updateStock($item, $quantity, 'PH', $size); // Pass size
-                            $this->updateTransferStock($item, $quantity, 'PH');
+                            $this->updateStock($item, $quantity, 'PH', $size);
+                            $this->updateTransferStock($item, $quantity, 'PH', $size); // Pass size
                         } elseif ($request->voucher_type === 'PK') {
-                            $this->updateTransferStock($item, $quantity, 'PK'); // Decrease transfer_stocks
-                            // Add or update used_stocks for new items
-                            $existingTransferStock = TransferStock::where('item', $item)->first();
+                            $this->updateTransferStock($item, $quantity, 'PK', $size); // Pass size
+                            $existingTransferStock = TransferStock::where('item', $item)->where('size', $size)->first();
                             if (!$existingTransferStock) {
-                                $this->updateUsedStock($item, $quantity, 'PK'); // Add new item to used_stocks
+                                $this->updateUsedStock($item, $quantity, 'PK');
                             } else {
-                                $this->updateUsedStock($item, $quantity, 'PK'); // Update existing used_stocks
+                                $this->updateUsedStock($item, $quantity, 'PK');
                             }
                         } elseif ($request->voucher_type === 'PJ') {
                             $this->updateUsedStock($item, $quantity, 'PJ');
@@ -957,16 +983,17 @@ class VoucherService
             $voucher->transactions()->delete();
             $transactionsToCreate = $transactionsData;
 
-            // Add HPP transactions for PK voucher type
-            if ($request->voucher_type === 'PK') {
+            // Add HPP transactions for PB and PK voucher types
+            if (in_array($request->voucher_type, ['PB', 'PK'])) {
                 foreach ($transactionsData as $transaction) {
                     if (!str_starts_with($transaction['description'], 'HPP ')) {
                         $item = $transaction['description'];
                         $quantity = floatval($transaction['quantity']);
+                        $size = $transaction['size'] ?? null;
                         $averageHpp = $this->calculateAverageHpp($item);
                         $transactionsToCreate[] = [
                             'description' => "HPP {$item}",
-                            'size' => $transaction['size'] ?? null,
+                            'size' => $size,
                             'quantity' => $quantity,
                             'nominal' => $averageHpp,
                         ];

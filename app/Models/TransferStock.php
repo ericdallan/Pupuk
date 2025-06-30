@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+
 class TransferStock extends Model
 {
     use HasFactory;
@@ -20,9 +21,10 @@ class TransferStock extends Model
     {
         return $this->hasMany(Transaction::class);
     }
+
     public function recipes()
     {
-        return $this->belongsToMany(Recipe::class, 'recipe_transfer_stock')
+        return $this->belongsToMany(Recipes::class, 'recipe_transfer_stock')
             ->withPivot('quantity')
             ->withTimestamps();
     }

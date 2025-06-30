@@ -705,7 +705,7 @@
 
             if (selectedItem && stocks && Array.isArray(stocks) && stocks.length > 0) {
                 const sizesWithQuantity = stocks
-                    .filter(stock => stock.item === selectedItem && stock.size && stock.quantity)
+                    .filter(stock => stock.item === selectedItem && stock.size && stock.quantity !== null)
                     .map(stock => ({
                         size: stock.size,
                         quantity: stock.quantity
@@ -725,6 +725,7 @@
             select.addEventListener('change', function() {
                 const input = container.querySelector('input');
                 input.value = this.value;
+                updateHppRowForPB(index, selectedItem, input.value, parseFloat(container.closest('tr').querySelector('.quantityInput').value));
                 updateAllCalculationsAndValidations();
             });
 
@@ -735,6 +736,7 @@
             input.name = `transactions[${index}][size]`;
             input.addEventListener('input', function() {
                 select.value = '';
+                updateHppRowForPB(index, selectedItem, this.value, parseFloat(container.closest('tr').querySelector('.quantityInput').value));
                 updateAllCalculationsAndValidations();
             });
 
@@ -755,7 +757,7 @@
 
             if (selectedItem && stocks && Array.isArray(stocks) && stocks.length > 0) {
                 const sizesWithQuantity = stocks
-                    .filter(stock => stock.item === selectedItem && stock.size && stock.quantity)
+                    .filter(stock => stock.item === selectedItem && stock.size && stock.quantity !== null)
                     .map(stock => ({
                         size: stock.size,
                         quantity: stock.quantity
@@ -766,13 +768,22 @@
                     sizesWithQuantity.forEach(item => {
                         const option = document.createElement('option');
                         option.value = item.size;
-                        option.textContent = `${item.size} (${item.quantity})`;
+                        option.textContent = `${item.size} (Stok: ${item.quantity})`;
                         select.appendChild(option);
                     });
                 }
             }
 
             select.disabled = document.querySelector('input[name="use_stock"]:checked')?.value !== 'yes';
+            select.addEventListener('change', function() {
+                if (voucherTypeSelect.value === 'PB') {
+                    const row = select.closest('tr');
+                    const quantity = parseFloat(row.querySelector('.quantityInput').value) || 1;
+                    updateHppRowForPB(index, row.querySelector('.descriptionInput').value, this.value, quantity);
+                }
+                updateAllCalculationsAndValidations();
+            });
+
             return select;
         }
 
@@ -889,6 +900,124 @@
 
             const totalNominal = matchingTransactions.reduce((sum, t) => sum + (parseFloat(t.nominal) || 0), 0);
             return matchingTransactions.length > 0 ? totalNominal / matchingTransactions.length : 0;
+        }
+
+        function addHppRowForPB(currentIndex, selectedItem, size, quantity) {
+            if (!selectedItem || voucherTypeSelect.value !== 'PB') return;
+
+            const newIndex = transactionTableBody.querySelectorAll('tr').length;
+            const hppRow = document.createElement('tr');
+            hppRow.dataset.rowIndex = newIndex;
+            hppRow.dataset.isHppRow = 'true';
+
+            const descriptionCell = document.createElement('td');
+            const descriptionInput = createDescriptionInput(newIndex);
+            descriptionInput.value = `HPP ${selectedItem}`;
+            descriptionInput.readOnly = true;
+            descriptionCell.appendChild(descriptionInput);
+            hppRow.appendChild(descriptionCell);
+
+            const sizeCell = document.createElement('td');
+            const sizeInput = document.createElement('input');
+            sizeInput.type = 'text';
+            sizeInput.className = 'form-control sizeInput';
+            sizeInput.name = `transactions[${newIndex}][size]`;
+            sizeInput.value = size || '';
+            sizeInput.readOnly = true;
+            sizeInput.disabled = document.querySelector('input[name="use_stock"]:checked')?.value !== 'yes';
+            sizeCell.appendChild(sizeInput);
+            hppRow.appendChild(sizeCell);
+
+            const quantityCell = document.createElement('td');
+            const quantityInput = document.createElement('input');
+            quantityInput.type = 'number';
+            quantityInput.min = '0.01';
+            quantityInput.step = '0.01';
+            quantityInput.className = 'form-control quantityInput';
+            quantityInput.name = `transactions[${newIndex}][quantity]`;
+            quantityInput.value = quantity || 1;
+            quantityInput.readOnly = true;
+            quantityCell.appendChild(quantityInput);
+            hppRow.appendChild(quantityCell);
+
+            const nominalCell = document.createElement('td');
+            const nominalInput = document.createElement('input');
+            nominalInput.type = 'number';
+            nominalInput.min = '0';
+            nominalInput.step = '0.01';
+            nominalInput.className = 'form-control nominalInput';
+            nominalInput.name = `transactions[${newIndex}][nominal]`;
+            const averageHpp = calculateAverageHpp(selectedItem);
+            nominalInput.value = averageHpp.toFixed(2);
+            nominalInput.readOnly = true;
+            nominalCell.appendChild(nominalInput);
+            hppRow.appendChild(nominalCell);
+
+            const totalCell = document.createElement('td');
+            const totalInput = document.createElement('input');
+            totalInput.type = 'text';
+            totalInput.className = 'form-control totalInput';
+            totalInput.name = `transactions[${newIndex}][total]`;
+            totalInput.readOnly = true;
+            totalInput.value = (quantity * averageHpp).toLocaleString('id-ID', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+            totalCell.appendChild(totalInput);
+            hppRow.appendChild(totalCell);
+
+            const actionCell = document.createElement('td');
+            actionCell.className = 'text-center';
+            const deleteButton = document.createElement('button');
+            deleteButton.type = 'button';
+            deleteButton.className = 'btn btn-danger removeTransactionRowBtn';
+            deleteButton.textContent = 'Hapus';
+            deleteButton.disabled = true;
+            actionCell.appendChild(deleteButton);
+            hppRow.appendChild(actionCell);
+
+            const currentRow = transactionTableBody.querySelector(`tr[data-row-index="${currentIndex}"]`);
+            if (currentRow.nextSibling) transactionTableBody.insertBefore(hppRow, currentRow.nextSibling);
+            else transactionTableBody.appendChild(hppRow);
+
+            updateTransactionRowIndices();
+            updateAllCalculationsAndValidations();
+        }
+
+        // Update existing HPP row for PB voucher
+        function updateHppRowForPB(currentIndex, selectedItem, size, quantity) {
+            if (!selectedItem || voucherTypeSelect.value !== 'PB') return;
+
+            const currentRow = transactionTableBody.querySelector(`tr[data-row-index="${currentIndex}"]`);
+            let nextRow = currentRow.nextSibling;
+
+            while (nextRow) {
+                if (nextRow.dataset.isHppRow === 'true' && nextRow.querySelector('.descriptionInput').value === `HPP ${selectedItem}`) {
+                    const descriptionInput = nextRow.querySelector('.descriptionInput');
+                    descriptionInput.value = `HPP ${selectedItem}`;
+                    const sizeInput = nextRow.querySelector('.sizeInput');
+                    sizeInput.value = size || '';
+                    sizeInput.readOnly = true;
+                    sizeInput.disabled = document.querySelector('input[name="use_stock"]:checked')?.value !== 'yes';
+                    const quantityInput = nextRow.querySelector('.quantityInput');
+                    quantityInput.value = quantity;
+                    quantityInput.readOnly = true;
+                    const nominalInput = nextRow.querySelector('.nominalInput');
+                    const averageHpp = calculateAverageHpp(selectedItem);
+                    nominalInput.value = averageHpp.toFixed(2);
+                    nominalInput.readOnly = true;
+                    const totalInput = nextRow.querySelector('.totalInput');
+                    totalInput.value = (quantity * averageHpp).toLocaleString('id-ID', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2
+                    });
+                    updateAllCalculationsAndValidations();
+                    return;
+                }
+                nextRow = nextRow.nextSibling;
+            }
+
+            addHppRowForPB(currentIndex, selectedItem, size, quantity);
         }
 
         function addHppRow(currentIndex, selectedItem, quantity) {
@@ -1011,20 +1140,36 @@
             const selectedItem = event.target.value;
             const row = event.target.closest('tr');
             const quantity = parseFloat(row.querySelector('.quantityInput')?.value) || 1;
+            const size = row.querySelector('.sizeInput')?.value || '';
 
-            if (selectedItem && voucherTypeSelect.value === 'PJ') {
-                let nextRow = row.nextSibling;
-                let hppRowExists = false;
-                while (nextRow) {
-                    if (nextRow.dataset.isHppRow === 'true') {
-                        hppRowExists = true;
-                        break;
+            if (selectedItem) {
+                if (voucherTypeSelect.value === 'PJ') {
+                    let nextRow = row.nextSibling;
+                    let hppRowExists = false;
+                    while (nextRow) {
+                        if (nextRow.dataset.isHppRow === 'true') {
+                            hppRowExists = true;
+                            break;
+                        }
+                        nextRow = nextRow.nextSibling;
                     }
-                    nextRow = nextRow.nextSibling;
-                }
 
-                if (hppRowExists) updateHppRow(index, selectedItem, quantity);
-                else addHppRow(index, selectedItem, quantity);
+                    if (hppRowExists) updateHppRow(index, selectedItem, quantity);
+                    else addHppRow(index, selectedItem, quantity);
+                } else if (voucherTypeSelect.value === 'PB') {
+                    let nextRow = row.nextSibling;
+                    let hppRowExists = false;
+                    while (nextRow) {
+                        if (nextRow.dataset.isHppRow === 'true' && nextRow.querySelector('.descriptionInput').value === `HPP ${selectedItem}`) {
+                            hppRowExists = true;
+                            break;
+                        }
+                        nextRow = nextRow.nextSibling;
+                    }
+
+                    if (hppRowExists) updateHppRowForPB(index, selectedItem, size, quantity);
+                    else addHppRowForPB(index, selectedItem, size, quantity);
+                }
             } else {
                 let nextRow = row.nextSibling;
                 while (nextRow) {
@@ -1068,12 +1213,16 @@
                     select.addEventListener('change', function() {
                         input.value = this.value;
                         updateSizeDropdown(index, this.value);
+                        const size = row.querySelector('.sizeInput')?.value || '';
+                        const quantity = parseFloat(row.querySelector('.quantityInput')?.value) || 1;
+                        updateHppRowForPB(index, this.value, size, quantity);
                         updateAllCalculationsAndValidations();
                     });
 
                     input.addEventListener('input', function() {
                         select.value = '';
                         updateSizeDropdown(index, '');
+                        updateHppRowForPB(index, this.value, row.querySelector('.sizeInput')?.value || '', parseFloat(row.querySelector('.quantityInput')?.value) || 1);
                         updateAllCalculationsAndValidations();
                     });
 
@@ -1088,7 +1237,7 @@
             row.appendChild(descriptionCell);
 
             const sizeCell = document.createElement('td');
-            const sizeElement = createSizeDropdown(index, initialSelectedItem);
+            const sizeElement = createSizeInputWithDropdown(index, initialSelectedItem);
             sizeCell.appendChild(sizeElement);
             row.appendChild(sizeCell);
 
@@ -1100,6 +1249,14 @@
             quantityInput.className = 'form-control quantityInput';
             quantityInput.name = `transactions[${index}][quantity]`;
             quantityInput.value = '1';
+            quantityInput.addEventListener('input', function() {
+                const description = row.querySelector('.descriptionInput')?.value || '';
+                const size = row.querySelector('.sizeInput')?.value || '';
+                if (voucherTypeSelect.value === 'PB') {
+                    updateHppRowForPB(index, description, size, parseFloat(this.value) || 1);
+                }
+                updateAllCalculationsAndValidations();
+            });
             quantityCell.appendChild(quantityInput);
             row.appendChild(quantityCell);
 

@@ -239,7 +239,8 @@
                     <a class="nav-link {{ request()->routeIs('balanceSheet_page') ? 'active' : '' }}" href="{{ route('balanceSheet_page') }}">
                         <i class="fas fa-file-alt"></i> Neraca Keuangan
                     </a>
-                </li> <li class="nav-item">
+                </li>
+                <li class="nav-item">
                     <a class="nav-link {{ request()->routeIs('zakat_page') ? 'active' : '' }}" href="{{ route('zakat_page') }}">
                         <i class="fas fa-file-alt"></i> Zakat
                     </a>
@@ -256,7 +257,8 @@
                 </li>
             </ul>
             <div class="logout-form">
-                <form action="{{ route('logout') }}" method="GET">
+                {{-- Ubah method menjadi POST --}}
+                <form action="{{ route('logout') }}" method="POST">
                     @csrf
                     <button type="submit" class="nav-link">
                         <i class="fas fa-sign-out-alt"></i> Logout

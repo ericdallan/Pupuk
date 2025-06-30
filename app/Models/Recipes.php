@@ -4,28 +4,23 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class Recipe extends Model
+class Recipes extends Model
 {
-    protected $fillable = [
-        'used_stock_id',
-        'product_name', // Opsional, jika Anda memutuskan untuk menyimpan nama produk di sini
-    ];
+    protected $table = 'recipes';
+    protected $fillable = ['product_name', 'used_stock_id'];
 
-    /**
-     * Mendapatkan used stock yang terkait dengan resep ini
-     */
-    public function usedStock()
-    {
-        return $this->belongsTo(UsedStock::class);
-    }
-
-    /**
-     * Mendapatkan transfer stocks yang digunakan dalam resep ini
-     */
     public function transferStocks()
     {
-        return $this->belongsToMany(TransferStock::class, 'recipe_transfer_stock')
-            ->withPivot('quantity')
-            ->withTimestamps();
+        return $this->belongsToMany(
+            TransferStock::class,
+            'recipe_transfer_stock',
+            'recipe_id',        // foreign key for current model
+            'transfer_stock_id' // foreign key for related model
+        )->withPivot('quantity', 'item', 'size')->withTimestamps();
+    }
+
+    public function usedStock()
+    {
+        return $this->belongsTo(UsedStock::class, 'used_stock_id');
     }
 }

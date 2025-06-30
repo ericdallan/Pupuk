@@ -22,7 +22,7 @@ Route::middleware(['guest:web'])->group(function () {
 Route::middleware(['auth:admin'])->group(function () {
     //LandingPage
     Route::get('/dashboard', [AdminController::class, 'dashboard_page'])->name('dashboard_page');
-    Route::get('/logout', [AuthController::class, 'logout'])->name('logout');
+    Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
     //AdminPage
     Route::get('/admin_profile', [AdminController::class, 'admin_profile'])->name('admin_profile');
     Route::put('/admin_profile/update', [AdminController::class, 'admin_update'])->name('admin_update');
