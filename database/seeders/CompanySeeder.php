@@ -15,11 +15,11 @@ class CompanySeeder extends Seeder
     {
         DB::table('companies')->insert([
             [
-                'company_name' => 'Candra Meubel',
-                'address' => 'Jl. Raya Puncak - Cianjur No.8, Palasari, Kec. Cipanas, Kabupaten Cianjur, Jawa Barat 43253',
-                'phone' => '0818-771-406',
-                'email' => 'SariPratamaMandiri@gmail.com',
-                'director' => 'Sari Novianti',
+                'company_name' => 'PD. Sahudi',
+                'address' => 'Jl. Hanjawar Pacet Sukanagalih, Pacet Cipanas - Cianjur',
+                'phone' => 'Sukanagalih',
+                'email' => 'PdSahudi@gmail.com',
+                'director' => 'Akang',
                 'logo' => null, // 
                 'created_at' => now(),
                 'updated_at' => now(),

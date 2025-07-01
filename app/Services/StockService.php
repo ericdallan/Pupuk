@@ -281,19 +281,17 @@ class StockService
             $openingBalance = $openingBalances->get($stockKey, (object) ['opening_qty' => 0, 'opening_hpp' => 0]);
             $hppEntry = $hppAverages[$stockKey] ?? ['average_hpp' => 0];
 
-            $incomingTransactions = $records->where('voucher_type', 'PB');
-            $outgoingTransactions = $records->whereIn('voucher_type', ['PJ', 'PK', 'PH']);
+            // Execute the query and sum directly on the query builder
+            $incomingQty = $records->where('voucher_type', 'PB')->sum('transaction_quantity') ?? 0; // Masuk Barang
+            $outgoingQty = $records->whereIn('voucher_type', ['PJ', 'PK', 'PH'])->sum('transaction_quantity') ?? 0; // Keluar Barang
 
-            $incomingQty = $incomingTransactions->sum('transaction_quantity') ?? 0;
-            $outgoingQty = $outgoingTransactions->sum('transaction_quantity') ?? 0;
+            // Hitung stok akhir berdasarkan rumus: Stok Akhir = Masuk Barang - Keluar Barang
+            $finalStockQty = $incomingQty - $outgoingQty;
 
-            // Hitung final_hpp berdasarkan rata-rata tertimbang
-            $totalQty = ($openingBalance->opening_qty ?? 0) + $incomingQty;
-            $totalValue = ($openingBalance->opening_qty ?? 0) * $openingBalance->opening_hpp + $incomingQty * $hppEntry['average_hpp'];
-            $final_hpp = $totalQty > 0 ? $totalValue / $totalQty : ($hppEntry['average_hpp'] ?? 0);
-
-            // Hitung final_stock_qty berdasarkan opening, incoming, dan outgoing
-            $finalStockQty = ($openingBalance->opening_qty ?? 0) + $incomingQty - $outgoingQty;
+            // (Opsional) Jika Anda ingin menyimpan HPP, gunakan logika sebelumnya
+            $totalQty = $incomingQty; // Tanpa saldo awal
+            $totalValue = $incomingQty * ($hppEntry['average_hpp'] ?? 0);
+            $finalHpp = $totalQty > 0 ? $totalValue / $totalQty : ($hppEntry['average_hpp'] ?? 0);
 
             $entry = (object) [
                 'id' => $records->first()->id ?? null,
@@ -307,7 +305,7 @@ class StockService
                 'outgoing_qty' => $outgoingQty,
                 'outgoing_hpp' => $hppEntry['average_hpp'],
                 'final_stock_qty' => $finalStockQty,
-                'final_hpp' => $final_hpp,
+                'final_hpp' => $finalHpp,
                 'average_hpp' => $hppEntry['average_hpp'],
                 'transactions' => $records->map(function ($record) {
                     return (object) [
