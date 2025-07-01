@@ -13,7 +13,7 @@ class VoucherSeeder extends Seeder
         // Calculate total debit and credit based on transactions
         $totalDebitCredit =
             // Kayu Jenjeng
-            (1 * 35000.00) + (63 * 30000.00) + (104 * 23500.00) + (63 * 14000.00) + (451 * 8500.00) +
+            (1 * 35000.00) + (63 * 30000.00) + (104 * 23    500.00) + (63 * 14000.00) + (451 * 8500.00) +
             (303 * 7500.00) + (225 * 9500.00) + (162 * 13000.00) + (13 * 18500.00) + (64 * 48000.00) +
             (28 * 7500.00) + (111 * 6000.00) + (7 * 4500.00) + (5 * 18000.00) + (6 * 21000.00) + (10 * 16000.00) +
             // Kayu Merahan
@@ -292,33 +292,53 @@ class VoucherSeeder extends Seeder
 
         DB::table('used_stocks')->insert([
             // Kusen Jendela Mahoni
-            ['id' => 1, 'item' => 'Kusen Jendela Mahoni', 'size' => '40x120', 'quantity' => 9, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
-            ['id' => 2, 'item' => 'Kusen Jendela Mahoni', 'size' => '40x140', 'quantity' => 12, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
+            ['id' => 107, 'item' => 'Kusen Jendela Mahoni', 'size' => '40x120', 'quantity' => 9, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
+            ['id' => 108, 'item' => 'HPP Kusen Jendela Mahoni', 'size' => '40x120', 'quantity' => 9, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
+            ['id' => 109, 'item' => 'Kusen Jendela Mahoni', 'size' => '40x140', 'quantity' => 12, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
+            ['id' => 110, 'item' => 'HPP Kusen Jendela Mahoni', 'size' => '40x140', 'quantity' => 12, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
             // Pintu Kayu (Panel)
-            ['id' => 3, 'item' => 'Pintu Kayu (Panel)', 'size' => '80x2m', 'quantity' => 8, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
-            ['id' => 4, 'item' => 'Pintu Kayu (Panel)', 'size' => '75x2m', 'quantity' => 11, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
-            ['id' => 5, 'item' => 'Pintu Kayu (Panel)', 'size' => '70x2m', 'quantity' => 7, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
-            ['id' => 6, 'item' => 'Pintu Kayu (Panel)', 'size' => '60x2m', 'quantity' => 28, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
+            ['id' => 111, 'item' => 'Pintu Kayu (Panel)', 'size' => '80x2m', 'quantity' => 8, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
+            ['id' => 112, 'item' => 'HPP Pintu Kayu (Panel)', 'size' => '80x2m', 'quantity' => 8, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
+            ['id' => 113, 'item' => 'Pintu Kayu (Panel)', 'size' => '75x2m', 'quantity' => 11, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
+            ['id' => 114, 'item' => 'HPP Pintu Kayu (Panel)', 'size' => '75x2m', 'quantity' => 11, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
+            ['id' => 115, 'item' => 'Pintu Kayu (Panel)', 'size' => '70x2m', 'quantity' => 7, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
+            ['id' => 116, 'item' => 'HPP Pintu Kayu (Panel)', 'size' => '70x2m', 'quantity' => 17, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
+            ['id' => 117, 'item' => 'Pintu Kayu (Panel)', 'size' => '60x2m', 'quantity' => 28, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
+            ['id' => 118, 'item' => 'HPP Pintu Kayu (Panel)', 'size' => '60x2m', 'quantity' => 28, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
             // Pintu (Full Triplek)
-            ['id' => 7, 'item' => 'Pintu (Full Triplek)', 'size' => '80x2m', 'quantity' => 5, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
+            ['id' => 119, 'item' => 'Pintu (Full Triplek)', 'size' => '80x2m', 'quantity' => 5, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
+            ['id' => 120, 'item' => 'HPP Pintu (Full Triplek)', 'size' => '80x2m', 'quantity' => 5, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
             // Loster (motif bali)
-            ['id' => 8, 'item' => 'Loster (motif bali)', 'size' => '15x128m', 'quantity' => 18, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
-            ['id' => 9, 'item' => 'Loster (motif bali)', 'size' => '15x88m', 'quantity' => 25, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
-            ['id' => 10, 'item' => 'Loster (motif bali)', 'size' => '15x83m', 'quantity' => 3, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
-            ['id' => 11, 'item' => 'Loster (motif bali)', 'size' => '15x78m', 'quantity' => 27, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
-            ['id' => 12, 'item' => 'Loster (motif bali)', 'size' => '15x30m', 'quantity' => 10, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
-            ['id' => 13, 'item' => 'Loster (motif bali)', 'size' => '15x49m', 'quantity' => 56, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
+            ['id' => 121, 'item' => 'Loster (motif bali)', 'size' => '15x128m', 'quantity' => 18, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
+            ['id' => 122, 'item' => 'HPP Loster (motif bali)', 'size' => '15x128m', 'quantity' => 18, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
+            ['id' => 123, 'item' => 'Loster (motif bali)', 'size' => '15x88m', 'quantity' => 25, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
+            ['id' => 124, 'item' => 'HPP Loster (motif bali)', 'size' => '15x88m', 'quantity' => 25, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
+            ['id' => 125, 'item' => 'Loster (motif bali)', 'size' => '15x83m', 'quantity' => 3, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
+            ['id' => 126, 'item' => 'HPP Loster (motif bali)', 'size' => '15x83m', 'quantity' => 3, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
+            ['id' => 127, 'item' => 'Loster (motif bali)', 'size' => '15x78m', 'quantity' => 27, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
+            ['id' => 128, 'item' => 'HPP Loster (motif bali)', 'size' => '15x78m', 'quantity' => 27, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
+            ['id' => 129, 'item' => 'Loster (motif bali)', 'size' => '15x30m', 'quantity' => 10, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
+            ['id' => 130, 'item' => 'HPP Loster (motif bali)', 'size' => '15x30m', 'quantity' => 10, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
+            ['id' => 131, 'item' => 'Loster (motif bali)', 'size' => '15x49m', 'quantity' => 56, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
+            ['id' => 132, 'item' => 'HPP Loster (motif bali)', 'size' => '15x49m', 'quantity' => 56, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
             // Jati
-            ['id' => 14, 'item' => 'Jati', 'size' => '4x20x2m', 'quantity' => 2, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
-            ['id' => 15, 'item' => 'Jati', 'size' => '3x20x2m', 'quantity' => 1, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
-            ['id' => 16, 'item' => 'Jati', 'size' => '6x12x2m', 'quantity' => 2, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
-            ['id' => 17, 'item' => 'Jati', 'size' => '5x10x2m', 'quantity' => 3, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
+            ['id' => 133, 'item' => 'Jati', 'size' => '4x20x2m', 'quantity' => 2, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
+            ['id' => 134, 'item' => 'HPP Jati', 'size' => '4x20x2m', 'quantity' => 2, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
+            ['id' => 135, 'item' => 'Jati', 'size' => '3x20x2m', 'quantity' => 1, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
+            ['id' => 136, 'item' => 'HPP Jati', 'size' => '3x20x2m', 'quantity' => 1, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
+            ['id' => 137, 'item' => 'Jati', 'size' => '6x12x2m', 'quantity' => 2, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
+            ['id' => 138, 'item' => 'HPP Jati', 'size' => '6x12x2m', 'quantity' => 1, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
+            ['id' => 139, 'item' => 'Jati', 'size' => '5x10x2m', 'quantity' => 3, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
+            ['id' => 140, 'item' => 'HPP Jati', 'size' => '5x10x2m', 'quantity' => 3, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
             // Pintu Tikblok
-            ['id' => 18, 'item' => 'Pintu Tikblok', 'size' => '80x2m', 'quantity' => 1, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
+            ['id' => 141, 'item' => 'Pintu Tikblok', 'size' => '80x2m', 'quantity' => 1, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
+            ['id' => 142, 'item' => 'HPP Pintu Tikblok', 'size' => '80x2m', 'quantity' => 1, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
             // Kusen Jendela Bayur
-            ['id' => 19, 'item' => 'Kusen Jendela Bayur', 'size' => '140x40', 'quantity' => 4, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
+            ['id' => 143, 'item' => 'Kusen Jendela Bayur', 'size' => '140x40', 'quantity' => 4, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
+            ['id' => 144, 'item' => 'HPP Kusen Jendela Bayur', 'size' => '140x40', 'quantity' => 4, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
             // Ram Kaca Bayur
-            ['id' => 20, 'item' => 'Ram Kaca Bayur', 'size' => '120x40', 'quantity' => 12, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
+            ['id' => 145, 'item' => 'Ram Kaca Bayur', 'size' => '120x40', 'quantity' => 12, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
+            ['id' => 146, 'item' => 'HPP Ram Kaca Bayur', 'size' => '120x40', 'quantity' => 12, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
         ]);
     }
 }

@@ -36,13 +36,23 @@ class VoucherController extends Controller
     {
         try {
             $data = $this->voucherService->prepareVoucherPageData($request);
-            // Include 'size' in the select query
             $data['stocks'] = Stock::select(['item', 'size', 'quantity'])->get();
             $data['transferStocks'] = TransferStock::select(['item', 'size', 'quantity'])->get();
             $data['usedStocks'] = UsedStock::select(['item', 'size', 'quantity'])->get();
+            // Combine stocks for PJ vouchers
+            $data['pjStocks'] = collect($data['usedStocks'])
+                ->map(function ($stock) {
+                    return ['item' => $stock->item, 'size' => $stock->size, 'quantity' => $stock->quantity, 'source' => 'used_stocks'];
+                })
+                ->merge(
+                    collect($data['transferStocks'])
+                        ->map(function ($stock) {
+                            return ['item' => $stock->item, 'size' => $stock->size, 'quantity' => $stock->quantity, 'source' => 'transfer_stocks'];
+                        })
+                );
             $data['transactionsData'] = Transactions::join('vouchers', 'transactions.voucher_id', '=', 'vouchers.id')
                 ->where('vouchers.voucher_type', 'PB')
-                ->select(['transactions.description', 'transactions.nominal'])
+                ->select(['transactions.description', 'transactions.nominal', 'transactions.size'])
                 ->get();
             return view('voucher.voucher_page', $data);
         } catch (\Exception $e) {
@@ -54,7 +64,6 @@ class VoucherController extends Controller
             return redirect()->back()->withErrors(['error' => 'Gagal memuat halaman voucher']);
         }
     }
-
     /**
      * Filter and normalize transactions data
      *
@@ -236,67 +245,70 @@ class VoucherController extends Controller
         foreach ($transactions as $index => $transaction) {
             $item = $transaction['description'];
             $quantity = floatval($transaction['quantity']);
+            $size = $transaction['size'] ?? null;
             $errorField = "transactions.{$index}.quantity";
 
             if (!str_starts_with($item, 'HPP ')) {
                 $nonHppItems[$item] = [
                     'index' => $index,
                     'quantity' => $quantity,
+                    'size' => $size,
                 ];
 
                 if ($request->voucher_type === 'PH') {
-                    $stock = Stock::where('item', $item)->first();
+                    $stock = Stock::where('item', $item)->where('size', $size)->first();
                     if (!$stock || $stock->quantity < $quantity) {
                         $validator->errors()->add(
                             $errorField,
-                            "Stok untuk item {$item} tidak mencukupi di tabel stocks. Tersedia: " . ($stock ? $stock->quantity : 0) . ", Dibutuhkan: {$quantity}."
+                            "Stok untuk item {$item} (Ukuran: {$size}) tidak mencukupi di tabel stocks. Tersedia: " . ($stock ? $stock->quantity : 0) . ", Dibutuhkan: {$quantity}."
                         );
                     }
                 } elseif ($request->voucher_type === 'PK') {
-                    $transferStock = TransferStock::where('item', $item)->first();
+                    $transferStock = TransferStock::where('item', $item)->where('size', $size)->first();
                     if (!$transferStock || $transferStock->quantity < $quantity) {
                         $validator->errors()->add(
                             $errorField,
-                            "Stok untuk item {$item} tidak mencukupi di tabel transfer_stocks. Tersedia: " . ($transferStock ? $transferStock->quantity : 0) . ", Dibutuhkan: {$quantity}."
+                            "Stok untuk item {$item} (Ukuran: {$size}) tidak mencukupi di tabel transfer_stocks. Tersedia: " . ($transferStock ? $transferStock->quantity : 0) . ", Dibutuhkan: {$quantity}."
                         );
                     }
                 } elseif ($request->voucher_type === 'PJ') {
-                    $usedStock = UsedStock::where('item', $item)->first();
-                    if (!$usedStock || $usedStock->quantity < $quantity) {
+                    $usedStock = UsedStock::where('item', $item)->where('size', $size)->first();
+                    $transferStock = TransferStock::where('item', $item)->where('size', $size)->first();
+                    $totalQuantity = ($usedStock ? $usedStock->quantity : 0) + ($transferStock ? $transferStock->quantity : 0);
+                    if ($totalQuantity < $quantity) {
                         $validator->errors()->add(
                             $errorField,
-                            "Stok untuk item {$item} tidak mencukupi di tabel used_stocks. Tersedia: " . ($usedStock ? $usedStock->quantity : 0) . ", Dibutuhkan: {$quantity}."
+                            "Stok untuk item {$item} (Ukuran: {$size}) tidak mencukupi di tabel used_stocks atau transfer_stocks. Tersedia: {$totalQuantity}, Dibutuhkan: {$quantity}."
                         );
                     }
                 }
             }
         }
 
-        // Validate HPP for PJ
         if ($request->voucher_type === 'PJ') {
             foreach ($nonHppItems as $item => $data) {
                 $hppItem = "HPP {$item}";
                 $hppFound = false;
                 $index = $data['index'];
                 $expectedQuantity = $data['quantity'];
+                $expectedSize = $data['size'];
 
                 foreach ($transactions as $tIndex => $transaction) {
-                    if ($transaction['description'] === $hppItem) {
+                    if ($transaction['description'] === $hppItem && $transaction['size'] === $expectedSize) {
                         $hppFound = true;
                         $hppQuantity = floatval($transaction['quantity']);
                         $hppNominal = floatval($transaction['nominal']);
                         if ($hppQuantity !== $expectedQuantity) {
                             $validator->errors()->add(
                                 "transactions.{$tIndex}.quantity",
-                                "Kuantitas untuk HPP {$item} harus sama dengan kuantitas item utama ({$expectedQuantity})."
+                                "Kuantitas untuk HPP {$item} (Ukuran: {$expectedSize}) harus sama dengan kuantitas item utama ({$expectedQuantity})."
                             );
                         }
-                        // Validasi nominal HPP berdasarkan rata-rata pembelian
                         $averageHpp = $this->calculateAverageHpp($item);
                         if (abs($hppNominal - $averageHpp) > 0.01) {
                             $validator->errors()->add(
                                 "transactions.{$tIndex}.nominal",
-                                "Nominal untuk HPP {$item} harus sesuai dengan rata-rata HPP ({$averageHpp}). Diterima: {$hppNominal}."
+                                "Nominal untuk HPP {$item} (Ukuran: {$expectedSize}) harus sesuai dengan rata-rata HPP ({$averageHpp}). Diterima: {$hppNominal}."
                             );
                         }
                         break;
@@ -306,7 +318,7 @@ class VoucherController extends Controller
                 if (!$hppFound) {
                     $validator->errors()->add(
                         "transactions.{$index}.description",
-                        "Item {$item} membutuhkan baris HPP terkait (HPP {$item})."
+                        "Item {$item} (Ukuran: {$expectedSize}) membutuhkan baris HPP terkait (HPP {$item})."
                     );
                 }
             }
@@ -444,8 +456,18 @@ class VoucherController extends Controller
             $data['stocks'] = Stock::select(['item', 'size', 'quantity'])->get();
             $data['transferStocks'] = TransferStock::select(['item', 'size', 'quantity'])->get();
             $data['usedStocks'] = UsedStock::select(['item', 'size', 'quantity'])->get();
+            $data['pjStocks'] = collect($data['usedStocks'])
+                ->map(function ($stock) {
+                    return ['item' => $stock->item, 'size' => $stock->size, 'quantity' => $stock->quantity, 'source' => 'used_stocks'];
+                })
+                ->merge(
+                    collect($data['transferStocks'])
+                        ->map(function ($stock) {
+                            return ['item' => $stock->item, 'size' => $stock->size, 'quantity' => $stock->quantity, 'source' => 'transfer_stocks'];
+                        })
+                );
             $data['transactionsData'] = Transactions::where('voucher_type', 'PB')
-                ->select(['description', 'nominal', 'voucher_type'])
+                ->select(['description', 'nominal', 'size'])
                 ->get();
             return view('voucher.voucher_edit', $data);
         } catch (\Exception $e) {

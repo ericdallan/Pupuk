@@ -591,6 +591,10 @@
                 }
             });
 
+            select.addEventListener('change', function() {
+                updateProductDropdownForPK();
+            });
+
             return select;
         }
 
@@ -623,6 +627,7 @@
             invoiceFieldContainer.appendChild(invoiceLabel);
             invoiceFieldContainer.appendChild(invoiceInputDiv);
             updateAccountCodeDatalist();
+            updateProductDropdownForPK();
         }
 
         function updateDueDateField() {
@@ -676,6 +681,7 @@
             }
             updateDueDateField();
             updateAccountCodeDatalist();
+            updateProductDropdownForPK();
         }
 
         useInvoiceYes.addEventListener('change', updateInvoiceAndStoreFields);
@@ -683,10 +689,12 @@
         useExistingInvoiceYes.addEventListener('change', function() {
             updateInvoiceField();
             updateDueDateField();
+            updateProductDropdownForPK();
         });
         useExistingInvoiceNo.addEventListener('change', function() {
             updateInvoiceField();
             updateDueDateField();
+            updateProductDropdownForPK();
         });
 
         function createSizeInputWithDropdown(index, selectedItem) {
@@ -745,7 +753,7 @@
             return container;
         }
 
-        function createSizeDropdown(index, selectedItem) {
+        function createSizeDropdown(index, selectedItem, voucherType) {
             const select = document.createElement('select');
             select.className = 'form-control sizeInput';
             select.name = `transactions[${index}][size]`;
@@ -755,16 +763,61 @@
             defaultOption.textContent = 'Pilih Ukuran';
             select.appendChild(defaultOption);
 
-            if (selectedItem && stocks && Array.isArray(stocks) && stocks.length > 0) {
-                const sizesWithQuantity = stocks
+            let stockData = [];
+            if (voucherType === 'PJ') {
+                stockData = [...usedStocks, ...transferStocks];
+            } else if (voucherType === 'PH') {
+                stockData = stocks;
+            } else if (voucherType === 'PK') {
+                stockData = transferStocks;
+            }
+
+            if (selectedItem && stockData && Array.isArray(stockData) && stockData.length > 0) {
+                const sizesWithQuantity = stockData
                     .filter(stock => stock.item === selectedItem && stock.size && stock.quantity !== null)
                     .map(stock => ({
                         size: stock.size,
-                        quantity: stock.quantity
+                        quantity: stock.quantity,
+                        source: stock.source || (usedStocks.includes(stock) ? 'used_stocks' : 'transfer_stocks')
                     }))
                     .filter(item => item.size !== null && item.size !== undefined);
 
-                if (sizesWithQuantity.length > 0) {
+                if (voucherType === 'PJ') {
+                    const usedStockSizes = sizesWithQuantity.filter(item => item.source === 'used_stocks');
+                    const transferStockSizes = sizesWithQuantity.filter(item => item.source === 'transfer_stocks');
+
+                    if (usedStockSizes.length > 0) {
+                        const separator = document.createElement('option');
+                        separator.value = '';
+                        separator.textContent = '---- Used Stocks ----';
+                        separator.disabled = true;
+                        select.appendChild(separator);
+
+                        usedStockSizes.forEach(item => {
+                            const option = document.createElement('option');
+                            option.value = item.size;
+                            option.textContent = `${item.size} (Stok: ${item.quantity})`;
+                            option.dataset.source = 'used_stocks';
+                            select.appendChild(option);
+                        });
+                    }
+
+                    if (transferStockSizes.length > 0) {
+                        const separator = document.createElement('option');
+                        separator.value = '';
+                        separator.textContent = '---- Transfer Stocks ----';
+                        separator.disabled = true;
+                        select.appendChild(separator);
+
+                        transferStockSizes.forEach(item => {
+                            const option = document.createElement('option');
+                            option.value = item.size;
+                            option.textContent = `${item.size} (Stok: ${item.quantity})`;
+                            option.dataset.source = 'transfer_stocks';
+                            select.appendChild(option);
+                        });
+                    }
+                } else {
                     sizesWithQuantity.forEach(item => {
                         const option = document.createElement('option');
                         option.value = item.size;
@@ -776,10 +829,12 @@
 
             select.disabled = document.querySelector('input[name="use_stock"]:checked')?.value !== 'yes';
             select.addEventListener('change', function() {
-                if (voucherTypeSelect.value === 'PB') {
-                    const row = select.closest('tr');
-                    const quantity = parseFloat(row.querySelector('.quantityInput').value) || 1;
+                const row = select.closest('tr');
+                const quantity = parseFloat(row.querySelector('.quantityInput').value) || 1;
+                if (voucherType === 'PB') {
                     updateHppRowForPB(index, row.querySelector('.descriptionInput').value, this.value, quantity);
+                } else if (voucherType === 'PJ') {
+                    updateHppRowForPJ(index, row.querySelector('.descriptionInput').value, this.value, quantity);
                 }
                 updateAllCalculationsAndValidations();
             });
@@ -803,7 +858,7 @@
                 if (voucherType === 'PB') {
                     newSizeElement = createSizeInputWithDropdown(index, selectedItem);
                 } else {
-                    newSizeElement = createSizeDropdown(index, selectedItem);
+                    newSizeElement = createSizeDropdown(index, selectedItem, voucherType);
                 }
             } else {
                 newSizeElement = document.createElement('input');
@@ -853,7 +908,7 @@
             attachTransactionInputListeners();
         }
 
-        function createStockDropdown(index) {
+        function createStockDropdown(index, voucherType) {
             const select = document.createElement('select');
             select.className = 'form-control descriptionInput';
             select.name = `transactions[${index}][description]`;
@@ -863,17 +918,80 @@
             defaultOption.textContent = 'Pilih Item Stok';
             select.appendChild(defaultOption);
 
-            if (stocks && Array.isArray(stocks)) {
-                const uniqueItems = [...new Set(stocks
+            let stockData = [];
+            if (voucherType === 'PJ') {
+                stockData = [...usedStocks, ...transferStocks];
+            } else if (voucherType === 'PH') {
+                stockData = stocks;
+            } else if (voucherType === 'PK') {
+                stockData = transferStocks;
+            }
+
+            if (stockData && Array.isArray(stockData)) {
+                const uniqueItems = [...new Set(stockData
                     .filter(stock => !stock.item.startsWith('HPP '))
                     .map(stock => stock.item))];
 
-                uniqueItems.forEach(item => {
-                    const option = document.createElement('option');
-                    option.value = item;
-                    option.textContent = item;
-                    select.appendChild(option);
-                });
+                if (voucherType === 'PJ') {
+                    const usedStockItems = usedStocks
+                        .filter(stock => !stock.item.startsWith('HPP '))
+                        .map(stock => ({
+                            item: stock.item,
+                            size: stock.size,
+                            quantity: stock.quantity,
+                            source: 'used_stocks'
+                        }));
+                    const transferStockItems = transferStocks
+                        .filter(stock => !stock.item.startsWith('HPP '))
+                        .map(stock => ({
+                            item: stock.item,
+                            size: stock.size,
+                            quantity: stock.quantity,
+                            source: 'transfer_stocks'
+                        }));
+
+                    if (usedStockItems.length > 0) {
+                        const separator = document.createElement('option');
+                        separator.value = '';
+                        separator.textContent = '---- Used Stocks ----';
+                        separator.disabled = true;
+                        select.appendChild(separator);
+
+                        [...new Set(usedStockItems.map(s => s.item))].forEach(item => {
+                            const stock = usedStockItems.find(s => s.item === item);
+                            const option = document.createElement('option');
+                            option.value = item;
+                            option.textContent = `${item}`;
+                            option.dataset.source = 'used_stocks';
+                            select.appendChild(option);
+                        });
+                    }
+
+                    if (transferStockItems.length > 0) {
+                        const separator = document.createElement('option');
+                        separator.value = '';
+                        separator.textContent = '---- Transfer Stocks ----';
+                        separator.disabled = true;
+                        select.appendChild(separator);
+
+                        [...new Set(transferStockItems.map(s => s.item))].forEach(item => {
+                            const stock = transferStockItems.find(s => s.item === item);
+                            const option = document.createElement('option');
+                            option.value = item;
+                            option.textContent = `${item}`;
+                            option.dataset.source = 'transfer_stocks';
+                            select.appendChild(option);
+                        });
+                    }
+                } else {
+                    uniqueItems.forEach(item => {
+                        const stock = stockData.find(s => s.item === item);
+                        const option = document.createElement('option');
+                        option.value = item;
+                        option.textContent = `${item}`;
+                        select.appendChild(option);
+                    });
+                }
             }
 
             select.addEventListener('change', function(event) {
@@ -892,10 +1010,67 @@
             return input;
         }
 
-        function calculateAverageHpp(item) {
+        function createProductDropdownForPK(index) {
+            const select = document.createElement('select');
+            select.className = 'form-control descriptionInput';
+            select.name = `transactions[${index}][description]`;
+
+            const defaultOption = document.createElement('option');
+            defaultOption.value = '';
+            defaultOption.textContent = 'Pilih Nama Produk';
+            select.appendChild(defaultOption);
+
+            const invoiceNumber = document.querySelector('#invoice')?.value;
+            if (invoiceNumber) {
+                const relatedStocks = usedStocks.filter(stock => stock.invoice_number === invoiceNumber);
+                const uniqueItems = [...new Set(relatedStocks.map(stock => stock.item))];
+
+                uniqueItems.forEach(item => {
+                    const stock = relatedStocks.find(s => s.item === item);
+                    const option = document.createElement('option');
+                    option.value = item;
+                    option.textContent = `${item}`;
+                    select.appendChild(option);
+                });
+            }
+
+            select.addEventListener('change', function(event) {
+                handleStockChange(index, event);
+                updateSizeDropdown(index, this.value);
+            });
+
+            return select;
+        }
+
+        function updateProductDropdownForPK() {
+            const voucherType = voucherTypeSelect.value;
+            if (voucherType !== 'PK') return;
+
+            const invoiceNumber = document.querySelector('#invoice')?.value;
+            transactionTableBody.querySelectorAll('tr[data-is-new-item="true"]').forEach(row => {
+                const index = parseInt(row.dataset.rowIndex);
+                const descriptionCell = row.querySelector('td:nth-child(1)');
+                if (!descriptionCell) return;
+
+                const currentDescriptionInput = row.querySelector('.descriptionInput');
+                const previousValue = currentDescriptionInput ? currentDescriptionInput.value : '';
+                descriptionCell.innerHTML = '';
+
+                const newDescriptionElement = createProductDropdownForPK(index);
+                descriptionCell.appendChild(newDescriptionElement);
+
+                if (previousValue && newDescriptionElement.querySelector(`option[value="${previousValue}"]`)) {
+                    newDescriptionElement.value = previousValue;
+                }
+
+                updateSizeDropdown(index, newDescriptionElement.value);
+            });
+        }
+
+        function calculateAverageHpp(item, size) {
             if (!transactions || !Array.isArray(transactions) || transactions.length === 0) return 0;
 
-            const matchingTransactions = transactions.filter(t => t.description === item && t.voucher_type === 'PB');
+            const matchingTransactions = transactions.filter(t => t.description === item && t.voucher_type === 'PB' && (!size || t.size === size));
             if (matchingTransactions.length === 0) return 0;
 
             const totalNominal = matchingTransactions.reduce((sum, t) => sum + (parseFloat(t.nominal) || 0), 0);
@@ -947,7 +1122,7 @@
             nominalInput.step = '0.01';
             nominalInput.className = 'form-control nominalInput';
             nominalInput.name = `transactions[${newIndex}][nominal]`;
-            const averageHpp = calculateAverageHpp(selectedItem);
+            const averageHpp = calculateAverageHpp(selectedItem, size);
             nominalInput.value = averageHpp.toFixed(2);
             nominalInput.readOnly = true;
             nominalCell.appendChild(nominalInput);
@@ -984,7 +1159,6 @@
             updateAllCalculationsAndValidations();
         }
 
-        // Update existing HPP row for PB voucher
         function updateHppRowForPB(currentIndex, selectedItem, size, quantity) {
             if (!selectedItem || voucherTypeSelect.value !== 'PB') return;
 
@@ -992,7 +1166,7 @@
             let nextRow = currentRow.nextSibling;
 
             while (nextRow) {
-                if (nextRow.dataset.isHppRow === 'true' && nextRow.querySelector('.descriptionInput').value === `HPP ${selectedItem}`) {
+                if (nextRow.dataset.isHppRow === 'true' && nextRow.querySelector('.descriptionInput').value === `HPP ${selectedItem}` && nextRow.querySelector('.sizeInput').value === size) {
                     const descriptionInput = nextRow.querySelector('.descriptionInput');
                     descriptionInput.value = `HPP ${selectedItem}`;
                     const sizeInput = nextRow.querySelector('.sizeInput');
@@ -1003,7 +1177,7 @@
                     quantityInput.value = quantity;
                     quantityInput.readOnly = true;
                     const nominalInput = nextRow.querySelector('.nominalInput');
-                    const averageHpp = calculateAverageHpp(selectedItem);
+                    const averageHpp = calculateAverageHpp(selectedItem, size);
                     nominalInput.value = averageHpp.toFixed(2);
                     nominalInput.readOnly = true;
                     const totalInput = nextRow.querySelector('.totalInput');
@@ -1020,7 +1194,7 @@
             addHppRowForPB(currentIndex, selectedItem, size, quantity);
         }
 
-        function addHppRow(currentIndex, selectedItem, quantity) {
+        function addHppRowForPJ(currentIndex, selectedItem, size, quantity) {
             if (!selectedItem || voucherTypeSelect.value !== 'PJ') return;
 
             const newIndex = transactionTableBody.querySelectorAll('tr').length;
@@ -1040,6 +1214,7 @@
             sizeInput.type = 'text';
             sizeInput.className = 'form-control sizeInput';
             sizeInput.name = `transactions[${newIndex}][size]`;
+            sizeInput.value = size || '';
             sizeInput.readOnly = true;
             sizeInput.disabled = document.querySelector('input[name="use_stock"]:checked')?.value !== 'yes';
             sizeCell.appendChild(sizeInput);
@@ -1052,7 +1227,7 @@
             quantityInput.step = '0.01';
             quantityInput.className = 'form-control quantityInput';
             quantityInput.name = `transactions[${newIndex}][quantity]`;
-            quantityInput.value = quantity;
+            quantityInput.value = quantity || 1;
             quantityInput.readOnly = true;
             quantityCell.appendChild(quantityInput);
             hppRow.appendChild(quantityCell);
@@ -1064,7 +1239,7 @@
             nominalInput.step = '0.01';
             nominalInput.className = 'form-control nominalInput';
             nominalInput.name = `transactions[${newIndex}][nominal]`;
-            const averageHpp = calculateAverageHpp(selectedItem);
+            const averageHpp = calculateAverageHpp(selectedItem, size);
             nominalInput.value = averageHpp.toFixed(2);
             nominalInput.readOnly = true;
             nominalCell.appendChild(nominalInput);
@@ -1101,25 +1276,25 @@
             updateAllCalculationsAndValidations();
         }
 
-        function updateHppRow(currentIndex, selectedItem, quantity) {
+        function updateHppRowForPJ(currentIndex, selectedItem, size, quantity) {
             if (!selectedItem || voucherTypeSelect.value !== 'PJ') return;
 
             const currentRow = transactionTableBody.querySelector(`tr[data-row-index="${currentIndex}"]`);
             let nextRow = currentRow.nextSibling;
 
             while (nextRow) {
-                if (nextRow.dataset.isHppRow === 'true') {
+                if (nextRow.dataset.isHppRow === 'true' && nextRow.querySelector('.descriptionInput').value === `HPP ${selectedItem}` && nextRow.querySelector('.sizeInput').value === size) {
                     const descriptionInput = nextRow.querySelector('.descriptionInput');
                     descriptionInput.value = `HPP ${selectedItem}`;
                     const sizeInput = nextRow.querySelector('.sizeInput');
-                    sizeInput.value = '';
+                    sizeInput.value = size || '';
                     sizeInput.readOnly = true;
                     sizeInput.disabled = document.querySelector('input[name="use_stock"]:checked')?.value !== 'yes';
                     const quantityInput = nextRow.querySelector('.quantityInput');
                     quantityInput.value = quantity;
                     quantityInput.readOnly = true;
                     const nominalInput = nextRow.querySelector('.nominalInput');
-                    const averageHpp = calculateAverageHpp(selectedItem);
+                    const averageHpp = calculateAverageHpp(selectedItem, size);
                     nominalInput.value = averageHpp.toFixed(2);
                     nominalInput.readOnly = true;
                     const totalInput = nextRow.querySelector('.totalInput');
@@ -1133,7 +1308,7 @@
                 nextRow = nextRow.nextSibling;
             }
 
-            addHppRow(currentIndex, selectedItem, quantity);
+            addHppRowForPJ(currentIndex, selectedItem, size, quantity);
         }
 
         function handleStockChange(index, event) {
@@ -1141,26 +1316,27 @@
             const row = event.target.closest('tr');
             const quantity = parseFloat(row.querySelector('.quantityInput')?.value) || 1;
             const size = row.querySelector('.sizeInput')?.value || '';
+            const voucherType = voucherTypeSelect.value;
 
             if (selectedItem) {
-                if (voucherTypeSelect.value === 'PJ') {
+                if (voucherType === 'PJ') {
                     let nextRow = row.nextSibling;
                     let hppRowExists = false;
                     while (nextRow) {
-                        if (nextRow.dataset.isHppRow === 'true') {
+                        if (nextRow.dataset.isHppRow === 'true' && nextRow.querySelector('.descriptionInput').value === `HPP ${selectedItem}` && nextRow.querySelector('.sizeInput').value === size) {
                             hppRowExists = true;
                             break;
                         }
                         nextRow = nextRow.nextSibling;
                     }
 
-                    if (hppRowExists) updateHppRow(index, selectedItem, quantity);
-                    else addHppRow(index, selectedItem, quantity);
-                } else if (voucherTypeSelect.value === 'PB') {
+                    if (hppRowExists) updateHppRowForPJ(index, selectedItem, size, quantity);
+                    else addHppRowForPJ(index, selectedItem, size, quantity);
+                } else if (voucherType === 'PB') {
                     let nextRow = row.nextSibling;
                     let hppRowExists = false;
                     while (nextRow) {
-                        if (nextRow.dataset.isHppRow === 'true' && nextRow.querySelector('.descriptionInput').value === `HPP ${selectedItem}`) {
+                        if (nextRow.dataset.isHppRow === 'true' && nextRow.querySelector('.descriptionInput').value === `HPP ${selectedItem}` && nextRow.querySelector('.sizeInput').value === size) {
                             hppRowExists = true;
                             break;
                         }
@@ -1196,14 +1372,14 @@
             let initialSelectedItem = '';
 
             if (useStock === 'yes' && (voucherType === 'PJ' || voucherType === 'PB' || voucherType === 'PH' || voucherType === 'PK')) {
-                if (voucherType === 'PJ' || voucherType === 'PH') {
-                    descriptionElement = createStockDropdown(index);
+                if (voucherType === 'PJ' || voucherType === 'PH' || voucherType === 'PK') {
+                    descriptionElement = createStockDropdown(index, voucherType);
                     initialSelectedItem = (descriptionElement.tagName === 'SELECT' && descriptionElement.value) || '';
-                } else if (voucherType === 'PB' || voucherType === 'PK') {
+                } else if (voucherType === 'PB') {
                     descriptionElement = document.createElement('div');
                     descriptionElement.className = 'input-group';
 
-                    const select = createStockDropdown(index);
+                    const select = createStockDropdown(index, voucherType);
                     select.style.width = '50%';
 
                     const input = createDescriptionInput(index);
@@ -1237,7 +1413,7 @@
             row.appendChild(descriptionCell);
 
             const sizeCell = document.createElement('td');
-            const sizeElement = createSizeInputWithDropdown(index, initialSelectedItem);
+            const sizeElement = createSizeDropdown(index, initialSelectedItem, voucherType);
             sizeCell.appendChild(sizeElement);
             row.appendChild(sizeCell);
 
@@ -1252,8 +1428,10 @@
             quantityInput.addEventListener('input', function() {
                 const description = row.querySelector('.descriptionInput')?.value || '';
                 const size = row.querySelector('.sizeInput')?.value || '';
-                if (voucherTypeSelect.value === 'PB') {
+                if (voucherType === 'PB') {
                     updateHppRowForPB(index, description, size, parseFloat(this.value) || 1);
+                } else if (voucherType === 'PJ') {
+                    updateHppRowForPJ(index, description, size, parseFloat(this.value) || 1);
                 }
                 updateAllCalculationsAndValidations();
             });
@@ -1311,11 +1489,16 @@
             row.dataset.isNewItem = 'true';
 
             const descriptionCell = document.createElement('td');
-            const descriptionInput = document.createElement('input');
-            descriptionInput.type = 'text';
-            descriptionInput.className = 'form-control descriptionInput';
-            descriptionInput.name = `transactions[${index}][description]`;
-            descriptionInput.placeholder = 'Masukkan Nama Barang Baru';
+            let descriptionInput;
+            if (voucherTypeSelect.value === 'PK') {
+                descriptionInput = createProductDropdownForPK(index);
+            } else {
+                descriptionInput = document.createElement('input');
+                descriptionInput.type = 'text';
+                descriptionInput.className = 'form-control descriptionInput';
+                descriptionInput.name = `transactions[${index}][description]`;
+                descriptionInput.placeholder = 'Masukkan Nama Barang Baru';
+            }
             descriptionCell.appendChild(descriptionInput);
             row.appendChild(descriptionCell);
 
@@ -1336,6 +1519,9 @@
             quantityInput.className = 'form-control quantityInput';
             quantityInput.name = `transactions[${index}][quantity]`;
             quantityInput.value = '1';
+            quantityInput.addEventListener('input', function() {
+                updateAllCalculationsAndValidations();
+            });
             quantityCell.appendChild(quantityInput);
             row.appendChild(quantityCell);
 
@@ -1433,9 +1619,21 @@
 
                 if (voucherType === 'PJ' && !isHppRow) {
                     const description = row.querySelector('.descriptionInput:not([type="text"])')?.value || row.querySelector('.descriptionInput[type="text"]')?.value || '';
+                    const size = row.querySelector('.sizeInput')?.value || '';
                     let nextRow = row.nextSibling;
                     while (nextRow) {
-                        if (nextRow.dataset.isHppRow === 'true' && nextRow.querySelector('.descriptionInput')?.value === `HPP ${description}`) {
+                        if (nextRow.dataset.isHppRow === 'true' && nextRow.querySelector('.descriptionInput')?.value === `HPP ${description}` && nextRow.querySelector('.sizeInput')?.value === size) {
+                            nextRow.remove();
+                            break;
+                        }
+                        nextRow = nextRow.nextSibling;
+                    }
+                } else if (voucherType === 'PB' && !isHppRow) {
+                    const description = row.querySelector('.descriptionInput:not([type="text"])')?.value || row.querySelector('.descriptionInput[type="text"]')?.value || '';
+                    const size = row.querySelector('.sizeInput')?.value || '';
+                    let nextRow = row.nextSibling;
+                    while (nextRow) {
+                        if (nextRow.dataset.isHppRow === 'true' && nextRow.querySelector('.descriptionInput')?.value === `HPP ${description}` && nextRow.querySelector('.sizeInput')?.value === size) {
                             nextRow.remove();
                             break;
                         }
@@ -1467,14 +1665,17 @@
         }
 
         function syncHppQuantity(row) {
-            if (voucherTypeSelect.value !== 'PJ') return;
+            const voucherType = voucherTypeSelect.value;
+            if (voucherType !== 'PJ' && voucherType !== 'PB') return;
 
             const rowIndex = parseInt(row.dataset.rowIndex);
             const isHppRow = row.dataset.isHppRow === 'true';
             if (!isHppRow) {
                 let nextRow = row.nextSibling;
+                const description = row.querySelector('.descriptionInput:not([type="text"])')?.value || row.querySelector('.descriptionInput[type="text"]')?.value || '';
+                const size = row.querySelector('.sizeInput')?.value || '';
                 while (nextRow) {
-                    if (nextRow.dataset.isHppRow === 'true') {
+                    if (nextRow.dataset.isHppRow === 'true' && nextRow.querySelector('.descriptionInput')?.value === `HPP ${description}` && nextRow.querySelector('.sizeInput')?.value === size) {
                         const hppQuantityInput = nextRow.querySelector('.quantityInput');
                         const currentQuantity = parseFloat(row.querySelector('.quantityInput')?.value) || 1;
                         const hppNominal = parseFloat(nextRow.querySelector('.nominalInput')?.value) || 0;
@@ -1495,6 +1696,7 @@
             const voucherType = voucherTypeSelect.value;
             const descriptionInput = row.querySelector('.descriptionInput');
             const quantityInput = row.querySelector('.quantityInput');
+            const sizeInput = row.querySelector('.sizeInput');
 
             if (!descriptionInput || !quantityInput) {
                 validationInput.value = 'Elemen input stok atau kuantitas tidak ditemukan di baris ini.';
@@ -1507,6 +1709,7 @@
 
             let description = descriptionInput.tagName.toLowerCase() === 'select' ? descriptionInput.value?.trim() : descriptionInput.value?.trim() || '';
             const quantity = parseFloat(quantityInput.value) || 0;
+            const size = sizeInput?.value?.trim() || '';
             const isHppRow = row.dataset.isHppRow === 'true';
             const isNewItemRow = row.dataset.isNewItem === 'true';
 
@@ -1529,8 +1732,8 @@
                 tableName = 'Stok Pemindahan';
                 targetTableName = 'Stok Pemakaian';
             } else if (voucherType === 'PJ') {
-                stockData = usedStocks;
-                tableName = 'Stok Pemakaian';
+                stockData = [...usedStocks, ...transferStocks];
+                tableName = 'Stok Pemakaian atau Stok Pemindahan';
             }
 
             if (!stockData || !Array.isArray(stockData) || stockData.length === 0) {
@@ -1544,7 +1747,7 @@
 
             if (!isNewItemRow) {
                 const cleanDescription = description.replace(/\(Stok: \d+\)/, '').trim().toLowerCase();
-                const stock = stockData.find(s => s.item?.toLowerCase().replace(/\(stok: \d+\)/, '').trim() === cleanDescription);
+                const stock = stockData.find(s => s.item?.toLowerCase().replace(/\(stok: \d+\)/, '').trim() === cleanDescription && (!size || s.size === size));
 
                 if (!description) {
                     validationInput.value = 'Item belum dipilih di baris ini.';
@@ -1555,7 +1758,7 @@
                     };
                 }
                 if (!stock) {
-                    validationInput.value = `Item ${description} tidak ditemukan di tabel ${tableName}.`;
+                    validationInput.value = `Item ${description}${size ? ' (' + size + ')' : ''} tidak ditemukan di tabel ${tableName}.`;
                     saveVoucherBtn.disabled = true;
                     return {
                         isValid: false,
@@ -1563,7 +1766,7 @@
                     };
                 }
                 if (stock.quantity < quantity) {
-                    validationInput.value = `Kuantitas untuk item ${description} melebihi stok tersedia di tabel ${tableName}. Tersedia: ${stock.quantity}, Dibutuhkan: ${quantity}`;
+                    validationInput.value = `Kuantitas untuk item ${description}${size ? ' (' + size + ')' : ''} melebihi stok tersedia di tabel ${tableName}. Tersedia: ${stock.quantity}, Dibutuhkan: ${quantity}`;
                     saveVoucherBtn.disabled = true;
                     return {
                         isValid: false,
@@ -1573,7 +1776,7 @@
             }
 
             if (voucherType === 'PK' && !isNewItemRow && stock.quantity >= quantity) {
-                validationInput.value = `Stok ${description} cukup untuk dipindahkan ke ${targetTableName}. Tersedia: ${stock.quantity}, Dibutuhkan: ${quantity}`;
+                validationInput.value = `Stok ${description}${size ? ' (' + size + ')' : ''} cukup untuk dipindahkan ke ${targetTableName}. Tersedia: ${stock.quantity}, Dibutuhkan: ${quantity}`;
                 saveVoucherBtn.disabled = false;
                 return {
                     isValid: true,
@@ -1640,7 +1843,9 @@
                 rowNominalInput.value = t.nominal;
 
                 if (voucherTypeSelect.value === 'PJ' && t.description && !t.isNewItem) {
-                    addHppRow(index, t.description, parseFloat(t.quantity));
+                    addHppRowForPJ(index, t.description, t.size, parseFloat(t.quantity));
+                } else if (voucherTypeSelect.value === 'PB' && t.description && !t.isNewItem) {
+                    addHppRowForPB(index, t.description, t.size, parseFloat(t.quantity));
                 }
             });
 
@@ -1702,6 +1907,7 @@
             updateAllCalculationsAndValidations();
             updateAddItemButtonVisibility();
             toggleSizeInputState();
+            updateProductDropdownForPK();
         });
 
         function calculateTotalNominal() {
