@@ -268,6 +268,7 @@ class StockService
     private function processGroupedStockData(Collection $stockData, Collection $openingBalances, array $hppAverages, string $tableName): array
     {
         $stockMap = [];
+
         foreach ($stockData as $key => $records) {
             $itemSize = explode('|', $key);
             $item = $itemSize[0];
@@ -278,35 +279,54 @@ class StockService
             }
 
             $stockKey = $item . '|' . $size;
-            $openingBalance = $openingBalances->get($stockKey, (object) ['opening_qty' => 0, 'opening_hpp' => 0]);
-            $hppEntry = $hppAverages[$stockKey] ?? ['average_hpp' => 0];
 
-            // Execute the query and sum directly on the query builder
-            $incomingQty = $records->where('voucher_type', 'PB')->sum('transaction_quantity') ?? 0; // Masuk Barang
-            $outgoingQty = $records->whereIn('voucher_type', ['PJ', 'PK', 'PH'])->sum('transaction_quantity') ?? 0; // Keluar Barang
+            // Ambil data pertama (saldo awal) berdasarkan created_at
+            $firstRecord = $records->sortBy('created_at')->first();
+            $openingBalance = (object) [
+                'opening_qty' => $firstRecord ? ($firstRecord->transaction_quantity ?? 0) : 0,
+                'opening_hpp' => $firstRecord ? ($firstRecord->nominal ?? 0) : 0, // Total nilai saldo awal
+            ];
 
-            // Hitung stok akhir berdasarkan rumus: Stok Akhir = Masuk Barang - Keluar Barang
-            $finalStockQty = $incomingQty - $outgoingQty;
+            // Filter transaksi PB setelah saldo awal
+            $pbRecordsAfterOpening = $records
+                ->where('voucher_type', 'PB')
+                ->where('created_at', '>', $firstRecord->created_at ?? '1970-01-01 00:00:00')
+                ->values();
 
-            // (Opsional) Jika Anda ingin menyimpan HPP, gunakan logika sebelumnya
-            $totalQty = $incomingQty; // Tanpa saldo awal
-            $totalValue = $incomingQty * ($hppEntry['average_hpp'] ?? 0);
-            $finalHpp = $totalQty > 0 ? $totalValue / $totalQty : ($hppEntry['average_hpp'] ?? 0);
+            $incomingQty = $pbRecordsAfterOpening->sum('transaction_quantity') ?? 0; // Total kuantitas masuk setelah saldo awal
+            $outgoingQty = $records->whereIn('voucher_type', ['PJ', 'PK', 'PH'])->sum('transaction_quantity') ?? 0; // Total kuantitas keluar
+
+            // Hitung stok akhir
+            $finalStockQty = ($openingBalance->opening_qty ?? 0) + $incomingQty - $outgoingQty;
+
+            // Hitung total nilai dan jumlah transaksi untuk HPP
+            $totalHppValue = ($openingBalance->opening_hpp ?? 0); // Nilai saldo awal
+            $transactionCount = 1; // Mulai dari 1 untuk saldo awal
+
+            // Akumulasikan nilai dari transaksi PB setelah saldo awal
+            foreach ($pbRecordsAfterOpening as $pbRecord) {
+                $hppValue = $pbRecord->nominal ?? 0;
+                $totalHppValue += $hppValue;
+                $transactionCount += 1; // Tambah jumlah transaksi
+            }
+
+            // Hitung final_hpp sebagai rata-rata berdasarkan jumlah transaksi
+            $finalHpp = $transactionCount > 0 ? $totalHppValue / $transactionCount : ($hppAverages[$stockKey]['average_hpp'] ?? 0);
 
             $entry = (object) [
-                'id' => $records->first()->id ?? null,
+                'id' => $firstRecord->id ?? null,
                 'item' => $item,
                 'size' => $size,
                 'quantity' => $this->getCurrentStockQuantity($tableName, $item, $size),
                 'opening_qty' => $openingBalance->opening_qty,
-                'opening_hpp' => $openingBalance->opening_hpp,
+                'opening_hpp' => $openingBalance->opening_hpp, // Total nilai saldo awal
                 'incoming_qty' => $incomingQty,
-                'incoming_hpp' => $hppEntry['average_hpp'],
+                'incoming_hpp' => $hppAverages[$stockKey]['average_hpp'] ?? 0,
                 'outgoing_qty' => $outgoingQty,
-                'outgoing_hpp' => $hppEntry['average_hpp'],
+                'outgoing_hpp' => $hppAverages[$stockKey]['average_hpp'] ?? 0,
                 'final_stock_qty' => $finalStockQty,
-                'final_hpp' => $finalHpp,
-                'average_hpp' => $hppEntry['average_hpp'],
+                'final_hpp' => $finalHpp, // Rata-rata HPP berdasarkan jumlah transaksi
+                'average_hpp' => $hppAverages[$stockKey]['average_hpp'] ?? 0,
                 'transactions' => $records->map(function ($record) {
                     return (object) [
                         'description' => $record->description ?? 'No description',
@@ -324,7 +344,6 @@ class StockService
 
         return $stockMap;
     }
-
     /**
      * Ambil kuantitas stok saat ini
      */

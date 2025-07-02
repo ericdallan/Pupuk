@@ -485,26 +485,6 @@ class VoucherService
                     }
                 }
 
-                if ($request->voucher_type === 'PB') {
-                    foreach ($transactionsToCreate as $transaction) {
-                        if (!$transaction['is_hpp']) {
-                            $item = $transaction['description'];
-                            $quantity = $transaction['quantity'];
-                            $size = $transaction['size'] ?? null;
-                            $averageHpp = $this->calculateAverageHpp($item);
-                            $transactionsToCreate[] = [
-                                'voucher_id' => $voucher->id,
-                                'description' => "HPP {$item}",
-                                'size' => $size,
-                                'quantity' => $quantity,
-                                'nominal' => $averageHpp,
-                                'is_hpp' => true,
-                                'index' => max(array_column($transactionsToCreate, 'index')) + 1,
-                            ];
-                        }
-                    }
-                }
-
                 foreach ($transactionsToCreate as $transaction) {
                     Transactions::create([
                         'voucher_id' => $voucher->id,

@@ -13,7 +13,7 @@ class VoucherSeeder extends Seeder
         // Calculate total debit and credit based on transactions
         $totalDebitCredit =
             // Kayu Jenjeng
-            (1 * 35000.00) + (63 * 30000.00) + (104 * 23    500.00) + (63 * 14000.00) + (451 * 8500.00) +
+            (1 * 35000.00) + (63 * 30000.00) + (104 * 23500.00    ) + (63 * 14000.00) + (451 * 8500.00) +
             (303 * 7500.00) + (225 * 9500.00) + (162 * 13000.00) + (13 * 18500.00) + (64 * 48000.00) +
             (28 * 7500.00) + (111 * 6000.00) + (7 * 4500.00) + (5 * 18000.00) + (6 * 21000.00) + (10 * 16000.00) +
             // Kayu Merahan
@@ -96,8 +96,8 @@ class VoucherSeeder extends Seeder
             ['id' => 4, 'voucher_id' => 1, 'description' => 'Kayu Jenjeng', 'size' => '4x9x3m', 'quantity' => 63, 'nominal' => 14000.00, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
             ['id' => 5, 'voucher_id' => 1, 'description' => 'Kayu Jenjeng', 'size' => '5x5x3m', 'quantity' => 451, 'nominal' => 8500.00, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
             ['id' => 6, 'voucher_id' => 1, 'description' => 'Kayu Jenjeng', 'size' => '4x6x3m (A)', 'quantity' => 303, 'nominal' => 7500.00, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
-            ['id' => 7, 'voucher_id' => 1, 'description' => 'Kayu Jenjeng', 'size' => '1,5x15x3m', 'quantity' => 225, 'nominal' => 9500.00, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
-            ['id' => 8, 'voucher_id' => 1, 'description' => 'Kayu Jenjeng', 'size' => '1,5x18x3m', 'quantity' => 162, 'nominal' => 13000.00, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
+            ['id' => 7, 'voucher_id' => 1, 'description' => 'Kayu Jenjeng', 'size' => '2x15x3m', 'quantity' => 225, 'nominal' => 9500.00, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
+            ['id' => 8, 'voucher_id' => 1, 'description' => 'Kayu Jenjeng', 'size' => '2x18x3m', 'quantity' => 162, 'nominal' => 13000.00, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
             ['id' => 9, 'voucher_id' => 1, 'description' => 'Kayu Jenjeng', 'size' => '2x20x3m', 'quantity' => 13, 'nominal' => 18500.00, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
             ['id' => 10, 'voucher_id' => 1, 'description' => 'Kayu Jenjeng', 'size' => '3x20x3m', 'quantity' => 64, 'nominal' => 48000.00, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
             ['id' => 11, 'voucher_id' => 1, 'description' => 'Kayu Jenjeng', 'size' => '4x6x3m bc', 'quantity' => 28, 'nominal' => 7500.00, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
@@ -191,10 +191,10 @@ class VoucherSeeder extends Seeder
             ['id' => 10, 'item' => 'HPP Kayu Jenjeng', 'size' => '5x5x3m', 'quantity' => 451, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
             ['id' => 11, 'item' => 'Kayu Jenjeng', 'size' => '4x6x3m (A)', 'quantity' => 303, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
             ['id' => 12, 'item' => 'HPP Kayu Jenjeng', 'size' => '4x6x3m (A)', 'quantity' => 303, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
-            ['id' => 13, 'item' => 'Kayu Jenjeng', 'size' => '1,5x15x3m', 'quantity' => 225, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
-            ['id' => 14, 'item' => 'HPP Kayu Jenjeng', 'size' => '1,5x15x3m', 'quantity' => 225, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
-            ['id' => 15, 'item' => 'Kayu Jenjeng', 'size' => '1,5x18x3m', 'quantity' => 162, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
-            ['id' => 16, 'item' => 'HPP Kayu Jenjeng', 'size' => '1,5x18x3m', 'quantity' => 162, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
+            ['id' => 13, 'item' => 'Kayu Jenjeng', 'size' => '2x15x3m', 'quantity' => 225, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
+            ['id' => 14, 'item' => 'HPP Kayu Jenjeng', 'size' => '2x15x3m', 'quantity' => 225, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
+            ['id' => 15, 'item' => 'Kayu Jenjeng', 'size' => '2x18x3m', 'quantity' => 162, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
+            ['id' => 16, 'item' => 'HPP Kayu Jenjeng', 'size' => '2x18x3m', 'quantity' => 162, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
             ['id' => 17, 'item' => 'Kayu Jenjeng', 'size' => '2x20x3m', 'quantity' => 13, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
             ['id' => 18, 'item' => 'HPP Kayu Jenjeng', 'size' => '2x20x3m', 'quantity' => 13, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
             ['id' => 19, 'item' => 'Kayu Jenjeng', 'size' => '3x20x3m', 'quantity' => 64, 'created_at' => Carbon::now(), 'updated_at' => Carbon::now()],
