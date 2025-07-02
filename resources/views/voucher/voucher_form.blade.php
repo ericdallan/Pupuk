@@ -713,7 +713,7 @@
                         quantity: stock.quantity || 0
                     }));
 
-                console.log(`Sizes for Item ${selectedItem}:`, sizesWithQuantity);
+                // console.log(`Sizes for Item ${selectedItem}:`, sizesWithQuantity);
 
                 if (sizesWithQuantity.length > 0) {
                     sizesWithQuantity.forEach(item => {
@@ -739,7 +739,7 @@
                 const description = row.querySelector('.descriptionInput:not([type="text"])')?.value ||
                     row.querySelector('.descriptionInput[type="text"]')?.value || '';
                 const quantity = parseFloat(row.querySelector('.quantityInput')?.value) || 1;
-                console.log(`Size changed: index=${rowIndex}, item=${description}, size=${this.value}`);
+                // console.log(`Size changed: index=${rowIndex}, item=${description}, size=${this.value}`);
                 updateAllCalculationsAndValidations();
             });
 
@@ -755,7 +755,7 @@
                 const description = row.querySelector('.descriptionInput:not([type="text"])')?.value ||
                     row.querySelector('.descriptionInput[type="text"]')?.value || '';
                 const quantity = parseFloat(row.querySelector('.quantityInput')?.value) || 1;
-                console.log(`Size input changed: index=${rowIndex}, item=${description}, size=${this.value}`);
+                // console.log(`Size input changed: index=${rowIndex}, item=${description}, size=${this.value}`);
                 updateAllCalculationsAndValidations();
             });
 
@@ -857,7 +857,7 @@
                 const description = row.querySelector('.descriptionInput:not([type="text"])')?.value ||
                     row.querySelector('.descriptionInput[type="text"]')?.value || '';
                 const quantity = parseFloat(row.querySelector('.quantityInput')?.value) || 1;
-                console.log(`Size changed: index=${rowIndex}, item=${description}, size=${this.value}`);
+                // console.log(`Size changed: index=${rowIndex}, item=${description}, size=${this.value}`);
                 handleStockChange(rowIndex, event); // Trigger handleStockChange on size change
                 updateAllCalculationsAndValidations();
             });
@@ -912,7 +912,7 @@
                 if (defaultSize && newSizeElement.tagName === 'SELECT') {
                     newSizeElement.value = defaultSize;
                     previousValue = defaultSize; // Update previousValue with inferred size
-                    console.log(`Inferred default size for ${selectedItem}: ${defaultSize}`);
+                    // console.log(`Inferred default size for ${selectedItem}: ${defaultSize}`);
                 }
             }
 
@@ -971,13 +971,13 @@
                 stockData = transferStocks;
             }
 
-            console.log(`Stock Data for Voucher Type ${voucherType}:`, stockData);
+            // console.log(`Stock Data for Voucher Type ${voucherType}:`, stockData);
 
             if (stockData && Array.isArray(stockData) && stockData.length > 0) {
                 const uniqueItems = [...new Set(stockData.map(stock => stock.item))].filter(item =>
                     !item.toLowerCase().startsWith('hpp')
                 );
-                console.log('Unique Items:', uniqueItems);
+                // console.log('Unique Items:', uniqueItems);
 
                 if (uniqueItems.length === 0) {
                     const noItemsOption = document.createElement('option');
@@ -994,7 +994,7 @@
                     });
                 }
             } else {
-                console.warn(`No stock data available for voucher type: ${voucherType}`);
+                // console.warn(`No stock data available for voucher type: ${voucherType}`);
                 const noDataOption = document.createElement('option');
                 noDataOption.value = '';
                 noDataOption.textContent = 'Tidak ada data stok';
@@ -1008,7 +1008,7 @@
                     handleStockChange(index, event);
                     updateSizeDropdown(index, selectedValue); // Ensure size dropdown updates
                 } else {
-                    console.log(`No valid item selected at index ${index}. Skipping handleStockChange.`);
+                    // console.log(`No valid item selected at index ${index}. Skipping handleStockChange.`);
                 }
             });
 
@@ -1037,7 +1037,7 @@
                         quantity: stock.quantity || 0
                     }));
 
-                console.log(`Sizes for Item ${selectedItem}:`, sizesWithQuantity);
+                // console.log(`Sizes for Item ${selectedItem}:`, sizesWithQuantity);
 
                 if (sizesWithQuantity.length > 0) {
                     sizesWithQuantity.forEach(item => {
@@ -1063,7 +1063,7 @@
                 const description = row.querySelector('.descriptionInput:not([type="text"])')?.value ||
                     row.querySelector('.descriptionInput[type="text"]')?.value || '';
                 const quantity = parseFloat(row.querySelector('.quantityInput')?.value) || 1;
-                console.log(`Size changed: index=${rowIndex}, item=${description}, size=${this.value}`);
+                // console.log(`Size changed: index=${rowIndex}, item=${description}, size=${this.value}`);
                 updateAllCalculationsAndValidations();
             });
 
@@ -1079,7 +1079,7 @@
                 const description = row.querySelector('.descriptionInput:not([type="text"])')?.value ||
                     row.querySelector('.descriptionInput[type="text"]')?.value || '';
                 const quantity = parseFloat(row.querySelector('.quantityInput')?.value) || 1;
-                console.log(`Size input changed: index=${rowIndex}, item=${description}, size=${this.value}`);
+                // console.log(`Size input changed: index=${rowIndex}, item=${description}, size=${this.value}`);
                 updateAllCalculationsAndValidations();
             });
 
@@ -1156,51 +1156,69 @@
         function calculateAverageHpp(item, size, voucherType) {
             // Validate input parameters
             if (!item || typeof item !== 'string') {
-                console.error(`Invalid item parameter: ${item}`);
+                // console.error(`Invalid item parameter: ${item}`);
                 return 0;
             }
             const trimmedItem = item.trim().toLowerCase();
             const trimmedSize = size ? size.trim() : '';
 
-            // Determine the relevant data source based on voucherType
-            let dataSource = [];
+            // Determine the relevant stock data source based on voucherType
+            let stockData = [];
             if (voucherType === 'PJ') {
-                dataSource = [...(usedStocks || []), ...(transferStocks || [])];
+                stockData = [...(usedStocks || []), ...(transferStocks || [])];
             } else {
-                dataSource = stocks || [];
+                stockData = stocks || [];
             }
 
-            if (!dataSource || !Array.isArray(dataSource) || dataSource.length === 0) {
-                console.warn(`No data source available for HPP calculation: item=${item}, size=${trimmedSize}, voucherType=${voucherType}`);
-                return 0; // No data to calculate HPP
+            if (!stockData || !Array.isArray(stockData) || stockData.length === 0) {
+                // console.warn(`No stock data available for HPP calculation: item=${item}, size=${trimmedSize}, voucherType=${voucherType}`);
             }
 
-            // Filter matching HPP transactions (match items starting with "HPP" followed by the base item name)
-            const baseItem = trimmedItem.replace(/^hpp\s+/i, ''); // Remove "HPP " prefix if present
-            const matchingHppTransactions = dataSource.filter(t =>
-                t.item.toLowerCase().startsWith('hpp ' + baseItem) && // Match HPP entries
+            // Use transactions to calculate HPP
+            if (!transactions || !Array.isArray(transactions) || transactions.length === 0) {
+                // console.warn(`No transactions data available for HPP calculation: item=${item}, size=${trimmedSize}, voucherType=${voucherType}`);
+                // Fallback to quantity from stockData if no transactions
+                const fallbackEntry = stockData.find(t =>
+                    t.item.toLowerCase().replace(/^hpp\s+/i, '') === trimmedItem &&
+                    (!trimmedSize || t.size === trimmedSize)
+                );
+                if (fallbackEntry) {
+                    // console.warn(`Using quantity (${fallbackEntry.quantity}) as temporary HPP proxy for ${item} due to missing transactions data.`);
+                    return parseFloat(fallbackEntry.quantity) || 0;
+                }
+                return 0;
+            }
+
+            // Filter transactions for the base item (without "HPP" prefix)
+            const baseItem = trimmedItem.replace(/^hpp\s+/i, '');
+            const matchingTransactions = transactions.filter(t =>
+                t.description.toLowerCase() === baseItem &&
                 (!trimmedSize || t.size === trimmedSize)
             );
 
-            console.log(`Matching HPP transactions for item=${item}, size=${trimmedSize}, voucherType=${voucherType}:`, matchingHppTransactions);
+            // console.log(`Matching transactions for item=${item}, size=${trimmedSize}, voucherType=${voucherType}:`, matchingTransactions);
 
-            if (matchingHppTransactions.length === 0) {
-                console.warn(`No matching HPP transactions found for item=${item}, size=${trimmedSize}, voucherType=${voucherType}`);
-                // Fallback to first matching HPP entry with the same item and size
-                const fallbackEntry = dataSource.find(t =>
-                    t.item.toLowerCase().startsWith('hpp ' + baseItem) &&
+            if (matchingTransactions.length === 0) {
+                // console.warn(`No matching transactions found for item=${item}, size=${trimmedSize}, voucherType=${voucherType}`);
+                // Fallback to quantity if no transactions match
+                const fallbackEntry = stockData.find(t =>
+                    t.item.toLowerCase().replace(/^hpp\s+/i, '') === baseItem &&
                     (!trimmedSize || t.size === trimmedSize)
                 );
-                return fallbackEntry ? (parseFloat(fallbackEntry.quantity) || 0) : 0; // Temporary use of quantity
+                if (fallbackEntry) {
+                    // console.warn(`No transaction data found. Using quantity (${fallbackEntry.quantity}) as temporary HPP proxy for ${item}.`);
+                    return parseFloat(fallbackEntry.quantity) || 0;
+                }
+                return 0;
             }
 
-            // Calculate average HPP (using quantity as a proxy until nominal/average_hpp is available)
-            const totalHpp = matchingHppTransactions.reduce((sum, t) =>
-                sum + (parseFloat(t.quantity) || 0), 0
+            // Calculate average HPP from transaction nominal values
+            const totalHpp = matchingTransactions.reduce((sum, t) =>
+                sum + (parseFloat(t.nominal) || 0), 0
             );
-            const averageHpp = totalHpp / matchingHppTransactions.length;
+            const averageHpp = totalHpp / matchingTransactions.length;
 
-            console.log(`Calculated HPP for item=${item}, size=${trimmedSize}, voucherType=${voucherType}: ${averageHpp}`);
+            // console.log(`Calculated HPP for item=${item}, size=${trimmedSize}, voucherType=${voucherType}: ${averageHpp}`);
             return averageHpp || 0;
         }
 
@@ -1220,7 +1238,7 @@
             rowsToRemove.forEach(row => {
                 const description = row.querySelector('.descriptionInput')?.value || '';
                 const size = row.querySelector('.sizeInput')?.value || '';
-                console.log(`Removing HPP row: description=${description}, size=${size}, rowIndex=${row.dataset.rowIndex}`);
+                // console.log(`Removing HPP row: description=${description}, size=${size}, rowIndex=${row.dataset.rowIndex}`);
                 row.remove();
             });
 
@@ -1310,7 +1328,7 @@
             if (currentRow.nextSibling) transactionTableBody.insertBefore(hppRow, currentRow.nextSibling);
             else transactionTableBody.appendChild(hppRow);
 
-            console.log(`Added HPP row for PB: item=${selectedItem}, size=${size}, rowIndex=${newIndex}`);
+            // console.log(`Added HPP row for PB: item=${selectedItem}, size=${size}, rowIndex=${newIndex}`);
             updateTransactionRowIndices();
             updateAllCalculationsAndValidations();
         }
@@ -1396,7 +1414,7 @@
             if (currentRow.nextSibling) transactionTableBody.insertBefore(hppRow, currentRow.nextSibling);
             else transactionTableBody.appendChild(hppRow);
 
-            console.log(`Added HPP row for PJ: item=${selectedItem}, size=${size}, rowIndex=${newIndex}`);
+            // console.log(`Added HPP row for PJ: item=${selectedItem}, size=${size}, rowIndex=${newIndex}`);
             updateTransactionRowIndices();
             updateAllCalculationsAndValidations();
         }
@@ -1419,7 +1437,7 @@
             }
 
             const averageHpp = calculateAverageHpp(selectedItem, size, 'PJ') || 0; // Pass voucherType
-            console.log(`Calculated averageHpp for item=${selectedItem}, size=${size}: ${averageHpp}`);
+            // console.log(`Calculated averageHpp for item=${selectedItem}, size=${size}: ${averageHpp}`);
 
             if (hppRowToUpdate) {
                 // Perbarui baris HPP yang sudah ada
@@ -1441,7 +1459,7 @@
                     maximumFractionDigits: 2
                 }) : 'N/A';
 
-                console.log(`Updated HPP row for PJ: item=${selectedItem}, size=${size}, rowIndex=${hppRowToUpdate.dataset.rowIndex}, hpp=${averageHpp}`);
+                // console.log(`Updated HPP row for PJ: item=${selectedItem}, size=${size}, rowIndex=${hppRowToUpdate.dataset.rowIndex}, hpp=${averageHpp}`);
                 updateAllCalculationsAndValidations();
             } else if (!transactionTableBody.querySelector(`tr[data-is-hpp-row="true"][data-item="${selectedItem}"][data-size="${size || ''}"]`)) {
                 addHppRowForPJ(currentIndex, selectedItem, size, quantity);
@@ -1452,7 +1470,7 @@
             const selectedElement = event.target;
             // Hanya lanjutkan jika target event adalah input/select yang relevan
             if (!selectedElement.classList.contains('descriptionInput') && !selectedElement.classList.contains('sizeInput')) {
-                console.warn(`Ignoring handleStockChange at index ${index}: Event target is not a description or size input.`);
+                // console.warn(`Ignoring handleStockChange at index ${index}: Event target is not a description or size input.`);
                 return;
             }
 
@@ -1466,11 +1484,11 @@
             let selectedItem = (row.querySelector('.descriptionInput:not([type="text"])')?.value ||
                 row.querySelector('.descriptionInput[type="text"]')?.value || '').trim();
 
-            console.log(`Initial selectedItem at index ${index}: "${selectedItem}", size: "${initialSize}"`); // Debug initial values
+            // console.log(`Initial selectedItem at index ${index}: "${selectedItem}", size: "${initialSize}"`); // Debug initial values
 
             // Skip if selectedItem is empty to avoid unnecessary correction
             if (!selectedItem) {
-                console.warn(`Empty selectedItem at index ${index}. Skipping HPP update.`);
+                // console.warn(`Empty selectedItem at index ${index}. Skipping HPP update.`);
                 return;
             }
 
@@ -1481,22 +1499,22 @@
                 isValidItem = usedStocks.some(s => s.item.trim().toLowerCase() === selectedItem.trim().toLowerCase()) ||
                     (transferStocks && transferStocks.some(s => s.item.trim().toLowerCase() === selectedItem.trim().toLowerCase()));
                 if (!isValidItem || !initialSize) {
-                    console.warn(`Invalid or empty item/size detected at index ${index} for PJ. Attempting to correct.`);
+                    // console.warn(`Invalid or empty item/size detected at index ${index} for PJ. Attempting to correct.`);
                     const validItemFromSize = [...usedStocks, ...(transferStocks || [])].find(s => s.size === selectedItem)?.item;
                     if (validItemFromSize) {
                         selectedItem = validItemFromSize;
                         updateDescriptionInput(row, validItemFromSize);
-                        console.log(`Corrected item to: ${validItemFromSize}`);
+                        // console.log(`Corrected item to: ${validItemFromSize}`);
                         isValidItem = true;
                     } else {
                         const similarItem = [...usedStocks, ...(transferStocks || [])].find(s => s.item.toLowerCase().includes(selectedItem.toLowerCase()));
                         if (similarItem) {
                             selectedItem = similarItem.item;
                             updateDescriptionInput(row, similarItem.item);
-                            console.log(`Corrected to similar item: ${similarItem.item}`);
+                            // console.log(`Corrected to similar item: ${similarItem.item}`);
                             isValidItem = true;
                         } else {
-                            console.error(`No valid item found for correction at index ${index} in usedStocks/transferStocks.`);
+                            // console.error(`No valid item found for correction at index ${index} in usedStocks/transferStocks.`);
                             selectedItem = '';
                         }
                     }
@@ -1511,7 +1529,7 @@
                             });
                             sizeElement.dispatchEvent(sizeChangeEvent);
                         }
-                        console.log(`Inferred size: "${inferredSize}"`);
+                        // console.log(`Inferred size: "${inferredSize}"`);
                     }
                 }
             } else {
@@ -1521,17 +1539,17 @@
                     if (validItemFromSize) {
                         selectedItem = validItemFromSize;
                         updateDescriptionInput(row, validItemFromSize);
-                        console.log(`Corrected item to: ${validItemFromSize}`);
+                        // console.log(`Corrected item to: ${validItemFromSize}`);
                         isValidItem = true;
                     } else {
                         const similarItem = stocks.find(s => s.item.toLowerCase().includes(selectedItem.toLowerCase()));
                         if (similarItem) {
                             selectedItem = similarItem.item;
                             updateDescriptionInput(row, similarItem.item);
-                            console.log(`Corrected to similar item: ${similarItem.item}`);
+                            // console.log(`Corrected to similar item: ${similarItem.item}`);
                             isValidItem = true;
                         } else {
-                            console.error(`No valid item found for correction at index ${index} in stocks.`);
+                            // console.error(`No valid item found for correction at index ${index} in stocks.`);
                             selectedItem = '';
                         }
                     }
@@ -1545,18 +1563,18 @@
                             });
                             sizeElement.dispatchEvent(sizeChangeEvent);
                         }
-                        console.log(`Inferred size: "${inferredSize}"`);
+                        // console.log(`Inferred size: "${inferredSize}"`);
                     }
                 }
             }
 
             // Hentikan jika selectedItem atau inferredSize tetap kosong
             if (!selectedItem || !inferredSize) {
-                console.warn(`No valid item or size found after correction at index ${index}. Skipping HPP update.`);
+                // console.warn(`No valid item or size found after correction at index ${index}. Skipping HPP update.`);
                 return;
             }
 
-            console.log(`Handling stock change: index=${index}, item=${selectedItem}, size=${inferredSize}, voucherType=${voucherType}`);
+            // console.log(`Handling stock change: index=${index}, item=${selectedItem}, size=${inferredSize}, voucherType=${voucherType}`);
 
             removeHppRowForItem(index);
 

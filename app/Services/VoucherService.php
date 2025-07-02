@@ -58,11 +58,11 @@ class VoucherService
             ->select('t1.description as item', 't1.voucher_id', 't1.created_at')
             ->from('transactions as t1')
             ->join(DB::raw('(
-                SELECT description, MIN(created_at) as min_created_at
-                FROM transactions
-                WHERE description NOT LIKE "HPP %"
-                GROUP BY description
-            ) as t2'), function ($join) {
+            SELECT description, MIN(created_at) as min_created_at
+            FROM transactions
+            WHERE description NOT LIKE "HPP %"
+            GROUP BY description
+        ) as t2'), function ($join) {
                 $join->on('t1.description', '=', 't2.description')
                     ->whereColumn('t1.created_at', 't2.min_created_at');
             })
@@ -91,17 +91,8 @@ class VoucherService
             return $voucher;
         });
 
-        $transactionsData = $vouchers->filter(function ($voucher) {
-            return $voucher->voucher_type === 'PB';
-        })->flatMap(function ($voucher) {
-            return $voucher->transactions->map(function ($transaction) {
-                return [
-                    'description' => $transaction->description,
-                    'quantity' => $transaction->quantity,
-                    'nominal' => $transaction->nominal,
-                ];
-            });
-        })->values()->all();
+        // Include all transactions for HPP calculation, not just PB
+        $transactionsData = Transactions::select(['description', 'size', 'nominal'])->get();
 
         $accounts = ChartOfAccount::orderBy('account_type')
             ->orderBy('account_section')
@@ -173,30 +164,6 @@ class VoucherService
             'transactionsData'
         );
     }
-
-    /**
-     * Calculate average HPP for an item
-     *
-     * @param string $item
-     * @return float
-     */
-    private function calculateAverageHpp(string $item): float
-    {
-        $transactions = Transactions::where('description', $item)
-            ->whereHas('voucher', function ($query) {
-                $query->where('voucher_type', 'PB');
-            })
-            ->get();
-
-        if ($transactions->isEmpty()) {
-            return 0;
-        }
-
-        $totalNominal = $transactions->sum('nominal');
-        $totalQuantity = $transactions->sum('quantity');
-        return $totalQuantity > 0 ? $totalNominal / $totalQuantity : 0;
-    }
-
     /**
      * Update stock in stocks table
      *

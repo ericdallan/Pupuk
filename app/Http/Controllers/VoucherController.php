@@ -50,10 +50,8 @@ class VoucherController extends Controller
                             return ['item' => $stock->item, 'size' => $stock->size, 'quantity' => $stock->quantity, 'source' => 'transfer_stocks'];
                         })
                 );
-            $data['transactionsData'] = Transactions::join('vouchers', 'transactions.voucher_id', '=', 'vouchers.id')
-                ->where('vouchers.voucher_type', 'PB')
-                ->select(['transactions.description', 'transactions.nominal', 'transactions.size'])
-                ->get();
+            // Use transactionsData from prepareVoucherPageData
+            $data['transactions'] = $data['transactionsData']; // Ensure transactions is passed
             return view('voucher.voucher_page', $data);
         } catch (\Exception $e) {
             Log::error('Voucher Page Error', [
