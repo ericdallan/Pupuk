@@ -78,6 +78,16 @@ class StockService
         ];
     }
 
+    protected function getModelClass($table)
+    {
+        return match ($table) {
+            'stocks' => \App\Models\Stock::class,
+            'transfer_stocks' => \App\Models\TransferStock::class,
+            'used_stocks' => \App\Models\UsedStock::class,
+            default => \App\Models\Stock::class,
+        };
+    }
+
     /**
      * Store a new recipe without reducing transfer_stocks
      *

@@ -76,7 +76,8 @@ class StockController extends Controller
     {
         try {
             $filter = $request->input('filter', '7_days');
-            $transactions = $this->stockService->getTransactions((int) $stockId, $filter);
+            $table = $request->input('table', 'stocks'); // Default to 'stocks' if not provided
+            $transactions = $this->stockService->getTransactions((int)$stockId, $filter, $table);
             return response()->json(['transactions' => $transactions]);
         } catch (\Exception $e) {
             Log::error('Get Transactions Error: ' . $e->getMessage(), ['exception' => $e]);

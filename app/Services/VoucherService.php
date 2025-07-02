@@ -91,8 +91,10 @@ class VoucherService
             return $voucher;
         });
 
-        // Include all transactions for HPP calculation, not just PB
-        $transactionsData = Transactions::select(['description', 'size', 'nominal'])->get();
+        // Fetch all transactions with proper join to vouchers
+        $transactionsData = Transactions::join('vouchers', 'transactions.voucher_id', '=', 'vouchers.id')
+            ->select(['transactions.description', 'transactions.size', 'transactions.nominal'])
+            ->get();
 
         $accounts = ChartOfAccount::orderBy('account_type')
             ->orderBy('account_section')

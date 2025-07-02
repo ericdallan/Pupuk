@@ -302,7 +302,7 @@ class VoucherController extends Controller
                                 "Kuantitas untuk HPP {$item} (Ukuran: {$expectedSize}) harus sama dengan kuantitas item utama ({$expectedQuantity})."
                             );
                         }
-                        $averageHpp = $this->calculateAverageHpp($item);
+                        $averageHpp = $this->calculateAverageHpp($item, $expectedSize); // Pass size
                         if (abs($hppNominal - $averageHpp) > 0.01) {
                             $validator->errors()->add(
                                 "transactions.{$tIndex}.nominal",
@@ -329,17 +329,25 @@ class VoucherController extends Controller
      * @param string $item
      * @return float
      */
-    protected function calculateAverageHpp($item)
+    protected function calculateAverageHpp($item, $size = null)
     {
-        $pbTransactions = Transactions::where('voucher_type', 'PB')
-            ->where('description', $item)
-            ->pluck('nominal');
+        $baseItem = trim(str_replace('HPP ', '', $item));
+
+        // Join transactions with vouchers to filter by voucher_type
+        $pbTransactions = Transactions::join('vouchers', 'transactions.voucher_id', '=', 'vouchers.id')
+            ->where('vouchers.voucher_type', 'PB')
+            ->where('transactions.description', $baseItem)
+            ->when($size, function ($query, $size) {
+                return $query->where('transactions.size', $size);
+            })
+            ->pluck('transactions.nominal');
 
         if ($pbTransactions->isEmpty()) {
+            Log::warning("No PB transactions found for item: {$baseItem}, size: {$size}");
             return 0;
         }
 
-        return $pbTransactions->average();
+        return $pbTransactions->average() ?: 0;
     }
 
     /**

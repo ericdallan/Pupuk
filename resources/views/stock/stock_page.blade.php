@@ -132,7 +132,7 @@
                             <td>{{ number_format($stock->final_hpp ?? 0, 2, ',', '.') }}</td>
                             <td>
                                 @if ($stock->id)
-                                <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#detailModal{{ $stock->id }}">Detail</button>
+                                <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#detailModal{{ $stock->id }}" data-table="stocks">Detail</button>
                                 @else
                                 <span>No Detail</span>
                                 @endif
@@ -209,7 +209,7 @@
                             <td>{{ number_format($stock->final_hpp ?? 0, 2, ',', '.') }}</td>
                             <td>
                                 @if ($stock->id)
-                                <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#detailModal{{ $stock->id }}">Detail</button>
+                                <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#detailModal{{ $stock->id }}" data-table="transfer_stocks">Detail</button>
                                 @else
                                 <span>No Detail</span>
                                 @endif
@@ -286,7 +286,7 @@
                             <td>{{ number_format($stock->final_hpp ?? 0, 2, ',', '.') }}</td>
                             <td>
                                 @if ($stock->id)
-                                <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#detailModal{{ $stock->id }}">Detail</button>
+                                <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#detailModal{{ $stock->id }}" data-table="used_stocks">Detail</button>
                                 @else
                                 <span>No Detail</span>
                                 @endif
@@ -310,73 +310,30 @@
     <!-- Transaction Detail Modals -->
     @php
     $allStocks = array_merge(
-    collect($stockData)->flatten()->toArray() ?? [],
-    collect($transferStockData)->flatten()->toArray() ?? [],
-    collect($usedStockData)->flatten()->toArray() ?? []
+    collect($stockData)->flatten()->map(function ($stock) { return array_merge((array)$stock, ['table_name' => 'stocks']); })->toArray() ?? [],
+    collect($transferStockData)->flatten()->map(function ($stock) { return array_merge((array)$stock, ['table_name' => 'transfer_stocks']); })->toArray() ?? [],
+    collect($usedStockData)->flatten()->map(function ($stock) { return array_merge((array)$stock, ['table_name' => 'used_stocks']); })->toArray() ?? []
     );
     @endphp
     @if (!empty($allStocks))
     @foreach ($allStocks as $stock)
-    <div class="modal fade" id="detailModal{{ $stock->id ?? '' }}" tabindex="-1" aria-labelledby="detailModalLabel{{ $stock->id ?? '' }}" aria-hidden="true">
+    <div class="modal fade" id="detailModal{{ $stock['id'] ?? '' }}" tabindex="-1" aria-labelledby="detailModalLabel{{ $stock['id'] ?? '' }}" aria-hidden="true">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="detailModalLabel{{ $stock->id ?? '' }}">Detail Transaksi untuk {{ $stock->item ?? 'Unknown Item' }} ({{ $stock->table_name ?? 'Unknown Table' }})</h5>
+                    <h5 class="modal-title" id="detailModalLabel{{ $stock['id'] ?? '' }}">Detail Transaksi untuk {{ $stock['item'] ?? 'Unknown Item' }} ({{ $stock['size'] ?? 'Unknown Size' }} - {{ $stock['table_name'] ?? 'Unknown Table' }})</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label for="modal_filter_{{ $stock->id ?? '' }}" class="form-label">Tampilkan Transaksi</label>
-                        <select id="modal_filter_{{ $stock->id ?? '' }}" class="form-select modal-filter" data-stock-id="{{ $stock->id ?? '' }}">
+                        <label for="modal_filter_{{ $stock['id'] ?? '' }}" class="form-label">Tampilkan Transaksi</label>
+                        <select id="modal_filter_{{ $stock['id'] ?? '' }}" class="form-select modal-filter" data-stock-id="{{ $stock['id'] ?? '' }}" data-table-name="{{ $stock['table_name'] ?? '' }}">
                             <option value="7_days">7 Hari Terakhir</option>
                             <option value="1_month">1 Bulan Terakhir</option>
                         </select>
                     </div>
-                    <div class="transaction-table" id="transactionTable_{{ $stock->id ?? '' }}">
-                        @if (isset($stock->transactions) && $stock->transactions->isNotEmpty())
-                        <div class="table-responsive">
-                            <table class="table table-striped table-bordered table-hover text-center">
-                                <thead class="table-dark">
-                                    <tr>
-                                        <th>No</th>
-                                        <th>Deskripsi</th>
-                                        <th>Tipe Transaksi</th>
-                                        <th>Kuantitas</th>
-                                        <th>Nominal</th>
-                                        <th>Tanggal</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach ($stock->transactions as $transaction)
-                                    @if (!str_starts_with($transaction->description ?? '', 'HPP '))
-                                    <tr>
-                                        <td>{{ $loop->iteration }}</td>
-                                        <td>{{ $transaction->description ?? 'No Description' }}</td>
-                                        <td>
-                                            @if ($transaction->voucher_type == 'PJ')
-                                            Penjualan
-                                            @elseif ($transaction->voucher_type == 'PB')
-                                            Pembelian
-                                            @elseif ($transaction->voucher_type == 'PH')
-                                            Pemindahan
-                                            @elseif ($transaction->voucher_type == 'PK')
-                                            Pemakaian
-                                            @else
-                                            {{ $transaction->voucher_type ?? 'Unknown' }}
-                                            @endif
-                                        </td>
-                                        <td>{{ $transaction->quantity ?? 0 }}</td>
-                                        <td>{{ number_format($transaction->nominal ?? 0, 2, ',', '.') }}</td>
-                                        <td>{{ \Carbon\Carbon::parse($transaction->created_at ?? now())->format('d-m-Y') }}</td>
-                                    </tr>
-                                    @endif
-                                    @endforeach
-                                </tbody>
-                            </table>
-                        </div>
-                        @else
-                        <p class="text-center">Tidak ada transaksi terkait untuk barang ini.</p>
-                        @endif
+                    <div class="transaction-table" id="transactionTable_{{ $stock['id'] ?? '' }}">
+                        <p class="text-center text-muted">Pilih filter untuk melihat transaksi...</p>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -387,7 +344,6 @@
     </div>
     @endforeach
     @endif
-
     <!-- Create Recipe Modal -->
     <div class="modal fade" id="createRecipeModal" tabindex="-1" aria-labelledby="createRecipeModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg">
@@ -406,7 +362,8 @@
                         </div>
                         <div class="mb-3">
                             <label for="product_size" class="form-label">Ukuran Produk</label>
-                            <input type="text" name="product_size" id="product_size" class="form-control"
+                            <input type="text" name="product_size" id="product_size" class="form-control" required maxlength="255">
+                            <div class="invalid-feedback">Masukkan ukuran produk yang valid (maksimal 255 karakter)</div>
                         </div>
                         <div id="ingredientsContainer">
                             <div class="ingredient-row mb-3" data-row-id="0">
@@ -455,69 +412,95 @@
         const form = document.getElementById('filterForm');
         const tableFilterInput = document.getElementById('table_filter');
         const dropdownButton = document.getElementById('tableFilterDropdown');
-        console.log('Form exists:', !!form);
-        console.log('Table filter input exists:', !!tableFilterInput);
-        console.log('Dropdown button exists:', !!dropdownButton);
-        console.log('Dropdown items found:', document.querySelectorAll('.dropdown-item[data-filter]').length);
-        console.log('Table sections found:', document.querySelectorAll('.table-section').length);
+        // console.log('Form exists:', !!form);
+        // console.log('Table filter input exists:', !!tableFilterInput);
+        // console.log('Dropdown button exists:', !!dropdownButton);
+        // console.log('Dropdown items found:', document.querySelectorAll('.dropdown-item[data-filter]').length);
+        // console.log('Table sections found:', document.querySelectorAll('.table-section').length);
 
-        // Table Filter Logic
+        // Table Filter Logic (on click, no form submission)
         document.querySelectorAll('.dropdown-item[data-filter]').forEach(item => {
             item.addEventListener('click', function(e) {
                 e.preventDefault();
                 const filter = this.dataset.filter;
-                console.log('Selected filter:', filter);
+                // console.log('Selected filter:', filter);
 
-                // Update hidden input and dropdown text
+                // Update hidden input
                 if (tableFilterInput) {
                     tableFilterInput.value = filter;
-                    console.log('Updated table_filter input to:', tableFilterInput.value);
+                    // console.log('Updated table_filter input to:', tableFilterInput.value);
                 } else {
-                    console.error('table_filter input not found');
+                    // console.error('table_filter input not found');
                     return;
                 }
 
+                // Update dropdown button text
                 if (dropdownButton) {
                     dropdownButton.textContent = filter === 'all' ? 'Semua Table' :
                         (filter === 'stocks' ? 'Table Stocks' :
                             (filter === 'transfer_stocks' ? 'Table Transfer Stocks' : 'Table Used Stocks'));
                 }
 
-                // Toggle table visibility (client-side)
+                // Toggle table visibility client-side
                 document.querySelectorAll('.table-section').forEach(section => {
-                    console.log('Table:', section.dataset.table, 'Display:', filter === 'all' || section.dataset.table === filter ? 'block' : 'none');
+                    // console.log('Table:', section.dataset.table, 'Display:', filter === 'all' || section.dataset.table === filter ? 'block' : 'none');
                     section.classList.toggle('hidden', !(filter === 'all' || section.dataset.table === filter));
                 });
 
-                // Submit form with delay to ensure input is updated
-                if (form) {
-                    console.log('Submitting form with table_filter:', tableFilterInput.value);
-                    setTimeout(() => {
-                        form.submit();
-                    }, 100); // Small delay to ensure DOM updates
-                } else {
-                    console.error('Form not found');
-                }
+                // Optional: Update URL parameters without reload (using History API)
+                const url = new URL(window.location);
+                url.searchParams.set('table_filter', filter);
+                window.history.pushState({}, '', url);
             });
         });
+
+        // Submit form only when Filter button is clicked
+        const filterButton = form?.querySelector('button[type="submit"]');
+        if (filterButton) {
+            filterButton.addEventListener('click', function(e) {
+                // console.log('Submitting form with table_filter:', tableFilterInput.value);
+                form.submit();
+            });
+        }
 
         // Modal Filter Logic
         document.querySelectorAll('.modal-filter').forEach(select => {
             select.addEventListener('change', function() {
                 const stockId = this.dataset.stockId;
                 const filter = this.value;
+                const tableName = this.dataset.tableName;
                 const transactionTable = document.getElementById(`transactionTable_${stockId}`);
 
-                console.log('Fetching transactions for stock:', stockId, 'Filter:', filter);
+                console.log('Fetching transactions for stock:', stockId, 'Filter:', filter, 'Table:', tableName);
 
-                fetch(`/stock/transactions/${stockId}?filter=${filter}`)
+                if (!stockId || !tableName) {
+                    console.error('Missing stockId or tableName:', {
+                        stockId,
+                        tableName
+                    });
+                    transactionTable.innerHTML = '<p class="text-center text-danger">Gagal memuat data: Informasi stok tidak lengkap.</p>';
+                    return;
+                }
+
+                // Show loading state
+                transactionTable.innerHTML = '<p class="text-center text-muted"><i class="fas fa-spinner fa-spin"></i> Memuat transaksi...</p>';
+
+                fetch(`/stock/transactions/${stockId}?filter=${filter}&table=${tableName}`, {
+                        headers: {
+                            'Accept': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    })
                     .then(response => {
-                        if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! Status: ${response.status}`);
+                        }
                         return response.json();
                     })
                     .then(data => {
-                        const filteredTransactions = data.transactions.filter(transaction => !transaction.description.startsWith('HPP '));
                         let html = '';
+                        const filteredTransactions = data.transactions.filter(transaction => !transaction.description?.startsWith('HPP '));
+
                         if (filteredTransactions.length > 0) {
                             html = `
                         <div class="table-responsive">
@@ -538,19 +521,19 @@
                                 html += `
                             <tr>
                                 <td>${index + 1}</td>
-                                <td>${transaction.description || 'No Description'}</td>
+                                <td>${transaction.description || 'Tidak ada deskripsi'}</td>
                                 <td>${(() => {
                                     switch (transaction.voucher_type) {
                                         case 'PJ': return 'Penjualan';
                                         case 'PB': return 'Pembelian';
                                         case 'PH': return 'Pemindahan';
                                         case 'PK': return 'Pemakaian';
-                                        default: return transaction.voucher_type || 'Unknown';
+                                        default: return transaction.voucher_type || 'Tidak diketahui';
                                     }
                                 })()}</td>
                                 <td>${transaction.quantity || 0}</td>
-                                <td>${number_format(transaction.nominal || 0, 2)}</td>
-                                <td>${transaction.created_at || ''}</td>
+                                <td>${window.number_format(transaction.nominal || 0, 2, ',', '.')}</td>
+                                <td>${transaction.created_at ? new Date(transaction.created_at).toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-'}</td>
                             </tr>
                         `;
                             });
@@ -560,13 +543,13 @@
                         </div>
                     `;
                         } else {
-                            html = '<p class="text-center">Tidak ada transaksi terkait untuk barang ini.</p>';
+                            html = '<p class="text-center text-muted">Tidak ada transaksi untuk periode ini.</p>';
                         }
                         transactionTable.innerHTML = html;
                     })
                     .catch(error => {
                         console.error('Error fetching transactions:', error);
-                        transactionTable.innerHTML = '<p class="text-center">Terjadi kesalahan saat memuat transaksi.</p>';
+                        transactionTable.innerHTML = '<p class="text-center text-danger">Terjadi kesalahan saat memuat transaksi. Silakan coba lagi.</p>';
                     });
             });
         });
@@ -611,7 +594,7 @@
 
         // Add new ingredient row
         document.getElementById('addIngredient').addEventListener('click', function() {
-            console.log('Adding ingredient row:', ingredientCount + 1);
+            // console.log('Adding ingredient row:', ingredientCount + 1);
             ingredientCount++;
             const container = document.getElementById('ingredientsContainer');
             const newRow = document.createElement('div');
@@ -685,7 +668,7 @@
         // Remove Ingredient Row
         document.addEventListener('click', function(e) {
             if (e.target.classList.contains('remove-ingredient')) {
-                console.log('Removing ingredient row');
+                // console.log('Removing ingredient row');
                 const row = e.target.closest('.ingredient-row');
                 if (document.querySelectorAll('.ingredient-row').length > 1) {
                     row.remove();
