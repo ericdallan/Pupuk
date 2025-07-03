@@ -15,6 +15,7 @@ return new class extends Migration
             $table->string('item');
             $table->string('size');
             $table->integer('quantity')->default(1); // Jumlah bahan baku yang dibutuhkan
+            $table->decimal('nominal', 15, 2)->default(0.00); // Kolom Nominal, decimal (15 digit total, 2 desimal), default 0.00
             $table->timestamps();
 
             // $table->unique(['recipe_id', 'transfer_stock_id']); // Hindari duplikat

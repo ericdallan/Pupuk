@@ -12,6 +12,7 @@ class RecipeTransferStock extends Pivot
         'recipe_id',
         'transfer_stock_id',
         'quantity',
+        'nominal',
     ];
 
     /**

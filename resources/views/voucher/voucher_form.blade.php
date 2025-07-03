@@ -1474,115 +1474,122 @@
                 return;
             }
 
-            const row = selectedElement.closest('tr');
-            const quantity = parseFloat(row.querySelector('.quantityInput')?.value) || 1;
-            const sizeElement = row.querySelector('.sizeInput');
-            const initialSize = sizeElement ? (sizeElement.value || '').trim() : ''; // Initial size value
-            const voucherType = voucherTypeSelect.value;
-
-            // Ambil selectedItem dari elemen deskripsi (select atau input)
-            let selectedItem = (row.querySelector('.descriptionInput:not([type="text"])')?.value ||
-                row.querySelector('.descriptionInput[type="text"]')?.value || '').trim();
-
-            // console.log(`Initial selectedItem at index ${index}: "${selectedItem}", size: "${initialSize}"`); // Debug initial values
-
-            // Skip if selectedItem is empty to avoid unnecessary correction
-            if (!selectedItem) {
-                // console.warn(`Empty selectedItem at index ${index}. Skipping HPP update.`);
+            // Prevent recursive calls by checking if we're already processing
+            if (selectedElement.dataset.isProcessing === 'true') {
                 return;
             }
+            selectedElement.dataset.isProcessing = 'true';
 
-            // Validasi dan koreksi selectedItem berdasarkan voucherType
-            let isValidItem = false;
-            let inferredSize = initialSize; // Track the inferred size
-            if (voucherType === 'PJ') {
-                isValidItem = usedStocks.some(s => s.item.trim().toLowerCase() === selectedItem.trim().toLowerCase()) ||
-                    (transferStocks && transferStocks.some(s => s.item.trim().toLowerCase() === selectedItem.trim().toLowerCase()));
-                if (!isValidItem || !initialSize) {
-                    // console.warn(`Invalid or empty item/size detected at index ${index} for PJ. Attempting to correct.`);
-                    const validItemFromSize = [...usedStocks, ...(transferStocks || [])].find(s => s.size === selectedItem)?.item;
-                    if (validItemFromSize) {
-                        selectedItem = validItemFromSize;
-                        updateDescriptionInput(row, validItemFromSize);
-                        // console.log(`Corrected item to: ${validItemFromSize}`);
-                        isValidItem = true;
-                    } else {
-                        const similarItem = [...usedStocks, ...(transferStocks || [])].find(s => s.item.toLowerCase().includes(selectedItem.toLowerCase()));
-                        if (similarItem) {
-                            selectedItem = similarItem.item;
-                            updateDescriptionInput(row, similarItem.item);
-                            // console.log(`Corrected to similar item: ${similarItem.item}`);
+            try {
+                const row = selectedElement.closest('tr');
+                const quantity = parseFloat(row.querySelector('.quantityInput')?.value) || 1;
+                const sizeElement = row.querySelector('.sizeInput');
+                const initialSize = sizeElement ? (sizeElement.value || '').trim() : ''; // Initial size value
+                const voucherType = voucherTypeSelect.value;
+
+                // Ambil selectedItem dari elemen deskripsi (select atau input)
+                let selectedItem = (
+                    row.querySelector('.descriptionInput:not([type="text"])')?.value ||
+                    row.querySelector('.descriptionInput[type="text"]')?.value || ''
+                ).trim();
+
+                // console.log(`Initial selectedItem at index ${index}: "${selectedItem}", size: "${initialSize}"`);
+
+                // Skip if selectedItem is empty to avoid unnecessary correction
+                if (!selectedItem) {
+                    // console.warn(`Empty selectedItem at index ${index}. Skipping HPP update.`);
+                    return;
+                }
+
+                // Validasi dan koreksi selectedItem berdasarkan voucherType
+                let isValidItem = false;
+                let inferredSize = initialSize; // Track the inferred size
+                if (voucherType === 'PJ') {
+                    isValidItem =
+                        usedStocks.some(s => s.item.trim().toLowerCase() === selectedItem.trim().toLowerCase()) ||
+                        (transferStocks && transferStocks.some(s => s.item.trim().toLowerCase() === selectedItem.trim().toLowerCase()));
+                    if (!isValidItem || !initialSize) {
+                        // console.warn(`Invalid or empty item/size detected at index ${index} for PJ. Attempting to correct.`);
+                        const validItemFromSize = [...usedStocks, ...(transferStocks || [])].find(s => s.size === selectedItem)?.item;
+                        if (validItemFromSize) {
+                            selectedItem = validItemFromSize;
+                            updateDescriptionInput(row, validItemFromSize);
+                            // console.log(`Corrected item to: ${validItemFromSize}`);
                             isValidItem = true;
                         } else {
-                            // console.error(`No valid item found for correction at index ${index} in usedStocks/transferStocks.`);
-                            selectedItem = '';
+                            const similarItem = [...usedStocks, ...(transferStocks || [])].find(s =>
+                                s.item.toLowerCase().includes(selectedItem.toLowerCase())
+                            );
+                            if (similarItem) {
+                                selectedItem = similarItem.item;
+                                updateDescriptionInput(row, similarItem.item);
+                                // console.log(`Corrected to similar item: ${similarItem.item}`);
+                                isValidItem = true;
+                            } else {
+                                // console.error(`No valid item found for correction at index ${index} in usedStocks/transferStocks.`);
+                                selectedItem = '';
+                            }
+                        }
+                        if (!initialSize && isValidItem) {
+                            const matchingStock = [...usedStocks, ...(transferStocks || [])].find(s => s.item === selectedItem);
+                            inferredSize = matchingStock ? matchingStock.size : '';
+                            if (sizeElement && inferredSize) {
+                                sizeElement.value = inferredSize; // Update size without triggering change event
+                                // console.log(`Inferred size: "${inferredSize}"`);
+                            }
                         }
                     }
-                    if (!initialSize && isValidItem) {
-                        const matchingStock = [...usedStocks, ...(transferStocks || [])].find(s => s.item === selectedItem);
-                        inferredSize = matchingStock ? matchingStock.size : '';
-                        if (sizeElement) {
-                            sizeElement.value = inferredSize;
-                            // Trigger change event on sizeElement to re-evaluate
-                            const sizeChangeEvent = new Event('change', {
-                                bubbles: true
-                            });
-                            sizeElement.dispatchEvent(sizeChangeEvent);
-                        }
-                        // console.log(`Inferred size: "${inferredSize}"`);
-                    }
-                }
-            } else {
-                isValidItem = stocks.some(s => s.item.trim().toLowerCase() === selectedItem.trim().toLowerCase());
-                if (!isValidItem || !initialSize) {
-                    const validItemFromSize = stocks.find(s => s.size === selectedItem)?.item;
-                    if (validItemFromSize) {
-                        selectedItem = validItemFromSize;
-                        updateDescriptionInput(row, validItemFromSize);
-                        // console.log(`Corrected item to: ${validItemFromSize}`);
-                        isValidItem = true;
-                    } else {
-                        const similarItem = stocks.find(s => s.item.toLowerCase().includes(selectedItem.toLowerCase()));
-                        if (similarItem) {
-                            selectedItem = similarItem.item;
-                            updateDescriptionInput(row, similarItem.item);
-                            // console.log(`Corrected to similar item: ${similarItem.item}`);
+                } else {
+                    isValidItem = stocks.some(s => s.item.trim().toLowerCase() === selectedItem.trim().toLowerCase());
+                    if (!isValidItem || !initialSize) {
+                        const validItemFromSize = stocks.find(s => s.size === selectedItem)?.item;
+                        if (validItemFromSize) {
+                            selectedItem = validItemFromSize;
+                            updateDescriptionInput(row, validItemFromSize);
+                            // console.log(`Corrected item to: ${validItemFromSize}`);
                             isValidItem = true;
                         } else {
-                            // console.error(`No valid item found for correction at index ${index} in stocks.`);
-                            selectedItem = '';
+                            const similarItem = stocks.find(s => s.item.toLowerCase().includes(selectedItem.toLowerCase()));
+                            if (similarItem) {
+                                selectedItem = similarItem.item;
+                                updateDescriptionInput(row, similarItem.item);
+                                // console.log(`Corrected to similar item: ${similarItem.item}`);
+                                isValidItem = true;
+                            } else {
+                                // console.error(`No valid item found for correction at index ${index} in stocks.`);
+                                selectedItem = '';
+                            }
                         }
-                    }
-                    if (!initialSize && isValidItem) {
-                        const matchingStock = stocks.find(s => s.item === selectedItem);
-                        inferredSize = matchingStock ? matchingStock.size : '';
-                        if (sizeElement) {
-                            sizeElement.value = inferredSize;
-                            const sizeChangeEvent = new Event('change', {
-                                bubbles: true
-                            });
-                            sizeElement.dispatchEvent(sizeChangeEvent);
+                        if (!initialSize && isValidItem) {
+                            const matchingStock = stocks.find(s => s.item === selectedItem);
+                            inferredSize = matchingStock ? matchingStock.size : '';
+                            if (sizeElement && inferredSize) {
+                                sizeElement.value = inferredSize; // Update size without triggering change event
+                                // console.log(`Inferred size: "${inferredSize}"`);
+                            }
                         }
-                        // console.log(`Inferred size: "${inferredSize}"`);
                     }
                 }
+
+                // Hentikan jika selectedItem atau inferredSize tetap kosong
+                if (!selectedItem || !inferredSize) {
+                    // console.warn(`No valid item or size found after correction at index ${index}. Skipping HPP update.`);
+                    return;
+                }
+
+                // console.log(`Handling stock change: index=${index}, item=${selectedItem}, size=${inferredSize}, voucherType=${voucherType}`);
+
+                removeHppRowForItem(index);
+
+                if (selectedItem && voucherType === 'PJ') {
+                    updateHppRowForPJ(index, selectedItem, inferredSize, quantity);
+                }
+
+                updateAllCalculationsAndValidations();
+            } finally {
+                // Reset processing flag
+                selectedElement.dataset.isProcessing = 'false';
             }
-
-            // Hentikan jika selectedItem atau inferredSize tetap kosong
-            if (!selectedItem || !inferredSize) {
-                // console.warn(`No valid item or size found after correction at index ${index}. Skipping HPP update.`);
-                return;
-            }
-
-            // console.log(`Handling stock change: index=${index}, item=${selectedItem}, size=${inferredSize}, voucherType=${voucherType}`);
-
-            removeHppRowForItem(index);
-
-            if (selectedItem && voucherType === 'PJ') {
-                updateHppRowForPJ(index, selectedItem, inferredSize, quantity);
-            }
-
-            updateAllCalculationsAndValidations();
         }
 
         // Helper function to update description input/select

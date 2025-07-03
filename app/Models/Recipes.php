@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class Recipes extends Model
 {
     protected $table = 'recipes';
-    protected $fillable = ['product_name', 'used_stock_id'];
+    protected $fillable = ['product_name', 'used_stock_id' ,'nominal'];
 
     public function transferStocks()
     {

@@ -75,13 +75,28 @@ class StockController extends Controller
     public function get_transactions($stockId, Request $request)
     {
         try {
+            $table = $request->input('table');
+            if (!in_array($table, ['stocks', 'transfer_stocks', 'used_stocks'])) {
+                Log::error('Invalid table name provided', [
+                    'stockId' => $stockId,
+                    'table' => $table,
+                    'request' => $request->all()
+                ]);
+                return response()->json(['error' => 'Invalid table name'], 400);
+            }
+
             $filter = $request->input('filter', '7_days');
-            $table = $request->input('table', 'stocks'); // Default to 'stocks' if not provided
             $transactions = $this->stockService->getTransactions((int)$stockId, $filter, $table);
             return response()->json(['transactions' => $transactions]);
         } catch (\Exception $e) {
-            Log::error('Get Transactions Error: ' . $e->getMessage(), ['exception' => $e]);
-            return response()->json(['transactions' => []], 500);
+            Log::error('Get Transactions Error: ' . $e->getMessage(), [
+                'exception' => $e,
+                'stockId' => $stockId,
+                'table' => $request->input('table'),
+                'filter' => $request->input('filter'),
+                'request' => $request->all()
+            ]);
+            return response()->json(['error' => 'Gagal memuat transaksi: ' . $e->getMessage()], 500);
         }
     }
 
