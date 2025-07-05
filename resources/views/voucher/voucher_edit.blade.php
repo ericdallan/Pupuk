@@ -71,11 +71,11 @@
                 <label for="useStock" class="col-sm-3 col-form-label">Transaksi Stok?</label>
                 <div class="col-sm-9">
                     <div class="form-check form-check-inline">
-                        <input class="form-check-input" type="radio" id="useStockYes" name="use_stock" value="yes" {{ in_array($voucher->voucher_type, ['PB', 'PJ']) ? 'checked' : '' }}>
+                        <input class="form-check-input" type="radio" id="useStockYes" name="use_stock" value="yes" {{ in_array($voucher->voucher_type, ['PB', 'PJ', 'PH', 'PK']) ? 'checked' : '' }}>
                         <label class="form-check-label" for="useStockYes">Ya</label>
                     </div>
                     <div class="form-check form-check-inline">
-                        <input class="form-check-input" type="radio" id="useStockNo" name="use_stock" value="no" {{ !in_array($voucher->voucher_type, ['PB', 'PJ']) ? 'checked' : '' }}>
+                        <input class="form-check-input" type="radio" id="useStockNo" name="use_stock" value="no" {{ !in_array($voucher->voucher_type, ['PG', 'PM', 'LN']) ? 'checked' : '' }}>
                         <label class="form-check-label" for="useStockNo">Tidak</label>
                     </div>
                 </div>
@@ -89,6 +89,8 @@
                         <option value="PM" {{ $voucher->voucher_type == 'PM' ? 'selected' : '' }}>Pemasukan</option>
                         <option value="PB" {{ $voucher->voucher_type == 'PB' ? 'selected' : '' }}>Pembelian</option>
                         <option value="LN" {{ $voucher->voucher_type == 'LN' ? 'selected' : '' }}>Lainnya</option>
+                        <option value="PH" {{ $voucher->voucher_type == 'PH' ? 'selected' : '' }}>Pemindahan</option>
+                        <option value="PK" {{ $voucher->voucher_type == 'PK' ? 'selected' : '' }}>Pemakaian</option>
                     </select>
                     <div class="invalid-feedback">Tipe Voucher wajib dipilih.</div>
                 </div>
@@ -413,34 +415,58 @@
             const transactions = @json($transactionsData);
             const currentVoucherType = @json($voucher -> voucher_type);
             const hasInvoice = @json($voucher -> invoice ? true : false);
+            const transferStocks = @json($transferStocks);
+            const usedStocks = @json($usedStocks);
+            const recipes = @json($recipes);
 
-            // --- Voucher Type Options ---
-            const voucherTypeOptions = [{
+            // Define voucher types with stock property
+            const voucherTypes = {
+                PJ: {
                     value: 'PJ',
                     text: 'Penjualan',
+                    description: 'Voucher Penjualan - Dokumen internal perusahaan untuk mencatat transaksi penjualan barang atau jasa yang tidak dapat dicatat pada voucher lain.',
                     stock: true
                 },
-                {
+                PB: {
                     value: 'PB',
                     text: 'Pembelian',
+                    description: 'Voucher Pembelian - Dokumen untuk mencatat transaksi pembelian barang atau jasa, seperti pembelian material, peralatan, atau layanan dari pemasok.',
                     stock: true
                 },
-                {
+                PG: {
                     value: 'PG',
                     text: 'Pengeluaran',
+                    description: 'Voucher Pengeluaran - Dokumen untuk mencatat pengeluaran dana perusahaan, seperti pembayaran tagihan, pembelian material, atau biaya operasional, sebagai bukti otorisasi transaksi.',
                     stock: false
                 },
-                {
+                PM: {
                     value: 'PM',
                     text: 'Pemasukan',
+                    description: 'Voucher Pemasukan - Dokumen internal perusahaan untuk mencatat penerimaan dana, seperti pembayaran dari pelanggan, setoran tunai, atau penerimaan lain yang masuk ke kas atau bank perusahaan.',
                     stock: false
                 },
-                {
+                LN: {
                     value: 'LN',
                     text: 'Lainnya',
+                    description: 'Voucher Lainnya - Dokumen untuk mencatat transaksi yang tidak termasuk dalam kategori voucher lain, seperti koreksi jurnal atau transaksi khusus lainnya.',
                     stock: false
-                }
-            ];
+                },
+                PH: {
+                    value: 'PH',
+                    text: 'Pemindahan',
+                    description: 'Voucher Pemindahan - Dokumen untuk mencatat pemindahan stok barang dari satu lokasi ke lokasi lain dalam perusahaan.',
+                    stock: true
+                },
+                PK: {
+                    value: 'PK',
+                    text: 'Pemakaian',
+                    description: 'Voucher Pemakaian - Dokumen untuk mencatat pemakaian barang dalam operasional perusahaan.',
+                    stock: true
+                },
+            };
+
+            // Convert voucherTypes object to an array for filtering
+            const voucherTypeOptions = Object.values(voucherTypes);
 
             // --- Update Voucher Type Dropdown ---
             function updateVoucherTypeOptions() {
@@ -454,19 +480,16 @@
                     const opt = document.createElement('option');
                     opt.value = option.value;
                     opt.textContent = option.text;
-                    // Select the current voucher type if it matches, otherwise leave unselected
                     if (option.value === currentVoucherType) {
                         opt.selected = true;
                     }
                     voucherTypeSelect.appendChild(opt);
                 });
 
-                // If the current voucher type is not in the valid options, select the first option
                 if (!validOptions.some(opt => opt.value === voucherTypeSelect.value)) {
                     voucherTypeSelect.value = validOptions[0]?.value || '';
                 }
 
-                // Trigger change event to ensure transaction table updates
                 const changeEvent = new Event('change', {
                     bubbles: true
                 });

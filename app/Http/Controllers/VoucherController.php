@@ -487,9 +487,24 @@ class VoucherController extends Controller
                             return ['item' => $stock->item, 'size' => $stock->size, 'quantity' => $stock->quantity, 'source' => 'transfer_stocks'];
                         })
                 );
-            $data['transactionsData'] = Transactions::where('voucher_type', 'PB')
-                ->select(['description', 'nominal', 'size'])
-                ->get();
+
+            // Use transactionsData from prepareVoucherEditData, or fetch specific fields if needed
+            // If you need different fields, ensure the query uses the voucher relationship
+            if (empty($data['transactionsData'])) {
+                $data['transactionsData'] = Transactions::whereHas('voucher', function ($query) {
+                    $query->where('voucher_type', 'PB');
+                })
+                    ->select(['description', 'nominal', 'size'])
+                    ->get()
+                    ->map(function ($transaction) {
+                        return [
+                            'description' => $transaction->description,
+                            'nominal' => $transaction->nominal,
+                            'size' => $transaction->size,
+                        ];
+                    })->values()->toArray();
+            }
+
             return view('voucher.voucher_edit', $data);
         } catch (\Exception $e) {
             Log::error('Voucher Edit Error', [

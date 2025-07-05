@@ -62,10 +62,11 @@
             <table class="table table-bordered" id="transactionTable">
                 <thead>
                     <tr class="text-center">
-                        <th colspan="3">Rincian Transaksi</th>
+                        <th colspan="4">Rincian Transaksi</th>
                     </tr>
                     <tr class="text-center">
                         <th>Deskripsi</th>
+                        <th>Ukuran</th>
                         <th>Quantitas</th>
                         <th>Nominal</th>
                     </tr>
@@ -74,6 +75,7 @@
                     @foreach($voucherTransactions as $transaction)
                     <tr>
                         <td>{{ $transaction->description }}</td>
+                        <td>{{ $transaction->size }}</td>
                         <td>{{ $transaction->quantity }}</td>
                         <td>{{ number_format($transaction->nominal, 2) }}</td>
                     </tr>

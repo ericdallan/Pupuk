@@ -591,15 +591,15 @@ class VoucherService
                     'is_hpp' => false,
                     'index' => 0,
                 ];
-                $transactionsToCreate[] = [
-                    'voucher_id' => $voucher->id,
-                    'description' => "HPP {$recipe->product_name}",
-                    'quantity' => $quantity,
-                    'size' => $recipe->size,
-                    'nominal' => floatval($recipe->nominal),
-                    'is_hpp' => true,
-                    'index' => 1,
-                ];
+                // $transactionsToCreate[] = [
+                //     'voucher_id' => $voucher->id,
+                //     'description' => "HPP {$recipe->product_name}",
+                //     'quantity' => $quantity,
+                //     'size' => $recipe->size,
+                //     'nominal' => floatval($recipe->nominal),
+                //     'is_hpp' => true,
+                //     'index' => 1,
+                // ];
 
                 // Update used_stocks for recipe product and its HPP
                 $this->updateUsedStock($recipe->product_name, $quantity, 'PK', $recipe->size);
@@ -862,18 +862,28 @@ class VoucherService
             $stocks = [];
         }
 
-        $transactionsData = Transactions::whereHas('voucher', function ($query) {
-            $query->where('voucher_type', 'PB');
-        })
-            ->where('description', 'NOT LIKE', 'HPP %')
-            ->get()
-            ->map(function ($transaction) {
-                return [
-                    'description' => $transaction->description,
-                    'quantity' => $transaction->quantity,
-                    'nominal' => $transaction->nominal,
-                ];
-            })->values()->toArray();
+        // Initialize $transactionsData as an empty array
+        $transactionsData = [];
+        try {
+            $transactionsData = Transactions::whereHas('voucher', function ($query) {
+                $query->where('voucher_type', 'PB');
+            })
+                ->where('description', 'NOT LIKE', 'HPP %')
+                ->get()
+                ->map(function ($transaction) {
+                    return [
+                        'description' => $transaction->description,
+                        'quantity' => $transaction->quantity,
+                        'nominal' => $transaction->nominal,
+                    ];
+                })->values()->toArray();
+        } catch (\Exception $e) {
+            // Log the query error for debugging
+            Log::error('Error fetching transactions data', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+        }
 
         $recipes = Recipes::select('id', 'product_name', 'size', 'nominal')->get()->toArray();
 
@@ -955,13 +965,13 @@ class VoucherService
                     'nominal' => floatval($recipe->nominal),
                     'is_hpp' => false,
                 ];
-                $transactionItems[] = [
-                    'description' => "HPP {$recipe->product_name}",
-                    'size' => $recipe->size,
-                    'quantity' => $quantity,
-                    'nominal' => floatval($recipe->nominal),
-                    'is_hpp' => true,
-                ];
+                // $transactionItems[] = [
+                //     'description' => "HPP {$recipe->product_name}",
+                //     'size' => $recipe->size,
+                //     'quantity' => $quantity,
+                //     'nominal' => floatval($recipe->nominal),
+                //     'is_hpp' => true,
+                // ];
                 $totalNominal = $quantity * floatval($recipe->nominal);
             } else {
                 foreach ($transactionsData as $index => $transaction) {
