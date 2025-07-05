@@ -80,7 +80,7 @@ class StockService
     {
         $query = DB::table($tableName)
             ->select(
-                "$tableName.id as stock_id", // Use alias to avoid ambiguity
+                "$tableName.id as stock_id",
                 "$tableName.item",
                 "$tableName.size",
                 'transactions.created_at',
@@ -99,10 +99,22 @@ class StockService
             ->whereBetween('transactions.created_at', [$startDate, $endDate]);
 
         $results = $query->get();
-        // Log::debug("Stock Transactions for $tableName:", $results->toArray());
 
         return $results->groupBy(function ($item) {
             return $item->item . '|' . ($item->size ?? '');
+        })->map(function ($records) {
+            return $records->map(function ($record) {
+                return (object) [
+                    'stock_id' => $record->stock_id,
+                    'item' => $record->item,
+                    'size' => $record->size,
+                    'description' => $record->description ?? 'No Description',
+                    'voucher_type' => $record->voucher_type ?? 'Unknown',
+                    'transaction_quantity' => $record->transaction_quantity ?? 0,
+                    'nominal' => $record->nominal ?? 0,
+                    'created_at' => $record->created_at ? Carbon::parse($record->created_at)->format('Y-m-d') : null,
+                ];
+            });
         });
     }
 
@@ -453,75 +465,6 @@ class StockService
             'startDate' => $data['startDate'],
             'endDate' => $data['endDate'],
         ];
-    }
-
-    /**
-     * Fetch transactions for a specific stock item
-     */
-    public function getTransactions(int $stockId, string $filter, string $table)
-    {
-        Log::info('Fetching transactions', ['stockId' => $stockId, 'table' => $table, 'filter' => $filter]);
-
-        try {
-            $modelClass = match ($table) {
-                'stocks' => \App\Models\Stock::class,
-                'transfer_stocks' => \App\Models\TransferStock::class,
-                'used_stocks' => \App\Models\UsedStock::class,
-                default => null,
-            };
-
-            if (!$modelClass) {
-                Log::warning("Invalid table name: $table");
-                return ['transactions' => [], 'error' => 'Invalid table name'];
-            }
-
-            $stock = $modelClass::find($stockId);
-            if (!$stock) {
-                Log::warning("No record found for stockId: $stockId in table: $table");
-                return ['transactions' => []];
-            }
-
-            $query = \App\Models\Transactions::select([
-                'transactions.id',
-                'transactions.description',
-                'transactions.quantity',
-                'transactions.nominal',
-                'transactions.created_at',
-                'vouchers.voucher_type'
-            ])
-                ->leftJoin('vouchers', 'transactions.voucher_id', '=', 'vouchers.id')
-                ->where('transactions.description', $stock->item)
-                ->where('transactions.size', $stock->size);
-
-            if ($filter === '7_days') {
-                $query->where('transactions.created_at', '>=', now()->subDays(7));
-            } elseif ($filter === '1_month') {
-                $query->where('transactions.created_at', '>=', now()->subMonth());
-            }
-
-            $transactions = $query->get()->map(function ($transaction) {
-                return [
-                    'id' => $transaction->id,
-                    'description' => $transaction->description ?? 'No Description',
-                    'voucher_type' => $transaction->voucher_type ?? 'Unknown',
-                    'quantity' => $transaction->quantity ?? 0,
-                    'nominal' => $transaction->nominal ?? 0,
-                    'created_at' => $transaction->created_at ? $transaction->created_at->format('Y-m-d') : null,
-                ];
-            })->toArray();
-
-            Log::info('Transactions fetched successfully', ['stockId' => $stockId, 'table' => $table, 'count' => count($transactions)]);
-            return ['transactions' => $transactions];
-        } catch (\Exception $e) {
-            Log::error('Error fetching transactions', [
-                'stockId' => $stockId,
-                'table' => $table,
-                'filter' => $filter,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-            ]);
-            return ['transactions' => [], 'error' => 'Failed to fetch transactions'];
-        }
     }
 
     /**

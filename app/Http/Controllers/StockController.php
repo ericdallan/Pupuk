@@ -66,41 +66,6 @@ class StockController extends Controller
     }
 
     /**
-     * Fetch transactions for a specific stock item
-     *
-     * @param int $stockId
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
-     */
-    public function get_transactions($stockId, Request $request)
-    {
-        try {
-            $table = $request->input('table');
-            if (!in_array($table, ['stocks', 'transfer_stocks', 'used_stocks'])) {
-                Log::error('Invalid table name provided', [
-                    'stockId' => $stockId,
-                    'table' => $table,
-                    'request' => $request->all()
-                ]);
-                return response()->json(['error' => 'Invalid table name'], 400);
-            }
-
-            $filter = $request->input('filter', '7_days');
-            $transactions = $this->stockService->getTransactions((int)$stockId, $filter, $table);
-            return response()->json(['transactions' => $transactions]);
-        } catch (\Exception $e) {
-            Log::error('Get Transactions Error: ' . $e->getMessage(), [
-                'exception' => $e,
-                'stockId' => $stockId,
-                'table' => $request->input('table'),
-                'filter' => $request->input('filter'),
-                'request' => $request->all()
-            ]);
-            return response()->json(['error' => 'Gagal memuat transaksi: ' . $e->getMessage()], 500);
-        }
-    }
-
-    /**
      * Generate and download a PDF transfer form
      *
      * @param Request $request

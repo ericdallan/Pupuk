@@ -38,7 +38,6 @@ Route::middleware(['auth:admin'])->group(function () {
     Route::get('/voucher/{id}/pdf', [VoucherController::class, 'generatePdf'])->name('voucher_pdf');
     //Stock
     Route::get('/stock_page', [StockController::class, 'stock_page'])->name('stock_page');
-    Route::get('/stock/transactions/{stockId}', [StockController::class, 'get_transactions'])->name('stock.transactions');
     Route::get('/stock/export', [StockController::class, 'export'])->name('stock.export');
     Route::get('stock/transfer/print', [StockController::class, 'printTransferForm'])->name('stock.transfer.print');
     Route::post('stock/recipe/store', [StockController::class, 'storeRecipe'])->name('recipe.store');

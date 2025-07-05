@@ -97,6 +97,7 @@
                             <th>No</th>
                             <th>Nama Barang</th>
                             <th>Ukuran</th>
+                            25
                             <th colspan="2">Stok Tersedia</th>
                             <th colspan="2">Saldo Awal</th>
                             <th colspan="2">Masuk Barang</th>
@@ -341,14 +342,10 @@
                     <div class="mb-3">
                         <label for="modal_filter_{{ $tableName }}_{{ $stock->id }}" class="form-label">Tampilkan Transaksi</label>
                         <select id="modal_filter_{{ $tableName }}_{{ $stock->id }}" class="form-select modal-filter" data-stock-id="{{ $stock->id }}">
-                            <option value="7_days" {{ request('filter', '7_days') == '7_days' ? 'selected' : '' }}>7 Hari Terakhir</option>
-                            <option value="1_month" {{ request('filter', '7_days') == '1_month' ? 'selected' : '' }}>1 Bulan Terakhir</option>
+                            <option value="all" {{ request('filter', 'all') == 'all' ? 'selected' : '' }}>Semua Transaksi</option>
+                            <option value="7_days" {{ request('filter', 'all') == '7_days' ? 'selected' : '' }}>7 Hari Terakhir</option>
+                            <option value="1_month" {{ request('filter', 'all') == '1_month' ? 'selected' : '' }}>1 Bulan Terakhir</option>
                         </select>
-                    </div>
-                    <div class="loading-spinner" id="loading_{{ $tableName }}_{{ $stock->id }}">
-                        <div class="spinner-border text-primary" role="status">
-                            <span class="visually-hidden">Loading...</span>
-                        </div>
                     </div>
                     <div class="transaction-table" id="transactionTable_{{ $tableName }}_{{ $stock->id }}">
                         @if (isset($stock->transactions) && !empty($stock->transactions))
@@ -367,7 +364,7 @@
                                 <tbody>
                                     @foreach ($stock->transactions as $transaction)
                                     @if (!str_starts_with($transaction->description ?? '', 'HPP '))
-                                    <tr>
+                                    <tr data-transaction-date="{{ $transaction->created_at }}">
                                         <td>{{ $loop->iteration }}</td>
                                         <td>{{ htmlspecialchars($transaction->description ?? 'No Description') }}</td>
                                         <td>
@@ -379,7 +376,7 @@
                                             @default {{ htmlspecialchars($transaction->voucher_type ?? 'Unknown') }}
                                             @endswitch
                                         </td>
-                                        <td>{{ $transaction->quantity ?? 0 }}</td>
+                                        <td>{{ $transaction->quantity ?? $transaction->transaction_quantity ?? 0 }}</td>
                                         <td>{{ number_format($transaction->nominal ?? 0, 2, ',', '.') }}</td>
                                         <td>{{ \Carbon\Carbon::parse($transaction->created_at ?? now())->format('d-m-Y') }}</td>
                                     </tr>
@@ -511,118 +508,43 @@
             });
         });
 
-        // Function to fetch and render transactions
-        function loadTransactions(stockId, tableName, filter, transactionTable, loadingSpinner, modalTitle) {
-            loadingSpinner.classList.add('active');
-            transactionTable.style.display = 'none';
-
-            fetch(`/stock/transactions/${stockId}?filter=${filter}&table=${tableName}`)
-                .then(response => {
-                    if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
-                    return response.json();
-                })
-                .then(data => {
-                    loadingSpinner.classList.remove('active');
-                    transactionTable.style.display = 'block';
-
-                    if (data.error) {
-                        transactionTable.innerHTML = `<p class="text-center text-danger">${data.error}</p>`;
-                        return;
-                    }
-
-                    let html = '';
-                    if (data.transactions && data.transactions.length > 0) {
-                        const filteredTransactions = data.transactions.filter(transaction => !transaction.description?.startsWith('HPP '));
-                        if (filteredTransactions.length > 0) {
-                            html = `
-                        <div class="table-responsive">
-                            <table class="table table-striped table-bordered table-hover text-center">
-                                <thead class="table-dark">
-                                    <tr>
-                                        <th>No</th>
-                                        <th>Deskripsi</th>
-                                        <th>Tipe Transaksi</th>
-                                        <th>Kuantitas</th>
-                                        <th>Nominal</th>
-                                        <th>Tanggal</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                    `;
-                            filteredTransactions.forEach((transaction, index) => {
-                                const formattedDate = transaction.created_at ?
-                                    new Date(transaction.created_at).toLocaleDateString('id-ID', {
-                                        day: '2-digit',
-                                        month: '2-digit',
-                                        year: 'numeric'
-                                    }) : '-';
-                                html += `
-                            <tr>
-                                <td>${index + 1}</td>
-                                <td>${transaction.description || 'No Description'}</td>
-                                <td>${(() => {
-                                    switch (transaction.voucher_type) {
-                                        case 'PJ': return 'Penjualan';
-                                        case 'PB': return 'Pembelian';
-                                        case 'PH': return 'Pemindahan';
-                                        case 'PK': return 'Pemakaian';
-                                        default: return transaction.voucher_type || 'Unknown';
-                                    }
-                                })()}</td>
-                                <td>${transaction.quantity || 0}</td>
-                                <td>${(transaction.nominal || 0).toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                                <td>${formattedDate}</td>
-                            </tr>
-                        `;
-                            });
-                            html += `
-                                </tbody>
-                            </table>
-                        </div>
-                    `;
-                        } else {
-                            html = '<p class="text-center">Tidak ada transaksi terkait untuk barang ini.</p>';
-                        }
-                    } else {
-                        html = '<p class="text-center">Tidak ada transaksi terkait untuk barang ini.</p>';
-                    }
-                    transactionTable.innerHTML = html;
-                })
-                .catch(error => {
-                    console.error('Error fetching transactions:', error);
-                    loadingSpinner.classList.remove('active');
-                    transactionTable.style.display = 'block';
-                    transactionTable.innerHTML = `<p class="text-center text-danger">Terjadi kesalahan saat memuat transaksi. Silakan coba lagi nanti.</p>`;
-                });
-        }
-
-        // Modal filter logic
+        // Modal filter logic for client-side filtering
         document.querySelectorAll('.modal-filter').forEach(select => {
             select.addEventListener('change', function() {
                 const stockId = this.dataset.stockId;
+                const tableName = this.closest('.modal-content').dataset.tableName;
                 const filter = this.value;
-                const modal = this.closest('.modal-content');
-                const tableName = modal.dataset.tableName || 'stocks';
                 const transactionTable = document.getElementById(`transactionTable_${tableName}_${stockId}`);
-                const loadingSpinner = document.getElementById(`loading_${tableName}_${stockId}`);
-                loadTransactions(stockId, tableName, filter, transactionTable, loadingSpinner);
-            });
-        });
+                const rows = transactionTable.querySelectorAll('tbody tr');
 
-        // Detail button logic
-        document.querySelectorAll('.detail-btn').forEach(button => {
-            button.addEventListener('click', function() {
-                const stockId = this.dataset.stockId;
-                const tableName = this.dataset.tableName || 'stocks';
-                const modal = document.querySelector(`#detailModal_${tableName}_${stockId}`);
-                const modalTitle = modal.querySelector('.modal-title');
-                const modalFilter = document.querySelector(`#modal_filter_${tableName}_${stockId}`);
-                const transactionTable = document.getElementById(`transactionTable_${tableName}_${stockId}`);
-                const loadingSpinner = document.getElementById(`loading_${tableName}_${stockId}`);
+                rows.forEach(row => {
+                    const transactionDate = row.dataset.transactionDate;
+                    if (!transactionDate) {
+                        row.style.display = filter === 'all' ? '' : 'none';
+                        return;
+                    }
 
-                modal.dataset.tableName = tableName;
-                modalTitle.textContent = `Detail Transaksi untuk ${this.dataset.item} (${tableName})`;
-                loadTransactions(stockId, tableName, modalFilter.value, transactionTable, loadingSpinner, modalTitle);
+                    const date = new Date(transactionDate);
+                    const now = new Date();
+                    let showRow = true;
+
+                    if (filter === '7_days') {
+                        showRow = date >= new Date(now.setDate(now.getDate() - 7));
+                    } else if (filter === '1_month') {
+                        showRow = date >= new Date(now.setMonth(now.getMonth() - 1));
+                    }
+
+                    row.style.display = showRow || filter === 'all' ? '' : 'none';
+                });
+
+                // Show message if no transactions are visible
+                const visibleRows = Array.from(rows).filter(row => row.style.display !== 'none');
+                if (visibleRows.length === 0) {
+                    transactionTable.innerHTML = '<p class="text-center">Tidak ada transaksi terkait untuk periode ini.</p>';
+                } else if (transactionTable.querySelector('p.text-center')) {
+                    // Re-render the table if it was replaced with a message
+                    location.reload(); // Simplest way to restore the table; alternatively, store the original HTML
+                }
             });
         });
 
