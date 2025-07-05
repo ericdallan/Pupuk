@@ -159,6 +159,10 @@
                         Pembelian
                         @elseif($voucher_item->voucher_type == 'LN')
                         Lainnya
+                        @elseif($voucher_item->voucher_type == 'PK')
+                        Pemakaian
+                        @elseif($voucher_item->voucher_type == 'PH')
+                        Pemindahan
                         @else
                         {{ $voucher_item->voucher_type }}
                         @endif

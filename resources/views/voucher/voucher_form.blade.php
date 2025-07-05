@@ -145,6 +145,14 @@
                                 </div>
                             </div>
                         </div>
+                        <div class="row mb-3">
+                            <label for="recipe" class="col-sm-3 col-form-label">Formula Produk:</label>
+                            <div class="col-sm-9">
+                                <div id="recipeFieldContainer">
+                                    <input type="text" class="form-control" id="recipe" name="recipe" disabled>
+                                </div>
+                            </div>
+                        </div>
                         <div class="mb-3">
                             <h5>Rincian Transaksi</h5>
                             <div class="table-responsive">
@@ -283,6 +291,8 @@
         const useExistingInvoiceNo = document.getElementById('useExistingInvoiceNo');
         const useStockYes = document.getElementById('useStockYes');
         const useStockNo = document.getElementById('useStockNo');
+        const recipeInputContainer = document.getElementById('recipeFieldContainer');
+        const recipeInput = document.getElementById('recipe');
         const existingInvoices = @json($existingInvoices);
         const storeNames = @json($storeNames);
         const subsidiaries = @json($subsidiariesData);
@@ -291,6 +301,7 @@
         const transferStocks = @json($transferStocks);
         const usedStocks = @json($usedStocks);
         const transactions = @json($transactionsData);
+        const recipes = @json($recipes);
 
         const voucherTypes = {
             PJ: {
@@ -344,6 +355,159 @@
             });
         }
 
+        function createRecipeDropdown() {
+            const select = document.createElement('select');
+            select.className = 'form-control';
+            select.id = 'recipe';
+            select.name = 'recipe_id'; // Changed from 'recipe' to 'recipe_id'
+
+            const defaultOption = document.createElement('option');
+            defaultOption.value = '';
+            defaultOption.textContent = 'Pilih Formula Produk';
+            select.appendChild(defaultOption);
+
+            if (recipes && Array.isArray(recipes)) {
+                recipes.forEach(recipe => {
+                    if (recipe.id) {
+                        const option = document.createElement('option');
+                        option.value = recipe.id;
+                        option.textContent = recipe.product_name || 'Unnamed Recipe';
+                        select.appendChild(option);
+                    } else {
+                        console.warn('Recipe missing id:', recipe);
+                    }
+                });
+            } else {
+                console.error('Recipes data is invalid or undefined:', recipes);
+            }
+
+            const existingListener = select._eventListeners?.change;
+            if (existingListener) {
+                select.removeEventListener('change', existingListener);
+            }
+            select.addEventListener('change', handleRecipeChange);
+            select._eventListeners = select._eventListeners || {};
+            select._eventListeners.change = handleRecipeChange;
+
+            return select;
+        }
+
+        function handleRecipeChange() {
+            const selectedRecipeId = this.value;
+            const voucherType = voucherTypeSelect.value;
+            const useStock = document.querySelector('input[name="use_stock"]:checked')?.value || 'no';
+            console.log('Recipe Change:', {
+                selectedRecipeId,
+                voucherType,
+                useStock
+            });
+
+            clearTimeout(this._debounceTimeout);
+            this._debounceTimeout = setTimeout(() => {
+                if (selectedRecipeId && voucherType === 'PK' && useStock === 'yes') {
+                    addTransactionRowBtn.disabled = true;
+                    // console.log('Disabling Tambah Transaksi button');
+                    populateTransactionTableFromRecipe(selectedRecipeId);
+                } else {
+                    addTransactionRowBtn.disabled = false;
+                    // console.log('Enabling Tambah Transaksi button');
+                    refreshTransactionTable();
+                }
+            }, 100);
+        }
+
+        function populateTransactionTableFromRecipe(recipeId) {
+            const selectedRecipe = recipes.find(r => r.id == recipeId);
+            if (!selectedRecipe) {
+                console.error('Invalid recipe data:', selectedRecipe);
+                transactionTableBody.innerHTML = '<tr><td colspan="6">No valid recipe data available</td></tr>';
+                return;
+            }
+
+            console.log('Selected Recipe:', selectedRecipe); // Debug selected recipe data
+            transactionTableBody.innerHTML = '';
+            const row = generateTransactionTableRow(0);
+            transactionTableBody.appendChild(row);
+
+            const descriptionInput = row.querySelector('.descriptionInput');
+            const sizeInput = row.querySelector('.sizeInput');
+            const quantityInput = row.querySelector('.quantityInput');
+            const nominalInput = row.querySelector('.nominalInput');
+            const totalInput = row.querySelector('.totalInput');
+
+            if (descriptionInput && descriptionInput.tagName === 'INPUT') {
+                descriptionInput.value = selectedRecipe.product_name || '';
+                descriptionInput.readonly = true;
+                // console.log('Description set to:', descriptionInput.value); // Debug
+            }
+            if (sizeInput && sizeInput.tagName === 'INPUT') {
+                sizeInput.value = selectedRecipe.size || '';
+                sizeInput.readonly = true;
+                // console.log('Size set to:', sizeInput.value); // Debug
+            }
+            if (quantityInput) {
+                quantityInput.value = 1;
+                quantityInput.addEventListener('input', function() {
+                    updateRowTotal(row);
+                    updateAllCalculationsAndValidations();
+                });
+            }
+            if (nominalInput) {
+                const nominalValue = parseFloat(selectedRecipe.nominal) || 0;
+                nominalInput.value = nominalValue.toFixed(2);
+                nominalInput.readonly = true;
+            }
+            if (totalInput) {
+                updateRowTotal(row);
+            }
+
+            attachTransactionRemoveButtonListeners();
+            attachTransactionInputListeners();
+            toggleSizeInputState();
+            updateAllCalculationsAndValidations();
+        }
+
+        function updateRowTotal(row) {
+            const quantityInput = row.querySelector('.quantityInput');
+            const nominalInput = row.querySelector('.nominalInput');
+            const totalInput = row.querySelector('.totalInput');
+
+            if (quantityInput && nominalInput && totalInput) {
+                const quantity = parseFloat(quantityInput.value) || 0;
+                const nominal = parseFloat(nominalInput.value) || 0;
+                const total = quantity * nominal;
+                totalInput.value = total.toLocaleString('id-ID', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                });
+            }
+        }
+
+        function updateRecipeField() {
+            recipeInputContainer.innerHTML = '';
+            const voucherType = voucherTypeSelect.value;
+            const useStock = document.querySelector('input[name="use_stock"]:checked')?.value || 'no';
+
+            if (voucherType === 'PK' && useStock === 'yes') {
+                const recipeSelect = createRecipeDropdown();
+                recipeInputContainer.appendChild(recipeSelect);
+                if (recipeSelect.value) {
+                    const changeEvent = new Event('change');
+                    recipeSelect.dispatchEvent(changeEvent);
+                }
+            } else {
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.className = 'form-control';
+                input.id = 'recipe';
+                input.name = 'recipe';
+                input.disabled = true;
+                recipeInputContainer.appendChild(input);
+                addTransactionRowBtn.disabled = false;
+            }
+            refreshTransactionTable();
+        }
+
         function updateVoucherTypeOptions() {
             const useStock = document.querySelector('input[name="use_stock"]:checked')?.value || 'no';
             const currentValue = voucherTypeSelect.value;
@@ -374,7 +538,6 @@
             deskripsiVoucherTextarea.value = voucherTypes[voucherTypeSelect.value]?.description || '';
             refreshTransactionTable();
             updateAllCalculationsAndValidations();
-            updateAddItemButtonVisibility();
             toggleSizeInputState();
         }
 
@@ -382,11 +545,13 @@
             updateVoucherTypeOptions();
             refreshTransactionTable();
             toggleSizeInputState();
+            updateRecipeField();
         });
         useStockNo.addEventListener('change', () => {
             updateVoucherTypeOptions();
             refreshTransactionTable();
             toggleSizeInputState();
+            updateRecipeField();
         });
 
         function isSubsidiaryCodeUsed() {
@@ -1103,7 +1268,6 @@
 
             const defaultOption = document.createElement('option');
             defaultOption.value = '';
-            defaultOption.textContent = 'Pilih Nama Produk';
             select.appendChild(defaultOption);
 
             const invoiceNumber = document.querySelector('#invoice')?.value;
@@ -1608,7 +1772,7 @@
             let descriptionElement;
             const voucherType = voucherTypeSelect.value;
             const useStock = document.querySelector('input[name="use_stock"]:checked')?.value || 'no';
-            let initialSelectedItem = '';
+            const recipeSelected = document.querySelector('#recipe')?.value && voucherType === 'PK' && useStock === 'yes';
 
             if (useStock === 'yes' && (voucherType === 'PJ' || voucherType === 'PB' || voucherType === 'PH' || voucherType === 'PK')) {
                 if (voucherType === 'PB') {
@@ -1625,25 +1789,28 @@
                     select.addEventListener('change', function() {
                         input.value = this.value;
                         updateSizeDropdown(index, this.value);
-                        const size = row.querySelector('.sizeInput')?.value || '';
-                        const quantity = parseFloat(row.querySelector('.quantityInput')?.value) || 1;
                         updateAllCalculationsAndValidations();
                     });
 
                     input.addEventListener('input', function() {
                         select.value = '';
                         updateSizeDropdown(index, '');
-                        const size = row.querySelector('.sizeInput')?.value || '';
-                        const quantity = parseFloat(row.querySelector('.quantityInput')?.value) || 1;
                         updateAllCalculationsAndValidations();
                     });
 
                     descriptionElement.appendChild(select);
                     descriptionElement.appendChild(input);
-                    initialSelectedItem = (select.value) || '';
-                } else if (voucherType === 'PJ' || voucherType === 'PH' || voucherType === 'PK') {
+                } else if (voucherType === 'PK') {
+                    // Use input instead of select for PK
+                    descriptionElement = document.createElement('input');
+                    descriptionElement.type = 'text';
+                    descriptionElement.className = 'form-control descriptionInput';
+                    descriptionElement.name = `transactions[${index}][description]`;
+                } else {
                     descriptionElement = createStockDropdown(index, voucherType);
-                    initialSelectedItem = (descriptionElement.tagName === 'SELECT' && descriptionElement.value) || '';
+                }
+                if (recipeSelected) {
+                    descriptionElement.readOnly = true;
                 }
             } else {
                 descriptionElement = createDescriptionInput(index);
@@ -1652,9 +1819,20 @@
             row.appendChild(descriptionCell);
 
             const sizeCell = document.createElement('td');
-            const sizeElement = (useStock === 'yes' && voucherType === 'PB') ?
-                createSizeInputWithDropdown(index, initialSelectedItem) :
-                createSizeDropdown(index, initialSelectedItem, voucherType);
+            let sizeElement;
+            if (useStock === 'yes' && voucherType === 'PB') {
+                sizeElement = createSizeInputWithDropdown(index, descriptionElement.value);
+            } else if (useStock === 'yes' && voucherType === 'PK') {
+                sizeElement = document.createElement('input');
+                sizeElement.type = 'text';
+                sizeElement.className = 'form-control sizeInput';
+                sizeElement.name = `transactions[${index}][size]`;
+            } else {
+                sizeElement = createSizeDropdown(index, descriptionElement.value, voucherType);
+            }
+            if (recipeSelected) {
+                sizeElement.readOnly = true;
+            }
             sizeCell.appendChild(sizeElement);
             row.appendChild(sizeCell);
 
@@ -1667,11 +1845,7 @@
             quantityInput.name = `transactions[${index}][quantity]`;
             quantityInput.value = '1';
             quantityInput.addEventListener('input', function() {
-                const description = row.querySelector('.descriptionInput')?.value || '';
-                const size = row.querySelector('.sizeInput')?.value || '';
-                if (voucherType === 'PJ') {
-                    updateHppRowForPJ(index, description, size, parseFloat(this.value) || 1);
-                }
+                updateRowTotal(row);
                 updateAllCalculationsAndValidations();
             });
             quantityCell.appendChild(quantityInput);
@@ -1684,6 +1858,9 @@
             nominalInput.step = '0.01';
             nominalInput.className = 'form-control nominalInput';
             nominalInput.name = `transactions[${index}][nominal]`;
+            if (recipeSelected) {
+                nominalInput.readonly = true;
+            }
             nominalCell.appendChild(nominalInput);
             row.appendChild(nominalCell);
 
@@ -1956,9 +2133,9 @@
                 stockData = stocks;
                 tableName = 'Stok';
             } else if (voucherType === 'PK') {
-                stockData = transferStocks;
-                tableName = 'Stok Pemindahan';
-                targetTableName = 'Stok Pemakaian';
+                stockData = usedStocks;
+                tableName = 'used_stocks';
+                targetTableName = 'used_stocks';
             } else if (voucherType === 'PJ') {
                 stockData = [...usedStocks, ...transferStocks];
                 tableName = 'Stok Pemakaian atau Stok Pemindahan';
@@ -1973,9 +2150,10 @@
                 };
             }
 
+            let stock = null;
             if (!isNewItemRow) {
                 const cleanDescription = description.replace(/\(Stok: \d+\)/, '').trim().toLowerCase();
-                const stock = stockData.find(s => s.item?.toLowerCase().replace(/\(stok: \d+\)/, '').trim() === cleanDescription && (!size || s.size === size));
+                stock = stockData.find(s => s.item?.toLowerCase().replace(/\(stok: \d+\)/, '').trim() === cleanDescription && (!size || s.size === size));
 
                 if (!description) {
                     validationInput.value = 'Item belum dipilih di baris ini.';
@@ -1985,7 +2163,7 @@
                         message: validationInput.value
                     };
                 }
-                if (!stock) {
+                if (!stock && voucherType !== 'PK') {
                     validationInput.value = `Item ${description}${size ? ' (' + size + ')' : ''} tidak ditemukan di tabel ${tableName}.`;
                     saveVoucherBtn.disabled = true;
                     return {
@@ -1993,7 +2171,7 @@
                         message: validationInput.value
                     };
                 }
-                if (stock.quantity < quantity) {
+                if (stock && stock.quantity < quantity && voucherType !== 'PK') {
                     validationInput.value = `Kuantitas untuk item ${description}${size ? ' (' + size + ')' : ''} melebihi stok tersedia di tabel ${tableName}. Tersedia: ${stock.quantity}, Dibutuhkan: ${quantity}`;
                     saveVoucherBtn.disabled = true;
                     return {
@@ -2003,7 +2181,7 @@
                 }
             }
 
-            if (voucherType === 'PK' && !isNewItemRow && stock.quantity >= quantity) {
+            if (voucherType === 'PK' && !isNewItemRow && stock && stock.quantity >= quantity) {
                 validationInput.value = `Stok ${description}${size ? ' (' + size + ')' : ''} cukup untuk dipindahkan ke ${targetTableName}. Tersedia: ${stock.quantity}, Dibutuhkan: ${quantity}`;
                 saveVoucherBtn.disabled = false;
                 return {
@@ -2019,7 +2197,7 @@
         }
 
         function attachTransactionInputListeners() {
-            const transactionInputs = transactionTableBody.querySelectorAll('.quantityInput, .nominalInput, .descriptionInput, .sizeInput');
+            const transactionInputs = transactionTableBody.querySelectorAll('.quantityInput, .nominalInput:not([disabled]), .descriptionInput:not([disabled]), .sizeInput:not([disabled])');
             transactionInputs.forEach(input => {
                 input.removeEventListener('input', handleTransactionInput);
                 input.addEventListener('input', handleTransactionInput);
@@ -2096,44 +2274,13 @@
             updateAllCalculationsAndValidations();
         });
 
-        const addItemButton = document.createElement('button');
-        addItemButton.type = 'button';
-        addItemButton.id = 'addItemRowBtn';
-        addItemButton.className = 'btn btn-primary';
-        addItemButton.textContent = 'Tambah Nama Barang';
-        addItemButton.style.marginLeft = '10px';
-        addItemButton.style.display = 'none';
-        addTransactionRowBtn.parentNode.insertBefore(addItemButton, addTransactionRowBtn.nextSibling);
-
-        function updateAddItemButtonVisibility() {
-            const voucherType = voucherTypeSelect.value;
-            addItemButton.style.display = voucherType === 'PK' ? 'inline-block' : 'none';
-            updateAddItemButtonState();
-        }
-
-        function updateAddItemButtonState() {
-            const hasNewItemRow = Array.from(transactionTableBody.querySelectorAll('tr')).some(row => row.dataset.isNewItem === 'true');
-            addItemButton.disabled = hasNewItemRow;
-        }
-
-        addItemButton.addEventListener('click', function() {
-            const newIndex = transactionTableBody.querySelectorAll('tr').length;
-            const newRow = generateNewItemRow(newIndex);
-            transactionTableBody.appendChild(newRow);
-            attachTransactionRemoveButtonListeners();
-            attachTransactionInputListeners();
-            toggleSizeInputState();
-            updateAddItemButtonState();
-            updateAllCalculationsAndValidations();
-        });
-
         voucherTypeSelect.addEventListener('change', function() {
             refreshTransactionTable();
             deskripsiVoucherTextarea.value = voucherTypes[this.value]?.description || '';
             updateAllCalculationsAndValidations();
-            updateAddItemButtonVisibility();
             toggleSizeInputState();
             updateProductDropdownForPK();
+            updateRecipeField();
         });
 
         function calculateTotalNominal() {
@@ -2262,6 +2409,7 @@
             updateVoucherDay();
         }
         // Initialize
+        updateRecipeField();
         attachTransactionInputListeners();
         attachTransactionRemoveButtonListeners();
         attachVoucherDetailRemoveButtonListeners();

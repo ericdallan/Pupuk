@@ -28,4 +28,9 @@ class TransferStock extends Model
             ->withPivot('quantity')
             ->withTimestamps();
     }
+
+    public function recipeTransfers()
+    {
+        return $this->hasMany(RecipeTransfer::class, 'transfer_stock_id');
+    }
 }

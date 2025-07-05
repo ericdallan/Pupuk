@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class Recipes extends Model
 {
     protected $table = 'recipes';
-    protected $fillable = ['product_name', 'used_stock_id' ,'nominal'];
+    protected $fillable = ['product_name', 'size', 'used_stock_id', 'nominal'];
 
     public function transferStocks()
     {
@@ -22,5 +22,10 @@ class Recipes extends Model
     public function usedStock()
     {
         return $this->belongsTo(UsedStock::class, 'used_stock_id');
+    }
+
+    public function recipeTransfers()
+    {
+        return $this->hasMany(RecipeTransfer::class, 'recipe_id');
     }
 }

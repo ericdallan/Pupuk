@@ -133,7 +133,7 @@
                             @endif
                             <td>{{ htmlspecialchars($stock->size ?? 'Unknown Size') }}</td>
                             <td>{{ $stock->quantity ?? 0 }}</td>
-                            <td>{{ number_format($stock->average_hpp ?? 0, 2, ',', '.') }}</td>
+                            <td>{{ number_format($stock->average_pb_hpp ?? 0, 2, ',', '.') }}</td>
                             <td>{{ $stock->opening_qty ?? 0 }}</td>
                             <td>{{ number_format($stock->opening_hpp ?? 0, 2, ',', '.') }}</td>
                             <td>{{ $stock->incoming_qty ?? 0 }}</td>
@@ -210,7 +210,7 @@
                             @endif
                             <td>{{ htmlspecialchars($stock->size ?? 'Unknown Size') }}</td>
                             <td>{{ $stock->quantity ?? 0 }}</td>
-                            <td>{{ number_format($stock->average_hpp ?? 0, 2, ',', '.') }}</td>
+                            <td>{{ number_format($stock->average_pb_hpp ?? 0, 2, ',', '.') }}</td>
                             <td>{{ $stock->opening_qty ?? 0 }}</td>
                             <td>{{ number_format($stock->opening_hpp ?? 0, 2, ',', '.') }}</td>
                             <td>{{ $stock->incoming_qty ?? 0 }}</td>
@@ -287,7 +287,7 @@
                             @endif
                             <td>{{ htmlspecialchars($stock->size ?? 'Unknown Size') }}</td>
                             <td>{{ $stock->quantity ?? 0 }}</td>
-                            <td>{{ number_format($stock->average_hpp ?? 0, 2, ',', '.') }}</td>
+                            <td>{{ number_format($stock->average_pb_hpp ?? 0, 2, ',', '.') }}</td>
                             <td>{{ $stock->opening_qty ?? 0 }}</td>
                             <td>{{ number_format($stock->opening_hpp ?? 0, 2, ',', '.') }}</td>
                             <td>{{ $stock->incoming_qty ?? 0 }}</td>
@@ -405,7 +405,7 @@
 
     <!-- Create Recipe Modal -->
     <div class="modal fade" id="createRecipeModal" tabindex="-1" aria-labelledby="createRecipeModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
+        <div class="modal-dialog modal-xl">
             <div class="modal-content">
                 <form id="recipeForm" action="{{ route('recipe.store') }}" method="POST">
                     @csrf
@@ -424,16 +424,21 @@
                             <input type="text" name="product_size" id="product_size" class="form-control" maxlength="50" pattern="[A-Za-z0-9\s\-\/]*" title="Ukuran produk hanya boleh berisi huruf, angka, spasi, tanda hubung, atau garis miring">
                             <div class="invalid-feedback">Masukkan ukuran produk yang valid (maksimal 50 karakter)</div>
                         </div>
+                        <div class="mb-3">
+                            <label for="total_nominal" class="form-label">Total Nominal</label>
+                            <input type="number" name="total_nominal" id="total_nominal" class="form-control" value="0.00" step="0.01" readonly>
+                            <div class="invalid-feedback">Total nominal tidak valid</div>
+                        </div>
                         <div id="ingredientsContainer">
                             <div class="ingredient-row mb-3" data-row-id="0">
                                 <div class="row align-items-end">
-                                    <div class="col-md-5">
+                                    <div class="col-md-4">
                                         <label for="transfer_stock_id_0" class="form-label">Bahan Baku</label>
                                         <select name="transfer_stock_id[]" id="transfer_stock_id_0" class="form-select transfer-stock-select" required>
                                             <option value="">Pilih Bahan Baku</option>
                                             @if (isset($transferStockData) && is_array($transferStockData) && !empty($transferStockData))
                                             @foreach (collect($transferStockData)->flatten() as $stock)
-                                            <option value="{{ $stock->id }}" data-max-quantity="{{ $stock->quantity }}">{{ htmlspecialchars($stock->item) }} ({{ htmlspecialchars($stock->size) }}) - {{ $stock->quantity }} tersedia</option>
+                                            <option value="{{ $stock->id }}" data-max-quantity="{{ $stock->quantity }}" data-nominal="{{ $stock->nominal ?? 0 }}">{{ htmlspecialchars($stock->item) }} ({{ htmlspecialchars($stock->size) }}) - {{ $stock->quantity }} tersedia</option>
                                             @endforeach
                                             @else
                                             <option value="" disabled>Tidak ada bahan baku tersedia</option>
@@ -441,13 +446,18 @@
                                         </select>
                                         <div class="invalid-feedback">Pilih bahan baku</div>
                                     </div>
-                                    <div class="col-md-5">
+                                    <div class="col-md-3">
                                         <label for="quantity_0" class="form-label">Kuantitas</label>
                                         <input type="number" name="quantity[]" id="quantity_0" class="form-control" min="1" max="999999" step="1" required>
-                                        <div class="invalid-feedback">Masukkan kuantitas yang valid (angka bulat, minimal 1)</div>
+                                        <div class="invalid-feedback">Masukkan kuantitas yang valid (minimal 1)</div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label for="nominal_0" class="form-label">Nominal</label>
+                                        <input type="number" name="nominal[]" id="nominal_0" class="form-control" min="0" step="0.01" readonly>
+                                        <div class="invalid-feedback"></div>
                                     </div>
                                     <div class="col-md-2">
-                                        <button type="button" class="btn btn-danger remove-ingredient" style="display: none;">Hapus</button>
+                                        <button type="button" class="btn btn-danger remove-ingredient">Hapus</button>
                                     </div>
                                 </div>
                             </div>
@@ -619,32 +629,75 @@
         // Recipe form validation and dynamic ingredient rows
         let ingredientCount = 0;
 
+        function updateNominal(row, select, quantityInput) {
+            const selectedOption = select.options[select.selectedIndex];
+            const nominal = parseFloat(selectedOption?.dataset.nominal || 0);
+            const quantity = parseInt(quantityInput.value) || 0;
+            const nominalInput = row.querySelector('input[name="nominal[]"]');
+            const feedback = row.querySelector('.invalid-feedback');
+
+            if (nominal && quantity) {
+                nominalInput.value = (nominal * quantity).toFixed(2);
+                feedback.style.display = 'none';
+            } else {
+                nominalInput.value = '0.00';
+                if (!nominal) {
+                    feedback.textContent = 'Nominal tidak tersedia untuk bahan baku ini (tidak ada transaksi pemindahan atau pembelian)';
+                    feedback.style.display = 'block';
+                } else if (!quantity) {
+                    feedback.textContent = 'Masukkan kuantitas yang valid';
+                    feedback.style.display = 'block';
+                } else {
+                    feedback.style.display = 'none';
+                }
+            }
+            updateTotalNominal();
+        }
+
+        function updateTotalNominal() {
+            const nominalInputs = document.querySelectorAll('input[name="nominal[]"]');
+            let totalNominal = 0;
+            nominalInputs.forEach(input => {
+                totalNominal += parseFloat(input.value) || 0;
+            });
+            const totalNominalInput = document.getElementById('total_nominal');
+            totalNominalInput.value = totalNominal.toFixed(2);
+        }
+
         function validateQuantityInput(row, quantityInput, select) {
             quantityInput.addEventListener('input', function() {
                 this.value = this.value.replace(/[^0-9]/g, '');
                 const maxQuantity = select.options[select.selectedIndex]?.dataset.maxQuantity || 999999;
+                const feedback = row.querySelector('.invalid-feedback');
+
                 if (parseInt(this.value) > parseInt(maxQuantity)) {
                     this.value = maxQuantity;
-                    row.querySelector('.invalid-feedback').textContent = `Kuantitas tidak boleh melebihi stok tersedia (${maxQuantity})`;
+                    feedback.textContent = `Kuantitas tidak boleh melebihi stok tersedia (${maxQuantity})`;
                     this.classList.add('is-invalid');
                 } else if (parseInt(this.value) < 1) {
                     this.value = 1;
-                    row.querySelector('.invalid-feedback').textContent = 'Kuantitas minimal adalah 1';
+                    feedback.textContent = 'Kuantitas minimal adalah 1';
                     this.classList.add('is-invalid');
                 } else {
                     this.classList.remove('is-invalid');
+                    feedback.style.display = 'none';
                 }
+                updateNominal(row, select, this);
             });
 
             select.addEventListener('change', function() {
                 const maxQuantity = this.options[this.selectedIndex]?.dataset.maxQuantity || 999999;
+                const feedback = row.querySelector('.invalid-feedback');
+
                 if (quantityInput.value && parseInt(quantityInput.value) > parseInt(maxQuantity)) {
                     quantityInput.value = maxQuantity;
                     quantityInput.classList.add('is-invalid');
-                    row.querySelector('.invalid-feedback').textContent = `Kuantitas tidak boleh melebihi stok tersedia (${maxQuantity})`;
+                    feedback.textContent = `Kuantitas tidak boleh melebihi stok tersedia (${maxQuantity})`;
                 } else {
                     quantityInput.classList.remove('is-invalid');
+                    feedback.style.display = 'none';
                 }
+                updateNominal(row, this, quantityInput);
             });
         }
 
@@ -664,24 +717,29 @@
             newRow.dataset.rowId = ingredientCount;
             newRow.innerHTML = `
                 <div class="row align-items-end">
-                    <div class="col-md-5">
+                    <div class="col-md-4">
                         <label for="transfer_stock_id_${ingredientCount}" class="form-label">Bahan Baku</label>
                         <select name="transfer_stock_id[]" id="transfer_stock_id_${ingredientCount}" class="form-select transfer-stock-select" required>
                             <option value="">Pilih Bahan Baku</option>
                             @if (isset($transferStockData) && is_array($transferStockData) && !empty($transferStockData))
-                                @foreach (collect($transferStockData)->flatten() as $stock)
-                                    <option value="{{ $stock->id }}" data-max-quantity="{{ $stock->quantity }}">{{ htmlspecialchars($stock->item) }} ({{ htmlspecialchars($stock->size) }}) - {{ $stock->quantity }} tersedia</option>
-                                @endforeach
+                            @foreach (collect($transferStockData)->flatten() as $stock)
+                            <option value="{{ $stock->id }}" data-max-quantity="{{ $stock->quantity }}" data-nominal="{{ $stock->nominal ?? 0 }}">{{ htmlspecialchars($stock->item) }} ({{ htmlspecialchars($stock->size) }}) - {{ $stock->quantity }} tersedia</option>
+                            @endforeach
                             @else
-                                <option value="" disabled>Tidak ada bahan baku tersedia</option>
+                            <option value="" disabled>Tidak ada bahan baku tersedia</option>
                             @endif
                         </select>
                         <div class="invalid-feedback">Pilih bahan baku</div>
                     </div>
-                    <div class="col-md-5">
+                    <div class="col-md-3">
                         <label for="quantity_${ingredientCount}" class="form-label">Kuantitas</label>
                         <input type="number" name="quantity[]" id="quantity_${ingredientCount}" class="form-control" min="1" max="999999" step="1" required>
                         <div class="invalid-feedback">Masukkan kuantitas yang valid (minimal 1)</div>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="nominal_${ingredientCount}" class="form-label">Nominal</label>
+                        <input type="number" name="nominal[]" id="nominal_${ingredientCount}" class="form-control" min="0" step="0.01" readonly>
+                        <div class="invalid-feedback"></div>
                     </div>
                     <div class="col-md-2">
                         <button type="button" class="btn btn-danger remove-ingredient">Hapus</button>
@@ -697,6 +755,8 @@
             document.querySelectorAll('.remove-ingredient').forEach(button => {
                 button.style.display = ingredientCount > 0 ? 'block' : 'none';
             });
+
+            updateTotalNominal();
         });
 
         document.addEventListener('click', function(e) {
@@ -710,6 +770,7 @@
                             button.style.display = 'none';
                         });
                     }
+                    updateTotalNominal();
                 }
             }
         });
@@ -718,6 +779,8 @@
         document.getElementById('recipeForm').addEventListener('submit', function(e) {
             const productName = document.getElementById('product_name');
             const productSize = document.getElementById('product_size');
+            const nominalInputs = document.querySelectorAll('input[name="nominal[]"]');
+            const totalNominalInput = document.getElementById('total_nominal');
             let isValid = true;
 
             // Validate product name
@@ -746,8 +809,33 @@
                 productSize.classList.remove('is-invalid');
             }
 
+            // Validate nominal values
+            nominalInputs.forEach(input => {
+                if (parseFloat(input.value) === 0) {
+                    const row = input.closest('.ingredient-row');
+                    const feedback = row.querySelector('.invalid-feedback');
+                    feedback.textContent = 'Nominal tidak valid untuk bahan baku ini';
+                    feedback.style.display = 'block';
+                    input.classList.add('is-invalid');
+                    isValid = false;
+                } else {
+                    input.classList.remove('is-invalid');
+                }
+            });
+
+            // Validate total nominal
+            if (parseFloat(totalNominalInput.value) === 0) {
+                totalNominalInput.classList.add('is-invalid');
+                totalNominalInput.nextElementSibling.textContent = 'Total nominal harus lebih besar dari 0';
+                isValid = false;
+            } else {
+                totalNominalInput.classList.remove('is-invalid');
+            }
+
             if (!isValid) {
                 e.preventDefault();
+                document.getElementById('errorMessage').textContent = 'Harap perbaiki kesalahan pada formulir.';
+                document.getElementById('errorMessage').style.display = 'block';
             }
         });
     });

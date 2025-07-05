@@ -13,9 +13,12 @@ use App\Models\Stock;
 use App\Models\TransferStock;
 use App\Models\UsedStock;
 use App\Models\Subsidiary;
+use App\Models\Recipes;
+use App\Models\RecipesTransfer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Collection;
 
 class VoucherService
@@ -85,9 +88,8 @@ class VoucherService
             $voucher->has_stock = $hasStock;
 
             $voucher->is_opening_stock = isset($openingStockTransactions[$voucher->id])
-                ? $openingStockTransactions[$voucher->id]
+                ? array_values(array_unique($openingStockTransactions[$voucher->id]))
                 : [];
-
             return $voucher;
         });
 
@@ -135,6 +137,7 @@ class VoucherService
             ->toArray();
         $subsidiaries = Subsidiary::all();
         $stocksData = Stock::all();
+        $recipes = Recipes::select('id', 'product_name', 'size', 'nominal')->get()->toArray();
 
         $subsidiariesData = $subsidiaries->map(function ($subsidiary) {
             return [
@@ -162,7 +165,8 @@ class VoucherService
             'subsidiariesData',
             'accountsData',
             'stocksData',
-            'transactionsData'
+            'transactionsData',
+            'recipes' // Add recipes to the return data
         );
     }
 
@@ -271,6 +275,57 @@ class VoucherService
     }
 
     /**
+     * Update recipe transfer stock in transfer_stocks table
+     *
+     * @param int $recipeId
+     * @param float $quantity
+     * @return void
+     * @throws \Exception
+     */
+    private function updateRecipeTransferStock(int $recipeId, float $quantity): void
+    {
+        Log::info('Attempting to update transfer_stocks for recipe:', ['recipe_id' => $recipeId, 'quantity' => $quantity]);
+
+        $recipeTransferStocks = RecipesTransfer::where('recipe_id', $recipeId)->get();
+
+        if ($recipeTransferStocks->isEmpty()) {
+            Log::warning('No RecipeTransfer records found for recipe:', ['recipe_id' => $recipeId]);
+            throw new \Exception("Tidak ditemukan bahan baku untuk resep dengan ID {$recipeId}.");
+        }
+
+        if ($quantity <= 0) {
+            throw new \Exception("Kuantitas tidak valid untuk resep {$recipeId}: {$quantity}.");
+        }
+
+        foreach ($recipeTransferStocks as $recipeTransferStock) {
+            $transferStock = TransferStock::where('id', $recipeTransferStock->transfer_stock_id)
+                ->where('item', $recipeTransferStock->item)
+                ->where('size', $recipeTransferStock->size)
+                ->first();
+
+            if (!$transferStock) {
+                throw new \Exception("Stok untuk item {$recipeTransferStock->item} dengan ukuran {$recipeTransferStock->size} tidak ditemukan di tabel transfer_stocks.");
+            }
+
+            $requiredQuantity = $recipeTransferStock->quantity * $quantity;
+            if ($transferStock->quantity < $requiredQuantity) {
+                throw new \Exception("Stok untuk item {$recipeTransferStock->item} dengan ukuran {$recipeTransferStock->size} tidak mencukupi. Tersedia: {$transferStock->quantity}, Dibutuhkan: {$requiredQuantity}.");
+            }
+
+            $transferStock->quantity -= $requiredQuantity;
+            $transferStock->save();
+
+            Log::info('Updated transfer_stocks:', [
+                'recipe_id' => $recipeId,
+                'item' => $recipeTransferStock->item,
+                'size' => $recipeTransferStock->size,
+                'reduced_quantity' => $requiredQuantity,
+                'new_quantity' => $transferStock->quantity,
+            ]);
+        }
+    }
+
+    /**
      * Update stock in used_stocks table
      *
      * @param string $item
@@ -282,15 +337,23 @@ class VoucherService
      */
     private function updateUsedStock(string $item, float $quantity, string $voucherType, ?string $size = null): void
     {
+        Log::info('Attempting to update used_stocks:', [
+            'item' => $item,
+            'size' => $size,
+            'quantity' => $quantity,
+            'voucher_type' => $voucherType,
+        ]);
+
         if ($voucherType === 'PJ' && is_null($size)) {
             throw new \Exception("Ukuran wajib diisi untuk item {$item} pada voucher tipe PJ di tabel used_stocks.");
         }
 
         $usedStock = UsedStock::where('item', $item)->where('size', $size)->first();
-        $transferStock = TransferStock::where('item', $item)->where('size', $size)->first();
-        $totalQuantity = ($usedStock ? $usedStock->quantity : 0) + ($transferStock ? $transferStock->quantity : 0);
 
         if ($voucherType === 'PJ') {
+            $transferStock = TransferStock::where('item', $item)->where('size', $size)->first();
+            $totalQuantity = ($usedStock ? $usedStock->quantity : 0) + ($transferStock ? $transferStock->quantity : 0);
+
             if ($totalQuantity < $quantity) {
                 throw new \Exception("Stok untuk item {$item} (Ukuran: {$size}) tidak mencukupi di tabel used_stocks atau transfer_stocks. Tersedia: {$totalQuantity}, Dibutuhkan: {$quantity}.");
             }
@@ -301,18 +364,38 @@ class VoucherService
                 $reduce = min($usedStock->quantity, $remainingQuantity);
                 $usedStock->quantity -= $reduce;
                 $usedStock->save();
+                Log::info('Reduced used_stocks:', [
+                    'item' => $item,
+                    'size' => $size,
+                    'reduced_quantity' => $reduce,
+                    'new_quantity' => $usedStock->quantity,
+                ]);
                 $remainingQuantity -= $reduce;
             }
             if ($transferStock && $remainingQuantity > 0) {
                 $transferStock->quantity -= $remainingQuantity;
                 $transferStock->save();
+                Log::info('Reduced transfer_stocks:', [
+                    'item' => $item,
+                    'size' => $size,
+                    'reduced_quantity' => $remainingQuantity,
+                    'new_quantity' => $transferStock->quantity,
+                ]);
                 if ($transferStock->quantity < 0) {
                     throw new \Exception("Stok untuk item {$item} (Ukuran: {$size}) tidak mencukupi di tabel transfer_stocks setelah pengurangan.");
                 }
             }
-        } elseif ($voucherType === 'PK' && !str_starts_with($item, 'HPP ')) {
+        } elseif ($voucherType === 'PK') {
+            if ($quantity <= 0) {
+                throw new \Exception("Kuantitas tidak valid untuk item {$item} pada voucher tipe PK: {$quantity}.");
+            }
             if (!$usedStock) {
-                UsedStock::create([
+                $usedStock = UsedStock::create([
+                    'item' => $item,
+                    'size' => $size,
+                    'quantity' => $quantity,
+                ]);
+                Log::info('Created new used_stocks record:', [
                     'item' => $item,
                     'size' => $size,
                     'quantity' => $quantity,
@@ -320,7 +403,15 @@ class VoucherService
             } else {
                 $usedStock->quantity += $quantity;
                 $usedStock->save();
+                Log::info('Updated used_stocks:', [
+                    'item' => $item,
+                    'size' => $size,
+                    'added_quantity' => $quantity,
+                    'new_quantity' => $usedStock->quantity,
+                ]);
             }
+        } else {
+            throw new \Exception("Tipe voucher {$voucherType} tidak didukung untuk update used_stocks.");
         }
     }
 
@@ -331,10 +422,11 @@ class VoucherService
      * @param float $quantity
      * @param string $voucherType
      * @param ?string $size
+     * @param ?int $recipeId
      * @return void
      * @throws \Exception
      */
-    private function reverseStock(string $item, float $quantity, string $voucherType, ?string $size = null): void
+    private function reverseStock(string $item, float $quantity, string $voucherType, ?string $size = null, ?int $recipeId = null): void
     {
         if (str_starts_with($item, 'HPP ')) {
             return; // Skip direct HPP items as they are not stored in transactions for PJ
@@ -377,6 +469,20 @@ class VoucherService
                     throw new \Exception("Stok untuk item {$item} dengan ukuran {$size} tidak mencukupi setelah pembalikan di tabel used_stocks.");
                 }
             }
+            // Reverse recipe transfer stocks if recipeId is provided
+            if ($recipeId) {
+                $recipeTransferStocks = RecipesTransfer::where('recipe_id', $recipeId)->get();
+                foreach ($recipeTransferStocks as $recipeTransferStock) {
+                    $transferStock = TransferStock::where('id', $recipeTransferStock->transfer_stock_id)
+                        ->where('item', $recipeTransferStock->item)
+                        ->where('size', $recipeTransferStock->size)
+                        ->first();
+                    if ($transferStock) {
+                        $transferStock->quantity += $recipeTransferStock->quantity * $quantity;
+                        $transferStock->save();
+                    }
+                }
+            }
         } elseif ($voucherType === 'PJ') {
             // Reverse both non-HPP and HPP stock
             $items = [$item, "HPP {$item}"];
@@ -410,6 +516,8 @@ class VoucherService
     {
         DB::beginTransaction();
         try {
+            Log::info('Voucher request data:', $request->all());
+
             config(['app.timezone' => 'Asia/Jakarta']);
             $voucherDetailsData = collect($request->voucher_details ?? [])
                 ->filter(function ($detail) {
@@ -434,27 +542,93 @@ class VoucherService
             ];
 
             $voucher = Voucher::create($voucherData);
+            Log::info('Voucher created:', ['voucher_id' => $voucher->id, 'voucher_number' => $voucherNumber, 'voucher_type' => $request->voucher_type]);
 
             $transactionsToCreate = [];
-            $hppStockUpdates = []; // Store HPP items for validation
-            if ($request->has('transactions') && is_array($request->transactions)) {
+            $hppStockUpdates = [];
+            // Handle both 'recipe_id' and 'recipe' for compatibility
+            $recipeId = $request->recipe_id ?? $request->recipe ?? null;
+
+            // Validate PK voucher requirements
+            if ($request->voucher_type === 'PK') {
+                if (!$recipeId || !Recipes::where('id', $recipeId)->exists()) {
+                    Log::error('Invalid or missing recipe_id for PK voucher:', [
+                        'recipe_id' => $request->recipe_id,
+                        'recipe' => $request->recipe,
+                        'used_field' => $recipeId ? 'recipe_id or recipe' : 'none'
+                    ]);
+                    throw new \Exception("Resep dengan ID {$recipeId} tidak valid atau tidak ditemukan.");
+                }
+                if ($request->use_stock !== 'yes') {
+                    Log::error('use_stock must be "yes" for PK voucher:', ['use_stock' => $request->use_stock]);
+                    throw new \Exception('Parameter use_stock harus bernilai "yes" untuk voucher tipe PK.');
+                }
+            }
+
+            if ($request->voucher_type === 'PK' && $recipeId && $request->use_stock === 'yes') {
+                // Handle PK voucher with recipe
+                $recipe = Recipes::findOrFail($recipeId);
+                $quantity = floatval($request->transactions[0]['quantity'] ?? 1);
+                if ($quantity <= 0) {
+                    Log::error('Invalid quantity for PK voucher:', ['recipe_id' => $recipeId, 'quantity' => $quantity]);
+                    throw new \Exception("Kuantitas untuk voucher PK tidak valid: {$quantity}.");
+                }
+
+                Log::info('Processing PK voucher with recipe:', [
+                    'recipe_id' => $recipeId,
+                    'product_name' => $recipe->product_name,
+                    'size' => $recipe->size,
+                    'quantity' => $quantity,
+                    'nominal' => $recipe->nominal,
+                ]);
+
+                $transactionsToCreate[] = [
+                    'voucher_id' => $voucher->id,
+                    'description' => $recipe->product_name,
+                    'quantity' => $quantity,
+                    'size' => $recipe->size,
+                    'nominal' => floatval($recipe->nominal),
+                    'is_hpp' => false,
+                    'index' => 0,
+                ];
+                $transactionsToCreate[] = [
+                    'voucher_id' => $voucher->id,
+                    'description' => "HPP {$recipe->product_name}",
+                    'quantity' => $quantity,
+                    'size' => $recipe->size,
+                    'nominal' => floatval($recipe->nominal),
+                    'is_hpp' => true,
+                    'index' => 1,
+                ];
+
+                // Update used_stocks for recipe product and its HPP
+                $this->updateUsedStock($recipe->product_name, $quantity, 'PK', $recipe->size);
+                $this->updateUsedStock("HPP {$recipe->product_name}", $quantity, 'PK', $recipe->size);
+
+                // Update transfer_stocks based on recipe_transfer_stock
+                $this->updateRecipeTransferStock($recipeId, $quantity);
+            } elseif ($request->has('transactions') && is_array($request->transactions)) {
+                Log::info('Processing non-recipe transactions for voucher:', ['voucher_id' => $voucher->id]);
                 foreach ($request->transactions as $index => $transaction) {
                     if (!empty($transaction['description']) && isset($transaction['quantity'])) {
+                        $quantity = floatval($transaction['quantity'] ?? 1);
+                        if ($quantity <= 0) {
+                            Log::error('Invalid transaction quantity:', ['voucher_id' => $voucher->id, 'description' => $transaction['description'], 'quantity' => $quantity]);
+                            throw new \Exception("Kuantitas tidak valid untuk transaksi: {$transaction['description']}.");
+                        }
                         $isHpp = str_starts_with($transaction['description'], 'HPP ');
                         if ($request->voucher_type === 'PJ' && $isHpp) {
-                            // For PJ, collect HPP items for validation
                             $hppStockUpdates[] = [
                                 'description' => $transaction['description'],
-                                'quantity' => floatval($transaction['quantity'] ?? 1),
+                                'quantity' => $quantity,
                                 'size' => $transaction['size'] ?? null,
                                 'index' => $index,
                             ];
                         } else {
-                            // Add non-HPP transactions (and HPP for non-PJ voucher types)
                             $transactionsToCreate[] = [
                                 'voucher_id' => $voucher->id,
                                 'description' => $transaction['description'],
-                                'quantity' => floatval($transaction['quantity'] ?? 1),
+                                'quantity' => $quantity,
                                 'size' => $transaction['size'] ?? null,
                                 'nominal' => floatval($transaction['nominal'] ?? 0.00),
                                 'is_hpp' => $isHpp,
@@ -463,28 +637,41 @@ class VoucherService
                         }
                     }
                 }
-
-                // Create transaction records for non-HPP (and HPP for non-PJ voucher types)
-                foreach ($transactionsToCreate as $transaction) {
-                    Transactions::create([
-                        'voucher_id' => $voucher->id,
-                        'description' => $transaction['description'],
-                        'size' => $transaction['size'] ?? null,
-                        'quantity' => $transaction['quantity'],
-                        'nominal' => $transaction['nominal'],
-                    ]);
-                }
+            } else {
+                Log::warning('No valid transactions or PK conditions met for voucher:', [
+                    'voucher_id' => $voucher->id,
+                    'voucher_type' => $request->voucher_type,
+                    'recipe_id' => $recipeId,
+                    'use_stock' => $request->use_stock,
+                ]);
+                throw new \Exception('Tidak ada transaksi valid atau kondisi PK tidak terpenuhi.');
             }
 
-            if (in_array($request->voucher_type, ['PB', 'PH', 'PK', 'PJ']) && (!empty($transactionsToCreate) || !empty($hppStockUpdates))) {
+            // Create transaction records
+            foreach ($transactionsToCreate as $transaction) {
+                Transactions::create([
+                    'voucher_id' => $voucher->id,
+                    'description' => $transaction['description'],
+                    'size' => $transaction['size'] ?? null,
+                    'quantity' => $transaction['quantity'],
+                    'nominal' => $transaction['nominal'],
+                ]);
+                Log::info('Transaction created:', [
+                    'voucher_id' => $voucher->id,
+                    'description' => $transaction['description'],
+                    'size' => $transaction['size'],
+                    'quantity' => $transaction['quantity'],
+                    'nominal' => $transaction['nominal'],
+                ]);
+            }
+
+            if (in_array($request->voucher_type, ['PB', 'PH', 'PJ']) && (!empty($transactionsToCreate) || !empty($hppStockUpdates))) {
                 if ($request->voucher_type === 'PJ') {
-                    // For PJ, validate and update both non-HPP and HPP stock
                     foreach ($transactionsToCreate as $transaction) {
                         $item = $transaction['description'];
                         $quantity = $transaction['quantity'];
                         $size = $transaction['size'] ?? null;
 
-                        // Validate corresponding HPP item
                         $hppItem = collect($hppStockUpdates)->firstWhere(function ($hpp) use ($item, $size) {
                             return $hpp['description'] === "HPP {$item}" && $hpp['size'] === $size;
                         });
@@ -496,12 +683,10 @@ class VoucherService
                             throw new \Exception("Kuantitas HPP untuk item {$item} dengan ukuran {$size} tidak sesuai dengan kuantitas stok.");
                         }
 
-                        // Update both non-HPP and HPP stock
                         $this->updateUsedStock($item, $quantity, 'PJ', $size);
                         $this->updateUsedStock("HPP {$item}", $quantity, 'PJ', $size);
                     }
                 } else {
-                    // For other voucher types, process transactions as before
                     foreach ($transactionsToCreate as $transaction) {
                         if (!$transaction['is_hpp']) {
                             $item = $transaction['description'];
@@ -513,9 +698,6 @@ class VoucherService
                             } elseif ($request->voucher_type === 'PH') {
                                 $this->updateStock($item, $quantity, 'PH', $size);
                                 $this->updateTransferStock($item, $quantity, 'PH', $size);
-                            } elseif ($request->voucher_type === 'PK') {
-                                $this->updateTransferStock($item, $quantity, 'PK', $size);
-                                $this->updateUsedStock($item, $quantity, 'PK', $size);
                             }
                         }
                     }
@@ -587,9 +769,16 @@ class VoucherService
             }
 
             DB::commit();
+            Log::info('Voucher creation completed successfully:', ['voucher_id' => $voucher->id]);
             return $voucher;
         } catch (\Exception $e) {
             DB::rollBack();
+            Log::error('Error creating voucher:', [
+                'voucher_number' => $voucherNumber,
+                'voucher_type' => $request->voucher_type,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
             throw $e;
         }
     }
@@ -686,6 +875,8 @@ class VoucherService
                 ];
             })->values()->toArray();
 
+        $recipes = Recipes::select('id', 'product_name', 'size', 'nominal')->get()->toArray();
+
         $headingText = $this->getVoucherHeading($voucher->voucher_type);
 
         $dueDate = '';
@@ -711,7 +902,8 @@ class VoucherService
             'accountsData',
             'stocks',
             'transactionsData',
-            'dueDate'
+            'dueDate',
+            'recipes'
         );
     }
 
@@ -746,27 +938,53 @@ class VoucherService
 
             $totalNominal = 0;
             $transactionItems = [];
-            $hppStockUpdates = []; // Store HPP items for PJ stock updates
-            foreach ($transactionsData as $index => $transaction) {
-                $quantity = floatval($transaction['quantity']);
-                $nominal = floatval($transaction['nominal']);
-                $totalNominal += $quantity * $nominal;
-                $isHpp = str_starts_with($transaction['description'], 'HPP ');
-                if ($request->voucher_type === 'PJ' && $isHpp) {
-                    $hppStockUpdates[$index] = [
-                        'description' => $transaction['description'],
-                        'size' => $transaction['size'] ?? null,
-                        'quantity' => $quantity,
-                        'index' => $index,
-                    ];
-                } else {
-                    $transactionItems[$index] = [
-                        'description' => $transaction['description'],
-                        'size' => $transaction['size'] ?? null,
-                        'quantity' => $quantity,
-                        'nominal' => $nominal,
-                        'is_hpp' => $isHpp,
-                    ];
+            $hppStockUpdates = [];
+            $recipeId = $request->recipe_id ?? null;
+
+            if ($request->voucher_type === 'PK' && $recipeId && $request->use_stock === 'yes') {
+                $recipe = Recipes::find($recipeId);
+                if (!$recipe) {
+                    throw new \Exception("Resep dengan ID {$recipeId} tidak ditemukan.");
+                }
+
+                $quantity = floatval($transactionsData[0]['quantity'] ?? 1);
+                $transactionItems[] = [
+                    'description' => $recipe->product_name,
+                    'size' => $recipe->size,
+                    'quantity' => $quantity,
+                    'nominal' => floatval($recipe->nominal),
+                    'is_hpp' => false,
+                ];
+                $transactionItems[] = [
+                    'description' => "HPP {$recipe->product_name}",
+                    'size' => $recipe->size,
+                    'quantity' => $quantity,
+                    'nominal' => floatval($recipe->nominal),
+                    'is_hpp' => true,
+                ];
+                $totalNominal = $quantity * floatval($recipe->nominal);
+            } else {
+                foreach ($transactionsData as $index => $transaction) {
+                    $quantity = floatval($transaction['quantity']);
+                    $nominal = floatval($transaction['nominal']);
+                    $totalNominal += $quantity * $nominal;
+                    $isHpp = str_starts_with($transaction['description'], 'HPP ');
+                    if ($request->voucher_type === 'PJ' && $isHpp) {
+                        $hppStockUpdates[$index] = [
+                            'description' => $transaction['description'],
+                            'size' => $transaction['size'] ?? null,
+                            'quantity' => $quantity,
+                            'index' => $index,
+                        ];
+                    } else {
+                        $transactionItems[$index] = [
+                            'description' => $transaction['description'],
+                            'size' => $transaction['size'] ?? null,
+                            'quantity' => $quantity,
+                            'nominal' => $nominal,
+                            'is_hpp' => $isHpp,
+                        ];
+                    }
                 }
             }
 
@@ -832,7 +1050,7 @@ class VoucherService
             }
 
             if ($request->voucher_type === 'PH') {
-                foreach ($transactionsData as $transaction) {
+                foreach ($transactionItems as $transaction) {
                     if (!str_starts_with($transaction['description'], 'HPP ')) {
                         $item = $transaction['description'];
                         $quantity = floatval($transaction['quantity']);
@@ -843,8 +1061,8 @@ class VoucherService
                         }
                     }
                 }
-            } elseif ($request->voucher_type === 'PK') {
-                foreach ($transactionsData as $transaction) {
+            } elseif ($request->voucher_type === 'PK' && !$recipeId) {
+                foreach ($transactionItems as $transaction) {
                     if (!str_starts_with($transaction['description'], 'HPP ')) {
                         $item = $transaction['description'];
                         $quantity = floatval($transaction['quantity']);
@@ -861,7 +1079,6 @@ class VoucherService
                     $quantity = $transaction['quantity'];
                     $size = $transaction['size'] ?? null;
 
-                    // Validate corresponding HPP item
                     $hppItem = collect($hppStockUpdates)->firstWhere(function ($hpp) use ($item, $size) {
                         return $hpp['description'] === "HPP {$item}" && $hpp['size'] === $size;
                     });
@@ -873,7 +1090,6 @@ class VoucherService
                         throw new \Exception("Kuantitas HPP untuk item {$item} dengan ukuran {$size} tidak sesuai dengan kuantitas stok.");
                     }
 
-                    // Validate stock availability for both non-HPP and HPP items
                     foreach ([$item, "HPP {$item}"] as $currentItem) {
                         $usedStock = UsedStock::where('item', $currentItem)->where('size', $size)->first();
                         $transferStock = TransferStock::where('item', $currentItem)->where('size', $size)->first();
@@ -892,26 +1108,28 @@ class VoucherService
                             $transaction->description,
                             floatval($transaction->quantity),
                             $voucher->voucher_type,
-                            $transaction->size
+                            $transaction->size,
+                            $recipeId
                         );
                     }
                 }
             }
 
             if (in_array($request->voucher_type, ['PB', 'PH', 'PK', 'PJ'])) {
-                if ($request->voucher_type === 'PJ') {
-                    // For PJ, update both non-HPP and HPP stock
+                if ($request->voucher_type === 'PK' && $recipeId) {
+                    $quantity = floatval($transactionItems[0]['quantity']);
+                    $this->updateUsedStock($transactionItems[0]['description'], $quantity, 'PK', $transactionItems[0]['size']);
+                    $this->updateUsedStock($transactionItems[1]['description'], $quantity, 'PK', $transactionItems[1]['size']);
+                    $this->updateRecipeTransferStock($recipeId, $quantity);
+                } elseif ($request->voucher_type === 'PJ') {
                     foreach ($transactionItems as $transaction) {
                         $item = $transaction['description'];
                         $quantity = $transaction['quantity'];
                         $size = $transaction['size'] ?? null;
-
-                        // Update both non-HPP and HPP stock
                         $this->updateUsedStock($item, $quantity, 'PJ', $size);
                         $this->updateUsedStock("HPP {$item}", $quantity, 'PJ', $size);
                     }
                 } else {
-                    // For other voucher types, process as before
                     foreach ($transactionItems as $transaction) {
                         if (!$transaction['is_hpp']) {
                             $item = $transaction['description'];
@@ -1017,7 +1235,7 @@ class VoucherService
             ]);
 
             $voucher->transactions()->delete();
-            $transactionsToCreate = $transactionItems; // Only non-HPP transactions for PJ
+            $transactionsToCreate = $transactionItems;
 
             foreach ($transactionsToCreate as $transaction) {
                 $voucher->transactions()->create([
@@ -1079,14 +1297,19 @@ class VoucherService
 
             foreach ($transactionQuantities as $description => $totalQuantity) {
                 $transaction = $voucherToDelete->transactions()->where('description', $description)->first();
+                $recipeId = null;
+                if ($voucherToDelete->voucher_type === 'PK') {
+                    $recipe = Recipes::where('product_name', $description)->first();
+                    $recipeId = $recipe ? $recipe->id : null;
+                }
                 $this->reverseStock(
                     $description,
                     $totalQuantity,
                     $voucherToDelete->voucher_type,
-                    $transaction->size ?? null
+                    $transaction->size ?? null,
+                    $recipeId
                 );
 
-                // Clean up empty stock records
                 foreach ([Stock::class, TransferStock::class, UsedStock::class] as $model) {
                     $stock = $model::where('item', $description)->first();
                     if ($stock && $stock->quantity == 0) {

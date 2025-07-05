@@ -31,14 +31,14 @@ class StockController extends Controller
     {
         try {
             $data = $this->stockService->prepareStockData($request->all());
-            Log::debug('Stock Page Data:', [
-                'stockData' => $data['stockData'],
-                'transferStockData' => $data['transferStockData'],
-                'usedStockData' => $data['usedStockData'],
-                'startDate' => $data['startDate']->toDateString(),
-                'endDate' => $data['endDate']->toDateString(),
-                'table_filter' => $request->input('table_filter', 'all')
-            ]);
+            // Log::debug('Stock Page Data:', [
+            //     'stockData' => $data['stockData'],
+            //     'transferStockData' => $data['transferStockData'],
+            //     'usedStockData' => $data['usedStockData'],
+            //     'startDate' => $data['startDate']->toDateString(),
+            //     'endDate' => $data['endDate']->toDateString(),
+            //     'table_filter' => $request->input('table_filter', 'all')
+            // ]);
             return view('stock.stock_page', $data);
         } catch (\Exception $e) {
             Log::error('Stock Page Error: ' . $e->getMessage(), ['exception' => $e]);
@@ -130,9 +130,10 @@ class StockController extends Controller
         try {
             $validated = $request->validate([
                 'product_name' => 'required|string|max:255|regex:/^[A-Za-z0-9\s]+$/',
-                'product_size' => 'required|string|max:255', // Validation for product_size
+                'product_size' => 'required|string|max:255',
                 'transfer_stock_id.*' => 'required|exists:transfer_stocks,id',
                 'quantity.*' => 'required|integer|min:1',
+                'nominal.*' => 'required|numeric|min:0',
             ]);
 
             Log::debug('Store Recipe Input:', [
@@ -140,6 +141,7 @@ class StockController extends Controller
                 'product_size' => $validated['product_size'],
                 'transfer_stock_ids' => $request->input('transfer_stock_id'),
                 'quantities' => $request->input('quantity'),
+                'nominals' => $request->input('nominal'),
             ]);
 
             $this->stockService->storeRecipe(

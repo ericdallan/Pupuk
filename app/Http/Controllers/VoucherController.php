@@ -14,6 +14,7 @@ use App\Models\UsedStock;
 use App\Models\Transactions;
 use App\Models\Invoice;
 use App\Models\ChartOfAccount;
+use App\Models\Recipes;
 use App\Models\Subsidiary;
 use Illuminate\Support\Arr;
 
@@ -52,6 +53,7 @@ class VoucherController extends Controller
                 );
             // Use transactionsData from prepareVoucherPageData
             $data['transactions'] = $data['transactionsData']; // Ensure transactions is passed
+            $data['recipes'] = Recipes::select(['id', 'product_name', 'size', 'nominal'])->get();
             return view('voucher.voucher_page', $data);
         } catch (\Exception $e) {
             Log::error('Voucher Page Error', [
@@ -71,16 +73,22 @@ class VoucherController extends Controller
     protected function filterTransactions($transactions)
     {
         if (!is_array($transactions)) {
+            Log::warning('Invalid transactions array', ['transactions' => $transactions]);
             return [];
         }
 
         return collect($transactions)
             ->filter(function ($transaction) {
-                $hasDescription = !empty($transaction['description']);
-                $isHpp = str_starts_with($transaction['description'], 'HPP ');
+                // Skip transactions without description
+                if (!isset($transaction['description']) || empty($transaction['description'])) {
+                    return false;
+                }
+                $description = $transaction['description'];
+                $isHpp = str_starts_with($description, 'HPP ');
+                $nominal = $transaction['nominal'] ?? $transaction['total'] ?? 0;
                 $hasQuantity = isset($transaction['quantity']) && floatval($transaction['quantity']) >= 0.01;
-                $hasNominal = isset($transaction['nominal']) && floatval($transaction['nominal']) >= 0;
-                return $hasDescription && ($isHpp || ($hasQuantity && $hasNominal));
+                $hasNominal = floatval($nominal) >= 0;
+                return $isHpp || ($hasQuantity && $hasNominal);
             })
             ->values()
             ->toArray();
@@ -241,6 +249,13 @@ class VoucherController extends Controller
 
         $nonHppItems = [];
         foreach ($transactions as $index => $transaction) {
+            if (!isset($transaction['description']) || empty($transaction['description'])) {
+                $validator->errors()->add(
+                    "transactions.{$index}.description",
+                    "Deskripsi wajib diisi untuk transaksi ke-{$index}."
+                );
+                continue;
+            }
             $item = $transaction['description'];
             $quantity = floatval($transaction['quantity']);
             $size = $transaction['size'] ?? null;

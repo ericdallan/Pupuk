@@ -99,7 +99,7 @@ class StockService
             ->whereBetween('transactions.created_at', [$startDate, $endDate]);
 
         $results = $query->get();
-        Log::debug("Stock Transactions for $tableName:", $results->toArray());
+        // Log::debug("Stock Transactions for $tableName:", $results->toArray());
 
         return $results->groupBy(function ($item) {
             return $item->item . '|' . ($item->size ?? '');
@@ -160,22 +160,33 @@ class StockService
                 $transactionCount += 1;
             }
 
-            $finalHpp = $transactionCount > 0 ? $totalHppValue / $transactionCount : ($hppAverages[$stockKey]['average_hpp'] ?? 0);
+            $finalHpp = $transactionCount > 0 ? $totalHppValue / $transactionCount : ($hppAverages[$stockKey]['average_pb_hpp'] ?? 0);
+
+            // Set nominal for transfer_stocks (prioritize PH, fallback to PB)
+            $nominal = $hppAverages[$stockKey]['average_pb_hpp'] ?? 0;
+            if ($tableName === 'transfer_stocks') {
+                $nominal = $hppAverages[$stockKey]['average_ph_hpp'] ?? 0;
+                if ($nominal == 0) {
+                    $nominal = $hppAverages[$stockKey]['average_pb_hpp'] ?? 0;
+                }
+            }
 
             $entry = (object) [
-                'id' => $stockRecord ? $stockRecord->id : null, // Use the stock table's ID
+                'id' => $stockRecord ? $stockRecord->id : null,
                 'item' => $item,
                 'size' => $size,
                 'quantity' => $this->getCurrentStockQuantity($tableName, $item, $size),
                 'opening_qty' => $openingBalance->opening_qty,
                 'opening_hpp' => $openingBalance->opening_hpp,
                 'incoming_qty' => $incomingQty,
-                'incoming_hpp' => $hppAverages[$stockKey]['average_hpp'] ?? 0,
+                'incoming_hpp' => $hppAverages[$stockKey]['average_pb_hpp'] ?? 0,
                 'outgoing_qty' => $outgoingQty,
-                'outgoing_hpp' => $hppAverages[$stockKey]['average_hpp'] ?? 0,
+                'outgoing_hpp' => $hppAverages[$stockKey]['average_pb_hpp'] ?? 0,
                 'final_stock_qty' => $finalStockQty,
                 'final_hpp' => $finalHpp,
-                'average_hpp' => $hppAverages[$stockKey]['average_hpp'] ?? 0,
+                'average_pb_hpp' => $hppAverages[$stockKey]['average_pb_hpp'] ?? 0,
+                'average_ph_hpp' => $hppAverages[$stockKey]['average_ph_hpp'] ?? 0,
+                'nominal' => $nominal,
                 'transactions' => $records->map(function ($record) {
                     return (object) [
                         'description' => $record->description ?? 'No description',
@@ -233,11 +244,12 @@ class StockService
      */
     private function getHppAverages(array $stockKeys, Carbon $startDate, Carbon $endDate): array
     {
-        $transactions = DB::table('transactions')
+        // Calculate average for PB transactions
+        $pbTransactions = DB::table('transactions')
             ->select(
                 'transactions.description as item',
                 'transactions.size',
-                DB::raw('COALESCE(AVG(transactions.nominal), 0) as average_hpp')
+                DB::raw('COALESCE(AVG(transactions.nominal), 0) as average_pb_hpp')
             )
             ->join('vouchers', 'transactions.voucher_id', '=', 'vouchers.id')
             ->where('vouchers.voucher_type', 'PB')
@@ -247,10 +259,34 @@ class StockService
             ->groupBy('transactions.description', 'transactions.size')
             ->get();
 
+        // Calculate average for PH transactions
+        $phTransactions = DB::table('transactions')
+            ->select(
+                'transactions.description as item',
+                'transactions.size',
+                DB::raw('COALESCE(AVG(transactions.nominal), 0) as average_ph_hpp')
+            )
+            ->join('vouchers', 'transactions.voucher_id', '=', 'vouchers.id')
+            ->where('vouchers.voucher_type', 'PH')
+            ->where('transactions.description', 'NOT LIKE', 'HPP %')
+            ->whereIn(DB::raw('CONCAT(transactions.description, \'|\', COALESCE(transactions.size, ""))'), $stockKeys)
+            ->whereBetween('transactions.created_at', [$startDate, $endDate])
+            ->groupBy('transactions.description', 'transactions.size')
+            ->get();
+
         $hppAverages = [];
-        foreach ($transactions as $transaction) {
-            $key = $transaction->item . '|' . ($transaction->size ?? '');
-            $hppAverages[$key] = ['average_hpp' => $transaction->average_hpp];
+        foreach ($stockKeys as $key) {
+            $itemSize = explode('|', $key);
+            $item = $itemSize[0];
+            $size = $itemSize[1] ?? '';
+
+            $pbAvg = $pbTransactions->where('item', $item)->where('size', $size)->first();
+            $phAvg = $phTransactions->where('item', $item)->where('size', $size)->first();
+
+            $hppAverages[$key] = [
+                'average_pb_hpp' => $pbAvg ? $pbAvg->average_pb_hpp : 0,
+                'average_ph_hpp' => $phAvg ? $phAvg->average_ph_hpp : 0,
+            ];
         }
 
         return $hppAverages;
@@ -272,6 +308,7 @@ class StockService
      */
     public function storeRecipe(string $productName, array $transferStockIds, array $quantities, string $productSize): void
     {
+        // Validate input
         foreach ($transferStockIds as $index => $stockId) {
             $transferStock = TransferStock::find($stockId);
             if (!$transferStock) {
@@ -292,36 +329,98 @@ class StockService
         DB::beginTransaction();
 
         try {
+            // Create first UsedStock entry for the product
             $usedStock = UsedStock::create([
                 'item' => $productName,
                 'size' => $productSize,
                 'quantity' => 0,
             ]);
 
-            $recipe = Recipes::create(['product_name' => $productName, 'used_stock_id' => $usedStock->id]);
+            // Calculate total nominal for the recipe
+            $totalNominal = 0;
+            $ingredientData = [];
 
             for ($i = 0; $i < count($transferStockIds); $i++) {
                 $transferStock = TransferStock::find($transferStockIds[$i]);
-                Log::debug('Attaching ingredient:', [
-                    'recipe_id' => $recipe->id,
+
+                // Get the average PH nominal
+                $averagePhHpp = DB::table('transactions')
+                    ->join('vouchers', 'transactions.voucher_id', '=', 'vouchers.id')
+                    ->where('transactions.description', $transferStock->item)
+                    ->where('transactions.size', $transferStock->size)
+                    ->where('vouchers.voucher_type', 'PH')
+                    ->where('transactions.description', 'NOT LIKE', 'HPP %')
+                    ->avg('transactions.nominal') ?? 0;
+
+                // Fallback to average PB nominal
+                $nominal = $averagePhHpp;
+                if ($nominal == 0) {
+                    $averagePbHpp = DB::table('transactions')
+                        ->join('vouchers', 'transactions.voucher_id', '=', 'vouchers.id')
+                        ->where('transactions.description', $transferStock->item)
+                        ->where('transactions.size', $transferStock->size)
+                        ->where('vouchers.voucher_type', 'PB')
+                        ->where('transactions.description', 'NOT LIKE', 'HPP %')
+                        ->avg('transactions.nominal') ?? 0;
+                    $nominal = $averagePbHpp;
+                }
+
+                // Calculate nominal for this ingredient
+                $ingredientNominal = $quantities[$i] * $nominal;
+                $totalNominal += $ingredientNominal;
+
+                $ingredientData[] = [
                     'transfer_stock_id' => $transferStockIds[$i],
                     'quantity' => $quantities[$i],
+                    'nominal' => $ingredientNominal,
                     'item' => $transferStock->item,
                     'size' => $transferStock->size,
-                ]);
-                $recipe->transferStocks()->attach($transferStockIds[$i], [
+                ];
+
+                Log::debug('Attaching ingredient:', [
+                    'recipe_id' => null, // Will be set after recipe creation
+                    'transfer_stock_id' => $transferStockIds[$i],
                     'quantity' => $quantities[$i],
+                    'nominal' => $ingredientNominal,
                     'item' => $transferStock->item,
                     'size' => $transferStock->size,
                 ]);
             }
+
+            // Create Recipe entry with total nominal and size
+            $recipe = Recipes::create([
+                'product_name' => $productName,
+                'used_stock_id' => $usedStock->id,
+                'size' => $productSize, // Add the size field
+                'nominal' => $totalNominal,
+            ]);
+
+            // Attach ingredients to recipe
+            foreach ($ingredientData as $data) {
+                $recipe->transferStocks()->attach($data['transfer_stock_id'], [
+                    'quantity' => $data['quantity'],
+                    'nominal' => $data['nominal'],
+                    'item' => $data['item'],
+                    'size' => $data['size'],
+                ]);
+            }
+
+            // Create second UsedStock entry for HPP
+            $hppUsedStock = UsedStock::create([
+                'item' => "HPP {$productName}",
+                'size' => $productSize,
+                'quantity' => 0,
+            ]);
 
             DB::commit();
 
             Log::info('Recipe created successfully:', [
                 'recipe_id' => $recipe->id,
                 'used_stock_id' => $usedStock->id,
+                'hpp_used_stock_id' => $hppUsedStock->id,
                 'product_name' => $productName,
+                'size' => $productSize, // Log the size for clarity
+                'nominal' => $totalNominal,
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
