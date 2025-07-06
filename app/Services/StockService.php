@@ -105,6 +105,10 @@ class StockService
      */
     private function getStockTransactions(string $tableName, array $stockKeys, Carbon $startDate, Carbon $endDate): Collection
     {
+        // Adjust date range to include the full day for endDate
+        $startDate = $startDate->startOfDay();
+        $endDate = $endDate->endOfDay();
+
         $query = DB::table($tableName)
             ->select(
                 "$tableName.id as stock_id",
@@ -118,14 +122,17 @@ class StockService
             )
             ->leftJoin('transactions', function ($join) use ($tableName) {
                 $join->on("$tableName.item", '=', 'transactions.description')
-                    ->on("$tableName.size", '=', 'transactions.size');
+                    ->on("$tableName.size", '=', 'transactions.size')
+                    ->where('transactions.description', 'NOT LIKE', 'HPP %');
             })
             ->leftJoin('vouchers', 'transactions.voucher_id', '=', 'vouchers.id')
-            ->where('transactions.description', 'NOT LIKE', 'HPP %')
             ->whereIn(DB::raw("CONCAT($tableName.item, '|', COALESCE($tableName.size, ''))"), $stockKeys)
             ->whereBetween('transactions.created_at', [$startDate, $endDate]);
 
         $results = $query->get();
+
+        // Debug log to verify data
+        Log::debug('Raw Stock Transactions', $results->toArray());
 
         return $results->groupBy(function ($item) {
             return $item->item . '|' . ($item->size ?? '');
@@ -139,7 +146,7 @@ class StockService
                     'voucher_type' => $record->voucher_type ?? 'Unknown',
                     'transaction_quantity' => $record->transaction_quantity ?? 0,
                     'nominal' => $record->nominal ?? 0,
-                    'created_at' => $record->created_at ? Carbon::parse($record->created_at)->format('Y-m-d') : null,
+                    'created_at' => $record->created_at ? Carbon::parse($record->created_at)->toDateTimeString() : null,
                 ];
             });
         });
@@ -170,6 +177,47 @@ class StockService
                 ->where('size', $size)
                 ->first();
 
+            // Define opening voucher types based on table
+            $openingVoucherType = match ($tableName) {
+                'stocks' => 'PB',
+                'transfer_stocks' => 'PH',
+                'used_stocks' => ['PK', 'PB'],
+                default => null,
+            };
+
+            // Sort records by created_at
+            $sortedRecords = $records->sortBy('created_at')->values();
+
+            // Determine opening balance based on the first matching voucher type
+            $openingBalance = (object) ['opening_qty' => 0, 'opening_hpp' => 0];
+
+            if (is_array($openingVoucherType)) {
+                // For used_stocks, check PB first, then PK
+                $pbRecord = $sortedRecords->firstWhere('voucher_type', 'PB');
+                $pkRecord = $sortedRecords->firstWhere('voucher_type', 'PK');
+                if ($pbRecord) {
+                    $openingBalance->opening_qty = $pbRecord->transaction_quantity ?? 0;
+                    $openingBalance->opening_hpp = $pbRecord->nominal ?? 0;
+                } elseif ($pkRecord) {
+                    $openingBalance->opening_qty = $pkRecord->transaction_quantity ?? 0;
+                    $openingBalance->opening_hpp = $pkRecord->nominal ?? 0;
+                }
+            } elseif ($openingVoucherType) {
+                // For stocks and transfer_stocks, use the first record with the specified voucher type
+                $firstOpeningRecord = $sortedRecords->firstWhere('voucher_type', $openingVoucherType);
+                if ($firstOpeningRecord) {
+                    $openingBalance->opening_qty = $firstOpeningRecord->transaction_quantity ?? 0;
+                    $openingBalance->opening_hpp = $firstOpeningRecord->nominal ?? 0;
+                }
+            }
+
+            // If no matching voucher type found, fall back to openingBalances
+            if ($openingBalance->opening_qty == 0 && $openingBalance->opening_hpp == 0) {
+                $defaultBalance = $openingBalances->get($stockKey, (object) ['opening_qty' => 0, 'opening_hpp' => 0]);
+                $openingBalance->opening_qty = $defaultBalance->opening_qty;
+                $openingBalance->opening_hpp = $defaultBalance->opening_hpp;
+            }
+
             // Define incoming and outgoing voucher types based on table
             $incomingVoucherTypes = match ($tableName) {
                 'stocks' => ['PB'],
@@ -185,19 +233,19 @@ class StockService
                 default => [],
             };
 
-            // Get opening balance
-            $openingBalance = $openingBalances->get($stockKey, (object) [
-                'opening_qty' => 0,
-                'opening_hpp' => 0,
-            ]);
-
-            // Calculate incoming quantities and HPP
-            $incomingRecords = $records->whereIn('voucher_type', $incomingVoucherTypes);
+            // Calculate incoming quantities and HPP (exclude the opening record)
+            $incomingRecords = $sortedRecords->filter(function ($record) use ($openingBalance, $incomingVoucherTypes) {
+                $isOpening = $record->transaction_quantity == $openingBalance->opening_qty && $record->nominal == $openingBalance->opening_hpp;
+                return !$isOpening && in_array($record->voucher_type, $incomingVoucherTypes);
+            });
             $incomingQty = $incomingRecords->sum('transaction_quantity') ?? 0;
             $incomingHpp = $incomingRecords->avg('nominal') ?? 0;
 
-            // Calculate outgoing quantities and HPP
-            $outgoingRecords = $records->whereIn('voucher_type', $outgoingVoucherTypes);
+            // Calculate outgoing quantities and HPP (exclude the opening record)
+            $outgoingRecords = $sortedRecords->filter(function ($record) use ($openingBalance, $outgoingVoucherTypes) {
+                $isOpening = $record->transaction_quantity == $openingBalance->opening_qty && $record->nominal == $openingBalance->opening_hpp;
+                return !$isOpening && in_array($record->voucher_type, $outgoingVoucherTypes);
+            });
             $outgoingQty = $outgoingRecords->sum('transaction_quantity') ?? 0;
             $outgoingHpp = $outgoingRecords->avg('nominal') ?? 0;
 

@@ -68,9 +68,9 @@
                             </button>
                             <ul class="dropdown-menu" aria-labelledby="tableFilterDropdown">
                                 <li><a class="dropdown-item" href="#" data-filter="all">Semua Table</a></li>
-                                <li><a class="dropdown-item" href="#" data-filter="stocks">Table Stocks</a></li>
-                                <li><a class="dropdown-item" href="#" data-filter="transfer_stocks">Table Transfer Stocks</a></li>
-                                <li><a class="dropdown-item" href="#" data-filter="used_stocks">Table Used Stocks</a></li>
+                                <li><a class="dropdown-item" href="#" data-filter="stocks">Table Stok</a></li>
+                                <li><a class="dropdown-item" href="#" data-filter="transfer_stocks">Table Stok Pemindahan</a></li>
+                                <li><a class="dropdown-item" href="#" data-filter="used_stocks">Table Stok Barang Jadi</a></li>
                             </ul>
                         </div>
                     </div>
@@ -90,7 +90,7 @@
     <div class="table-container">
         <!-- Stocks Table -->
         <div class="table-section" data-table="stocks">
-            <h3>Stocks</h3>
+            <h3>Stok</h3>
             <div class="table-responsive">
                 <table class="table table-striped table-bordered table-hover text-center">
                     <thead class="table-dark">
@@ -98,19 +98,16 @@
                             <th>No</th>
                             <th>Nama Barang</th>
                             <th>Ukuran</th>
-                            <th colspan="2">Stok Tersedia</th>
                             <th colspan="2">Saldo Awal</th>
                             <th colspan="2">Masuk Barang</th>
                             <th colspan="2">Keluar Barang</th>
-                            <th colspan="2">Akhir</th>
+                            <th colspan="2">Saldo Tersedia (Akhir)</th>
                             <th>Detail</th>
                         </tr>
                         <tr>
                             <th></th>
                             <th></th>
                             <th></th>
-                            <th>Qty</th>
-                            <th>HPP</th>
                             <th>Qty</th>
                             <th>HPP</th>
                             <th>Qty</th>
@@ -133,8 +130,6 @@
                             <td rowspan="{{ count($sizes) }}">{{ htmlspecialchars($stock->item ?? 'Unknown Item') }}</td>
                             @endif
                             <td>{{ htmlspecialchars($stock->size ?? 'Unknown Size') }}</td>
-                            <td>{{ $stock->quantity ?? 0 }}</td>
-                            <td>{{ number_format($stock->average_pb_hpp ?? 0, 2, ',', '.') }}</td>
                             <td>{{ $stock->opening_qty ?? 0 }}</td>
                             <td>{{ number_format($stock->opening_hpp ?? 0, 2, ',', '.') }}</td>
                             <td>{{ $stock->incoming_qty ?? 0 }}</td>
@@ -167,7 +162,7 @@
 
         <!-- Transfer Stocks Table -->
         <div class="table-section" data-table="transfer_stocks">
-            <h3>Transfer Stocks</h3>
+            <h3>Stok Pemindahan</h3>
             <div class="table-responsive">
                 <table class="table table-striped table-bordered table-hover text-center">
                     <thead class="table-dark">
@@ -175,19 +170,16 @@
                             <th>No</th>
                             <th>Nama Barang</th>
                             <th>Ukuran</th>
-                            <th colspan="2">Stok Tersedia</th>
                             <th colspan="2">Saldo Awal</th>
                             <th colspan="2">Masuk Barang</th>
                             <th colspan="2">Keluar Barang</th>
-                            <th colspan="2">Akhir</th>
+                            <th colspan="2">Saldo Tersedia (Akhir)</th>
                             <th>Detail</th>
                         </tr>
                         <tr>
                             <th></th>
                             <th></th>
                             <th></th>
-                            <th>Qty</th>
-                            <th>HPP</th>
                             <th>Qty</th>
                             <th>HPP</th>
                             <th>Qty</th>
@@ -210,8 +202,6 @@
                             <td rowspan="{{ count($sizes) }}">{{ htmlspecialchars($stock->item ?? 'Unknown Item') }}</td>
                             @endif
                             <td>{{ htmlspecialchars($stock->size ?? 'Unknown Size') }}</td>
-                            <td>{{ $stock->quantity ?? 0 }}</td>
-                            <td>{{ number_format($stock->average_pb_hpp ?? 0, 2, ',', '.') }}</td>
                             <td>{{ $stock->opening_qty ?? 0 }}</td>
                             <td>{{ number_format($stock->opening_hpp ?? 0, 2, ',', '.') }}</td>
                             <td>{{ $stock->incoming_qty ?? 0 }}</td>
@@ -244,7 +234,7 @@
 
         <!-- Used Stocks Table -->
         <div class="table-section" data-table="used_stocks">
-            <h3>Used Stocks</h3>
+            <h3>Stok Barang Jadi</h3>
             <div class="table-responsive">
                 <table class="table table-striped table-bordered table-hover text-center">
                     <thead class="table-dark">
@@ -252,19 +242,16 @@
                             <th>No</th>
                             <th>Nama Barang</th>
                             <th>Ukuran</th>
-                            <th colspan="2">Stok Tersedia</th>
                             <th colspan="2">Saldo Awal</th>
                             <th colspan="2">Masuk Barang</th>
                             <th colspan="2">Keluar Barang</th>
-                            <th colspan="2">Akhir</th>
+                            <th colspan="2">Saldo Tersedia (Akhir)</th>
                             <th>Detail</th>
                         </tr>
                         <tr>
                             <th></th>
                             <th></th>
                             <th></th>
-                            <th>Qty</th>
-                            <th>HPP</th>
                             <th>Qty</th>
                             <th>HPP</th>
                             <th>Qty</th>
@@ -287,8 +274,6 @@
                             <td rowspan="{{ count($sizes) }}">{{ htmlspecialchars($stock->item ?? 'Unknown Item') }}</td>
                             @endif
                             <td>{{ htmlspecialchars($stock->size ?? 'Unknown Size') }}</td>
-                            <td>{{ $stock->quantity ?? 0 }}</td>
-                            <td>{{ number_format($stock->average_pb_hpp ?? 0, 2, ',', '.') }}</td>
                             <td>{{ $stock->opening_qty ?? 0 }}</td>
                             <td>{{ number_format($stock->opening_hpp ?? 0, 2, ',', '.') }}</td>
                             <td>{{ $stock->incoming_qty ?? 0 }}</td>
