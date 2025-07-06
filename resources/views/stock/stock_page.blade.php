@@ -75,10 +75,11 @@
                         </div>
                     </div>
                     <div class="d-flex gap-2">
-                        <button type="submit" class="btn btn-primary btn-me-2">Filter</button>
-                        <a href="{{ route('stock.export') . '?start_date=' . request('start_date', now()->startOfYear()->toDateString()) . '&end_date=' . request('end_date', now()->toDateString()) . '&table_filter=' . request('table_filter', 'all') }}" class="btn btn-success me-2">Export to Excel</a>
-                        <a href="{{ route('stock.transfer.print') . '?table_filter=' . request('table_filter', 'all') }}" class="btn btn-secondary me-2">Print Form</a>
-                        <button type="button" class="btn btn-info" data-bs-toggle="modal" data-bs-target="#createRecipeModal">Rumus Produk</button>
+                        <button type="submit" class="btn btn-primary">Filter</button>
+                        <a href="{{ route('stock.export') . '?start_date=' . request('start_date', now()->startOfYear()->toDateString()) . '&end_date=' . request('end_date', now()->toDateString()) . '&table_filter=' . request('table_filter', 'all') }}" class="btn btn-success">Export to Excel</a>
+                        <!-- <a href="{{ route('stock.transfer.print') . '?table_filter=' . request('table_filter', 'all') }}" class="btn btn-secondary me-2">Print Form</a> -->
+                        <button type="button" class="btn btn-light" data-bs-toggle="modal" data-bs-target="#RecipeList">Daftar Formula</button>
+                        <button type="button" class="btn btn-info" data-bs-toggle="modal" data-bs-target="#createRecipeModal">Buat Formula</button>
                     </div>
                 </form>
             </div>
@@ -97,7 +98,6 @@
                             <th>No</th>
                             <th>Nama Barang</th>
                             <th>Ukuran</th>
-                            25
                             <th colspan="2">Stok Tersedia</th>
                             <th colspan="2">Saldo Awal</th>
                             <th colspan="2">Masuk Barang</th>
@@ -319,7 +319,79 @@
             </div>
         </div>
     </div>
-
+    <div class="modal fade" id="RecipeList" tabindex="-1" aria-labelledby="RecipeListLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="RecipeListLabel">Daftar Rumus</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-bordered table-hover text-center">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>No</th>
+                                    <th>Nama Produk</th>
+                                    <th>Ukuran</th>
+                                    <th>Total Nominal</th>
+                                    <th>Detail Bahan Baku</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @php $recipeCount = 1; @endphp
+                                @if (isset($recipes) && !empty($recipes))
+                                @foreach ($recipes as $recipe)
+                                <tr>
+                                    <td>{{ $recipeCount++ }}</td>
+                                    <td>{{ htmlspecialchars($recipe->product_name ?? 'Unknown Product') }}</td>
+                                    <td>{{ htmlspecialchars($recipe->size ?? 'Unknown Size') }}</td>
+                                    <td>{{ number_format($recipe->nominal ?? 0, 2, ',', '.') }}</td>
+                                    <td>
+                                        @if (isset($recipe->transferStocks) && !empty($recipe->transferStocks))
+                                        <table class="table table-sm table-bordered mt-2">
+                                            <thead>
+                                                <tr>
+                                                    <th>Bahan Baku</th>
+                                                    <th>Ukuran</th>
+                                                    <th>Kuantitas</th>
+                                                    <th>Nominal</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach ($recipe->transferStocks as $transferStock)
+                                                <tr>
+                                                    <td>{{ htmlspecialchars($transferStock->item ?? 'Unknown Item') }}</td>
+                                                    <td>{{ htmlspecialchars($transferStock->size ?? 'Unknown Size') }}</td>
+                                                    <td>{{ $transferStock->quantity ?? 0 }}</td>
+                                                    <td>{{ number_format($transferStock->nominal ?? 0, 2, ',', '.') }}</td>
+                                                </tr>
+                                                @endforeach
+                                            </tbody>
+                                        </table>
+                                        @else
+                                        <span>Tidak ada bahan baku</span>
+                                        @endif
+                                    </td>
+                                </tr>
+                                @endforeach
+                                @else
+                                <tr>
+                                    <td colspan="5" class="text-center">
+                                        <div class="alert alert-info mb-0">Tidak ada rumus yang ditemukan.</div>
+                                    </td>
+                                </tr>
+                                @endif
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+                </div>
+            </div>
+        </div>
+    </div>
     <!-- Transaction Detail Modals -->
     @php
     $allStocks = [
