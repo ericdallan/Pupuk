@@ -57,9 +57,9 @@ class StockService
         $usedStockData = $tableFilter === 'all' || $tableFilter === 'used_stocks' ? $this->getStockTransactions('used_stocks', $stockKeys, $startDate, $endDate) : collect([]);
 
         // Process grouped stock data
-        $stockMap = $this->processGroupedStockData($stockData, $openingBalances, 'stocks');
-        $transferStockMap = $this->processGroupedStockData($transferStockData, $openingBalances, 'transfer_stocks');
-        $usedStockMap = $this->processGroupedStockData($usedStockData, $openingBalances, 'used_stocks');
+        $stockMap = $this->processGroupedStockData($stockData, $openingBalances, 'stocks', $startDate, $endDate);
+        $transferStockMap = $this->processGroupedStockData($transferStockData, $openingBalances, 'transfer_stocks', $startDate, $endDate);
+        $usedStockMap = $this->processGroupedStockData($usedStockData, $openingBalances, 'used_stocks', $startDate, $endDate);
 
         // Fetch recipes and their transfer stocks
         $recipes = DB::table('recipes')
@@ -155,7 +155,7 @@ class StockService
     /**
      * Process grouped stock data
      */
-    private function processGroupedStockData(Collection $stockData, Collection $openingBalances, string $tableName): array
+    private function processGroupedStockData(Collection $stockData, Collection $openingBalances, string $tableName, $startDate, $endDate): array
     {
         $stockMap = [];
 
@@ -170,7 +170,7 @@ class StockService
 
             $stockKey = $item . '|' . $size;
 
-            // Fetch the stock record to get the correct ID
+            // Fetch the current stock record to get the correct quantity
             $stockRecord = DB::table($tableName)
                 ->select('id', 'quantity')
                 ->where('item', $item)
@@ -188,30 +188,24 @@ class StockService
             // Sort records by created_at
             $sortedRecords = $records->sortBy('created_at')->values();
 
-            // Determine opening balance based on the first matching voucher type
+            // Determine opening balance based on the specific voucher type
             $openingBalance = (object) ['opening_qty' => 0, 'opening_hpp' => 0];
 
-            if (is_array($openingVoucherType)) {
-                // For used_stocks, check PB first, then PK
-                $pbRecord = $sortedRecords->firstWhere('voucher_type', 'PB');
-                $pkRecord = $sortedRecords->firstWhere('voucher_type', 'PK');
-                if ($pbRecord) {
-                    $openingBalance->opening_qty = $pbRecord->transaction_quantity ?? 0;
-                    $openingBalance->opening_hpp = $pbRecord->nominal ?? 0;
-                } elseif ($pkRecord) {
-                    $openingBalance->opening_qty = $pkRecord->transaction_quantity ?? 0;
-                    $openingBalance->opening_hpp = $pkRecord->nominal ?? 0;
+            if ($openingVoucherType) {
+                if (is_array($openingVoucherType)) {
+                    $firstOpeningRecord = $sortedRecords->whereIn('voucher_type', $openingVoucherType)
+                        ->sortBy('created_at')
+                        ->first();
+                } else {
+                    $firstOpeningRecord = $sortedRecords->firstWhere('voucher_type', $openingVoucherType);
                 }
-            } elseif ($openingVoucherType) {
-                // For stocks and transfer_stocks, use the first record with the specified voucher type
-                $firstOpeningRecord = $sortedRecords->firstWhere('voucher_type', $openingVoucherType);
                 if ($firstOpeningRecord) {
                     $openingBalance->opening_qty = $firstOpeningRecord->transaction_quantity ?? 0;
                     $openingBalance->opening_hpp = $firstOpeningRecord->nominal ?? 0;
                 }
             }
 
-            // If no matching voucher type found, fall back to openingBalances
+            // Fallback to openingBalances if no transaction-based opening
             if ($openingBalance->opening_qty == 0 && $openingBalance->opening_hpp == 0) {
                 $defaultBalance = $openingBalances->get($stockKey, (object) ['opening_qty' => 0, 'opening_hpp' => 0]);
                 $openingBalance->opening_qty = $defaultBalance->opening_qty;
@@ -233,21 +227,102 @@ class StockService
                 default => [],
             };
 
-            // Calculate incoming quantities and HPP (exclude the opening record)
-            $incomingRecords = $sortedRecords->filter(function ($record) use ($openingBalance, $incomingVoucherTypes) {
-                $isOpening = $record->transaction_quantity == $openingBalance->opening_qty && $record->nominal == $openingBalance->opening_hpp;
+            // Filter incoming records with strict voucher_type check
+            $incomingRecords = $sortedRecords->filter(function ($record) use ($openingBalance, $incomingVoucherTypes, $sortedRecords, $openingVoucherType) {
+                if (is_array($openingVoucherType)) {
+                    $firstOpeningRecord = $sortedRecords->whereIn('voucher_type', $openingVoucherType)
+                        ->sortBy('created_at')
+                        ->first();
+                } else {
+                    $firstOpeningRecord = $sortedRecords->firstWhere('voucher_type', $openingVoucherType);
+                }
+                $isOpening = $firstOpeningRecord &&
+                    $record->transaction_quantity == $firstOpeningRecord->transaction_quantity &&
+                    $record->nominal == $firstOpeningRecord->nominal &&
+                    $record->created_at == $firstOpeningRecord->created_at &&
+                    (is_array($openingVoucherType) ? in_array($record->voucher_type, $openingVoucherType) : $record->voucher_type == $openingVoucherType);
                 return !$isOpening && in_array($record->voucher_type, $incomingVoucherTypes);
             });
-            $incomingQty = $incomingRecords->sum('transaction_quantity') ?? 0;
-            $incomingHpp = $incomingRecords->avg('nominal') ?? 0;
 
-            // Calculate outgoing quantities and HPP (exclude the opening record)
-            $outgoingRecords = $sortedRecords->filter(function ($record) use ($openingBalance, $outgoingVoucherTypes) {
-                $isOpening = $record->transaction_quantity == $openingBalance->opening_qty && $record->nominal == $openingBalance->opening_hpp;
-                return !$isOpening && in_array($record->voucher_type, $outgoingVoucherTypes);
-            });
-            $outgoingQty = $outgoingRecords->sum('transaction_quantity') ?? 0;
-            $outgoingHpp = $outgoingRecords->avg('nominal') ?? 0;
+            $incomingQty = $incomingRecords->sum('transaction_quantity') ?? 0;
+            $incomingHpp = $incomingRecords->isNotEmpty() ? ($incomingRecords->avg('nominal') ?? 0) : 0;
+
+            // Initialize outgoing records as an empty collection
+            $outgoingRecords = collect([]);
+
+            // Calculate outgoing quantities
+            $outgoingQty = 0;
+            $outgoingHpp = 0;
+
+            if ($tableName === 'transfer_stocks' && $stockRecord) {
+                // Fetch all PK transactions within the dynamic date range
+                $pkTransactions = DB::table('transactions as t')
+                    ->join('vouchers as v', 't.voucher_id', '=', 'v.id')
+                    ->where('v.voucher_type', 'PK')
+                    ->whereBetween('t.created_at', [$startDate, $endDate])
+                    ->select('t.id', 't.description', 't.quantity as transaction_quantity', 't.size as transaction_size', 't.nominal')
+                    ->get();
+
+                // Get all recipes that use this transfer_stocks item with standard cost
+                $relevantRecipes = DB::table('recipe_transfer_stock as rts')
+                    ->where('rts.item', $item)
+                    ->where('rts.size', $size)
+                    ->join('recipes as r', 'rts.recipe_id', '=', 'r.id')
+                    ->select('r.id as recipe_id', 'r.product_name', 'r.size as recipe_size', 'rts.quantity as material_quantity', 'rts.nominal as standard_cost')
+                    ->get();
+
+                $outgoingQty = 0;
+                $totalMaterialCost = 0;
+                $totalMaterialQty = 0;
+
+                foreach ($pkTransactions as $transaction) {
+                    foreach ($relevantRecipes as $recipe) {
+                        if ($recipe->product_name === $transaction->description && $recipe->recipe_size === $transaction->transaction_size) {
+                            $materialQty = $recipe->material_quantity ?? 0;
+                            $standardCostTotal = $recipe->standard_cost ?? $incomingHpp; // Total cost for material_quantity
+                            $standardCostPerUnit = $materialQty > 0 ? ($standardCostTotal / $materialQty) : $incomingHpp; // HPP per unit
+                            $outgoingQty += $materialQty * $transaction->transaction_quantity;
+
+                            // Use standard cost per unit as outgoing HPP
+                            $materialCost = $standardCostPerUnit * $materialQty * $transaction->transaction_quantity;
+                            $totalMaterialCost += $materialCost;
+                            $totalMaterialQty += $materialQty * $transaction->transaction_quantity;
+                        }
+                    }
+                }
+
+                // Calculate average outgoing HPP based on standard cost per unit
+                $outgoingHpp = $totalMaterialQty > 0 ? ($totalMaterialCost / $totalMaterialQty) : $incomingHpp;
+
+                // Fallback to quantity change if no recipe data
+                if ($outgoingQty == 0) {
+                    $currentQty = $stockRecord->quantity ?? 0;
+                    $expectedQty = $openingBalance->opening_qty + $incomingQty;
+                    $outgoingQty = max(0, $expectedQty - $currentQty);
+                    $outgoingHpp = $incomingHpp; // Fallback to incoming HPP if no recipe data
+                }
+            } else {
+                // Filter outgoing records with strict voucher_type check
+                $outgoingRecords = $sortedRecords->filter(function ($record) use ($openingBalance, $outgoingVoucherTypes, $openingVoucherType, $sortedRecords) {
+                    if (is_array($openingVoucherType)) {
+                        $firstOpeningRecord = $sortedRecords->whereIn('voucher_type', $openingVoucherType)
+                            ->sortBy('created_at')
+                            ->first();
+                    } else {
+                        $firstOpeningRecord = $sortedRecords->firstWhere('voucher_type', $openingVoucherType);
+                    }
+                    $isOpening = $firstOpeningRecord &&
+                        $record->transaction_quantity == $firstOpeningRecord->transaction_quantity &&
+                        $record->nominal == $firstOpeningRecord->nominal &&
+                        $record->created_at == $firstOpeningRecord->created_at &&
+                        (is_array($openingVoucherType) ? in_array($record->voucher_type, $openingVoucherType) : $record->voucher_type == $openingVoucherType);
+                    return !$isOpening && in_array($record->voucher_type, $outgoingVoucherTypes);
+                });
+                $outgoingQty = $outgoingRecords->sum('transaction_quantity') ?? 0;
+                $outgoingHpp = $outgoingRecords->isNotEmpty() ? ($outgoingRecords->avg('nominal') ?? $incomingHpp) : $incomingHpp;
+            }
+
+            $outgoingHpp = $outgoingQty > 0 ? $outgoingHpp : 0;
 
             // Calculate final stock quantity and HPP
             $finalQty = $openingBalance->opening_qty + $incomingQty - $outgoingQty;
@@ -259,19 +334,19 @@ class StockService
                 $transactionCount++;
             }
 
-            $finalHpp = $transactionCount > 0 ? $totalHppValue / $transactionCount : 0;
+            $finalHpp = $transactionCount > 0 ? $totalHppValue / $transactionCount : ($incomingHpp > 0 ? $incomingHpp : $openingBalance->opening_hpp);
 
-            // Set nominal for transfer_stocks (prioritize PH, fallback to PB)
+            // Set nominal for transfer_stocks with improved fallback
             $nominal = $tableName === 'transfer_stocks' ? ($incomingRecords->avg('nominal') ?? 0) : 0;
             if ($tableName === 'transfer_stocks' && $nominal == 0) {
-                $pbHpp = DB::table('transactions')
-                    ->join('vouchers', 'transactions.voucher_id', '=', 'vouchers.id')
-                    ->where('transactions.description', $item)
-                    ->where('transactions.size', $size)
-                    ->where('vouchers.voucher_type', 'PB')
-                    ->where('transactions.description', 'NOT LIKE', 'HPP %')
-                    ->avg('transactions.nominal') ?? 0;
-                $nominal = $pbHpp;
+                $pbHpp = DB::table('transactions as t')
+                    ->join('vouchers as v', 't.voucher_id', '=', 'v.id')
+                    ->where('t.description', $item)
+                    ->where('t.size', $size)
+                    ->where('v.voucher_type', 'PB')
+                    ->where('t.description', 'NOT LIKE', 'HPP %')
+                    ->avg('t.nominal') ?? null;
+                $nominal = $pbHpp ?: ($openingBalances->get($stockKey, (object) ['opening_hpp' => 0])->opening_hpp ?: 0);
             }
 
             $entry = (object) [
@@ -287,7 +362,7 @@ class StockService
                 'outgoing_hpp' => $outgoingHpp,
                 'final_stock_qty' => $finalQty,
                 'final_hpp' => $finalHpp,
-                'average_pb_hpp' => $incomingHpp, // For consistency with view
+                'average_pb_hpp' => $incomingHpp,
                 'average_ph_hpp' => $tableName === 'transfer_stocks' ? ($incomingRecords->avg('nominal') ?? 0) : 0,
                 'nominal' => $nominal,
                 'transactions' => $records->map(function ($record) {
@@ -307,7 +382,6 @@ class StockService
 
         return $stockMap;
     }
-
     /**
      * Fetch opening balances
      */

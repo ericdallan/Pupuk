@@ -88,6 +88,8 @@
                     <option value="PG" {{ request('voucher_type') == 'PG' ? 'selected' : '' }}>Pengeluaran</option>
                     <option value="PM" {{ request('voucher_type') == 'PM' ? 'selected' : '' }}>Pemasukan</option>
                     <option value="PB" {{ request('voucher_type') == 'PB' ? 'selected' : '' }}>Pembelian</option>
+                    <option value="PH" {{ request('voucher_type') == 'PH' ? 'selected' : '' }}>Pemindahan</option>
+                    <option value="PK" {{ request('voucher_type') == 'PK' ? 'selected' : '' }}>Pemakaian</option>
                     <option value="LN" {{ request('voucher_type') == 'LN' ? 'selected' : '' }}>Lainnya</option>
                 </select>
             </div>

@@ -180,7 +180,7 @@
                                                 <input type="text" class="form-control sizeInput" name="transactions[0][size]">
                                             </td>
                                             <td>
-                                                <input type="number" min="0.01" step="0.01" class="form-control quantityInput" name="transactions[0][quantity]" value="1">
+                                                <input type="number" min="0" step="1" class="form-control quantityInput" name="transactions[0][quantity]" value="1">
                                             </td>
                                             <td>
                                                 <input type="number" min="0" step="0.01" class="form-control nominalInput" name="transactions[0][nominal]">
@@ -1443,8 +1443,8 @@
             const quantityCell = document.createElement('td');
             const quantityInput = document.createElement('input');
             quantityInput.type = 'number';
-            quantityInput.min = '0.01';
-            quantityInput.step = '0.01';
+            quantityInput.min = '0';
+            quantityInput.step = '1';
             quantityInput.className = 'form-control quantityInput';
             quantityInput.name = `transactions[${newIndex}][quantity]`;
             quantityInput.value = quantity || 1;
@@ -1529,8 +1529,8 @@
             const quantityCell = document.createElement('td');
             const quantityInput = document.createElement('input');
             quantityInput.type = 'number';
-            quantityInput.min = '0.01';
-            quantityInput.step = '0.01';
+            quantityInput.min = '0';
+            quantityInput.step = '1';
             quantityInput.className = 'form-control quantityInput';
             quantityInput.name = `transactions[${newIndex}][quantity]`;
             quantityInput.value = quantity || 1;
@@ -1839,8 +1839,8 @@
             const quantityCell = document.createElement('td');
             const quantityInput = document.createElement('input');
             quantityInput.type = 'number';
-            quantityInput.min = '0.01';
-            quantityInput.step = '0.01';
+            quantityInput.min = '0';
+            quantityInput.step = '1';
             quantityInput.className = 'form-control quantityInput';
             quantityInput.name = `transactions[${index}][quantity]`;
             quantityInput.value = '1';
@@ -1930,8 +1930,8 @@
             const quantityCell = document.createElement('td');
             const quantityInput = document.createElement('input');
             quantityInput.type = 'number';
-            quantityInput.min = '0.01';
-            quantityInput.step = '0.01';
+            quantityInput.min = '0';
+            quantityInput.step = '1';
             quantityInput.className = 'form-control quantityInput';
             quantityInput.name = `transactions[${index}][quantity]`;
             quantityInput.value = '1';
