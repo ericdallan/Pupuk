@@ -77,7 +77,7 @@
                     <div class="d-flex gap-2">
                         <button type="submit" class="btn btn-primary">Filter</button>
                         <a href="{{ route('stock.export') . '?start_date=' . request('start_date', now()->startOfYear()->toDateString()) . '&end_date=' . request('end_date', now()->toDateString()) . '&table_filter=' . request('table_filter', 'all') }}" class="btn btn-success">Export to Excel</a>
-                        <!-- <a href="{{ route('stock.transfer.print') . '?table_filter=' . request('table_filter', 'all') }}" class="btn btn-secondary me-2">Print Form</a> -->
+                        <a href="{{ route('stock.transfer.print') . '?table_filter=' . request('table_filter', 'all') }}" class="btn btn-secondary me-2">Print Form</a>
                         <button type="button" class="btn btn-light" data-bs-toggle="modal" data-bs-target="#RecipeList">Daftar Formula</button>
                         <button type="button" class="btn btn-info" data-bs-toggle="modal" data-bs-target="#createRecipeModal">Buat Formula</button>
                     </div>

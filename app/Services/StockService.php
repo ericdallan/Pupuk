@@ -7,6 +7,7 @@ use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 use App\Imports\StockImport;
+use App\Models\Company;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Models\UsedStock;
 use App\Models\Recipes;
@@ -565,17 +566,12 @@ class StockService
      */
     public function prepareTransferFormData(string $tableFilter): array
     {
-        $query = DB::table('transfer_stocks')
-            ->select('id', 'item', 'size', 'quantity');
-
-        if ($tableFilter !== 'all' && $tableFilter !== 'transfer_stocks') {
-            $query->whereRaw('1 = 0');
-        }
-
-        $transferStockData = $query->get();
+        $companyLogo = Company::value('logo');
+        $company = Company::select('company_name', 'phone', 'director', 'email', 'address')->firstOrFail();
 
         return [
-            'transferStockData' => $transferStockData,
+            'companyLogo' => $companyLogo,
+            'company' => $company,
             'date' => Carbon::today()->format('d-m-Y'),
         ];
     }
