@@ -133,7 +133,7 @@ class StockService
         $results = $query->get();
 
         // Debug log to verify data
-        Log::debug('Raw Stock Transactions', $results->toArray());
+        // Log::debug('Raw Stock Transactions', $results->toArray());
 
         return $results->groupBy(function ($item) {
             return $item->item . '|' . ($item->size ?? '');
@@ -520,17 +520,17 @@ class StockService
 
             DB::commit();
 
-            Log::info('Recipe created successfully:', [
-                'recipe_id' => $recipe->id,
-                'used_stock_id' => $usedStock->id,
-                'hpp_used_stock_id' => $hppUsedStock->id,
-                'product_name' => $productName,
-                'size' => $productSize,
-                'nominal' => $totalNominal,
-            ]);
+            // Log::info('Recipe created successfully:', [
+            //     'recipe_id' => $recipe->id,
+            //     'used_stock_id' => $usedStock->id,
+            //     'hpp_used_stock_id' => $hppUsedStock->id,
+            //     'product_name' => $productName,
+            //     'size' => $productSize,
+            //     'nominal' => $totalNominal,
+            // ]);
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Store Recipe Service Error: ' . $e->getMessage(), ['exception' => $e]);
+            // Log::error('Store Recipe Service Error: ' . $e->getMessage(), ['exception' => $e]);
             throw $e;
         }
     }

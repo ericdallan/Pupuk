@@ -50,12 +50,14 @@
         <div class="container mt-4">
             <h2 class="text-center">Formulir Edit {{ $headingText }} Voucher</h2>
 
+            <!-- Voucher Number -->
             <div class="row mb-3">
                 <label for="voucherNumber" class="col-sm-3 col-form-label">Nomor Voucher:</label>
                 <div class="col-sm-9">
                     <input type="text" class="form-control" id="voucherNumber" name="voucher_number" value="{{ $voucher->voucher_number }}" readonly>
                 </div>
             </div>
+            <!-- Company Name -->
             <div class="row mb-3">
                 <label for="companyName" class="col-sm-3 col-form-label">Nama Perusahaan:</label>
                 <div class="col-sm-9">
@@ -67,6 +69,7 @@
                     @endif
                 </div>
             </div>
+            <!-- Use Stock -->
             <div class="row mb-3">
                 <label for="useStock" class="col-sm-3 col-form-label">Transaksi Stok?</label>
                 <div class="col-sm-9">
@@ -75,11 +78,12 @@
                         <label class="form-check-label" for="useStockYes">Ya</label>
                     </div>
                     <div class="form-check form-check-inline">
-                        <input class="form-check-input" type="radio" id="useStockNo" name="use_stock" value="no" {{ !in_array($voucher->voucher_type, ['PG', 'PM', 'LN']) ? 'checked' : '' }}>
+                        <input class="form-check-input" type="radio" id="useStockNo" name="use_stock" value="no" {{ in_array($voucher->voucher_type, ['PG', 'PM', 'LN']) ? 'checked' : '' }}>
                         <label class="form-check-label" for="useStockNo">Tidak</label>
                     </div>
                 </div>
             </div>
+            <!-- Voucher Type, Date, and Day -->
             <div class="row mb-3">
                 <label for="voucherType" class="col-sm-3 col-form-label">Tipe Voucher:</label>
                 <div class="col-sm-3">
@@ -103,47 +107,57 @@
                     <input type="text" class="form-control" id="voucherDay" name="voucher_day" value="{{ $voucher->voucher_day }}" readonly>
                 </div>
             </div>
+            <!-- Description -->
+            <div class="row mb-3">
+                <label for="description" class="col-sm-3 col-form-label">Deskripsi:</label>
+                <div class="col-sm-9">
+                    <textarea class="form-control" id="description" name="description" readonly>{{ $voucher->description }}</textarea>
+                </div>
+            </div>
+            <!-- Prepared By -->
             <div class="row mb-3">
                 <label for="preparedBy" class="col-sm-3 col-form-label">Dibuat Oleh:</label>
                 <div class="col-sm-9">
-                    <input type="text" class="form-control" id="preparedBy" name="prepared_by" value="{{ $voucher->prepared_by }}" required aria-required="true">
-                    <div class="invalid-feedback">Dibuat Oleh wajib diisi.</div>
+                    <input type="text" class="form-control" id="preparedBy" name="prepared_by" value="{{ $voucher->prepared_by }}" readonly>
                 </div>
             </div>
+            <!-- Given To -->
             <div class="row mb-3">
                 <label for="givenTo" class="col-sm-3 col-form-label">Diberikan Kepada:</label>
                 <div class="col-sm-9">
                     <input type="text" class="form-control" id="givenTo" name="given_to" value="{{ $voucher->given_to }}">
                 </div>
             </div>
+            <!-- Approved By -->
             <div class="row mb-3">
                 <label for="approvedBy" class="col-sm-3 col-form-label">Disetujui Oleh:</label>
                 <div class="col-sm-9">
                     <input type="text" class="form-control" id="approvedBy" name="approved_by" value="{{ $voucher->approved_by }}" readonly>
                 </div>
             </div>
+            <!-- Transaction -->
             <div class="row mb-3">
                 <label for="transaction" class="col-sm-3 col-form-label">Transaksi:</label>
                 <div class="col-sm-9">
                     <input type="text" class="form-control" id="transaction" name="transaction" value="{{ $voucher->transaction }}">
                 </div>
             </div>
-            <!-- Gunakan Invoice? -->
+            <!-- Use Invoice -->
             <div class="row mb-3">
                 <label for="useInvoice" class="col-sm-3 col-form-label">Gunakan Invoice?</label>
                 <div class="col-sm-9">
                     <div class="form-check form-check-inline">
-                        <input class="form-check-input" type="radio" id="useInvoiceYes" name="use_invoice" value="yes" {{ $voucher->invoice ? 'checked' : ($voucher->use_invoice === 'yes' ? 'checked' : '') }} required aria-required="true">
+                        <input class="form-check-input" type="radio" id="useInvoiceYes" name="use_invoice" value="yes" {{ $voucher->invoice || $voucher->use_invoice === 'yes' ? 'checked' : '' }} required aria-required="true">
                         <label class="form-check-label" for="useInvoiceYes">Ya</label>
                     </div>
                     <div class="form-check form-check-inline">
-                        <input class="form-check-input" type="radio" id="useInvoiceNo" name="use_invoice" value="no" {{ $voucher->invoice ? '' : ($voucher->use_invoice !== 'yes' ? 'checked' : '') }} required aria-required="true">
+                        <input class="form-check-input" type="radio" id="useInvoiceNo" name="use_invoice" value="no" {{ !$voucher->invoice && $voucher->use_invoice !== 'yes' ? 'checked' : '' }} required aria-required="true">
                         <label class="form-check-label" for="useInvoiceNo">Tidak</label>
                     </div>
                     <div class="invalid-feedback">Pilih apakah menggunakan invoice.</div>
                 </div>
             </div>
-            <!-- Gunakan Invoice yang Sudah Ada? -->
+            <!-- Use Existing Invoice -->
             <div class="row mb-3" id="existingInvoiceContainer" style="display: {{ $voucher->invoice || $voucher->use_invoice === 'yes' ? 'block' : 'none' }};">
                 <label class="col-sm-3 col-form-label">Gunakan Invoice yang Sudah Ada?</label>
                 <div class="col-sm-9">
@@ -157,7 +171,7 @@
                     </div>
                 </div>
             </div>
-            <!-- Nomor Invoice -->
+            <!-- Invoice Number -->
             <div class="row mb-3" id="invoiceFieldContainer" style="display: {{ $voucher->invoice || $voucher->use_invoice === 'yes' ? 'block' : 'none' }};">
                 <label for="invoice" class="col-sm-3 col-form-label">Nomor Invoice:</label>
                 <div class="col-sm-9">
@@ -165,7 +179,7 @@
                     <div class="invalid-feedback">Nomor Invoice wajib diisi jika menggunakan invoice.</div>
                 </div>
             </div>
-            <!-- Tanggal Jatuh Tempo -->
+            <!-- Due Date -->
             <div class="row mb-3" id="dueDateContainer" style="display: {{ $voucher->invoice || $voucher->use_invoice === 'yes' ? 'block' : 'none' }};">
                 <label for="due_date" class="col-sm-3 col-form-label">Tanggal Jatuh Tempo:</label>
                 <div class="col-sm-9">
@@ -173,7 +187,7 @@
                     <div class="invalid-feedback">Tanggal Jatuh Tempo wajib diisi untuk invoice baru.</div>
                 </div>
             </div>
-            <!-- Nama Toko -->
+            <!-- Store Name -->
             <div class="row mb-3" id="storeFieldContainer" style="display: {{ $voucher->invoice || $voucher->use_invoice === 'yes' ? 'block' : 'none' }};">
                 <label for="store" class="col-sm-3 col-form-label">Nama Toko:</label>
                 <div class="col-sm-9">
@@ -185,22 +199,36 @@
                     </select>
                 </div>
             </div>
-            <!-- Rincian Transaksi -->
+            <!-- Recipe Dropdown for PK -->
+            @if ($voucher->voucher_type == 'PK')
+            <div class="row mb-3" id="recipeContainer" style="display: {{ in_array($voucher->voucher_type, ['PK']) && $voucher->use_stock === 'yes' ? 'block' : 'none' }};">
+                <label for="recipe" class="col-sm-3 col-form-label">Formula Produk:</label>
+                <div class="col-sm-9">
+                    <select class="form-select" id="recipe" name="recipe">
+                        <option value="">Pilih Formula Produk</option>
+                        @foreach($recipes as $recipe)
+                        <option value="{{ $recipe['id'] }}" {{ $voucher->recipe_id == $recipe['id'] ? 'selected' : '' }}>{{ $recipe['name'] }}</option>
+                        @endforeach
+                    </select>
+                </div>
+            </div>
+            @endif
+            <!-- Transaction Details Table -->
             <div class="mb-3">
                 <h5>Rincian Transaksi</h5>
                 <div class="table-responsive">
                     <table class="table table-bordered" id="transactionDetailsTable">
                         <thead>
                             <tr class="text-center">
-                                <th colspan="4">Rincian Transaksi</th>
-                                <th style="width: 80px;">Aksi</th>
+                                <th colspan="6">Rincian Transaksi</th>
                             </tr>
                             <tr class="text-center">
                                 <th>Deskripsi</th>
+                                <th>Ukuran</th>
                                 <th>Quantitas</th>
                                 <th>Nominal</th>
                                 <th>Total</th>
-                                <th></th>
+                                <th style="width: 80px;">Aksi</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -210,7 +238,7 @@
                                 <td>
                                     @if (str_starts_with($transaction->description, 'HPP '))
                                     <input type="text" class="form-control descriptionInput" name="transactions[{{ $index }}][description]" value="{{ $transaction->description }}" readonly>
-                                    @elseif ($voucher->voucher_type == 'PJ')
+                                    @elseif (in_array($voucher->voucher_type, ['PJ', 'PH', 'PK']))
                                     <select class="form-control descriptionInput" name="transactions[{{ $index }}][description]" data-initial-value="{{ $transaction->description }}">
                                         <option value="">Pilih Nama Stock</option>
                                         @foreach($stocks as $stock)
@@ -221,7 +249,7 @@
                                     </select>
                                     @elseif ($voucher->voucher_type == 'PB')
                                     <div class="input-group">
-                                        <select class="form-control descriptionInput" style="width: 50%;">
+                                        <select class="form-control descriptionInput" name="transactions[{{ $index }}][description_select]" style="width: 50%;">
                                             <option value="">Pilih Nama Stock</option>
                                             @foreach($stocks as $stock)
                                             @if (!str_starts_with($stock['item'], 'HPP '))
@@ -229,10 +257,24 @@
                                             @endif
                                             @endforeach
                                         </select>
-                                        <input type="text" class="form-control descriptionInput" style="width: 50%;" name="transactions[{{ $index }}][description]" value="{{ $transaction->description }}">
+                                        <input type="text" class="form-control descriptionInput" name="transactions[{{ $index }}][description]" style="width: 50%;" value="{{ $transaction->description }}">
                                     </div>
                                     @else
                                     <input type="text" class="form-control descriptionInput" name="transactions[{{ $index }}][description]" value="{{ $transaction->description }}">
+                                    @endif
+                                </td>
+                                <td>
+                                    @if (in_array($voucher->voucher_type, ['PJ', 'PB', 'PH', 'PK']) && !str_starts_with($transaction->description, 'HPP '))
+                                    <select class="form-control sizeInput" name="transactions[{{ $index }}][size]">
+                                        <option value="">Pilih Ukuran</option>
+                                        @foreach($stocks as $stock)
+                                        @if ($stock['item'] == $transaction->description)
+                                        <option value="{{ $stock['size'] }}" {{ $transaction->size == $stock['size'] ? 'selected' : '' }}>{{ $stock['size'] }}</option>
+                                        @endif
+                                        @endforeach
+                                    </select>
+                                    @else
+                                    <input type="text" class="form-control sizeInput" name="transactions[{{ $index }}][size]" value="{{ $transaction->size }}" {{ str_starts_with($transaction->description, 'HPP ') ? 'readonly' : '' }}>
                                     @endif
                                 </td>
                                 <td>
@@ -252,7 +294,7 @@
                             @else
                             <tr data-row-index="0">
                                 <td>
-                                    @if ($voucher->voucher_type == 'PJ')
+                                    @if (in_array($voucher->voucher_type, ['PJ', 'PH', 'PK']))
                                     <select class="form-control descriptionInput" name="transactions[0][description]">
                                         <option value="">Pilih Nama Stock</option>
                                         @foreach($stocks as $stock)
@@ -263,7 +305,7 @@
                                     </select>
                                     @elseif ($voucher->voucher_type == 'PB')
                                     <div class="input-group">
-                                        <select class="form-control descriptionInput" style="width: 50%;">
+                                        <select class="form-control descriptionInput" name="transactions[0][description_select]" style="width: 50%;">
                                             <option value="">Pilih Nama Stock</option>
                                             @foreach($stocks as $stock)
                                             @if (!str_starts_with($stock['item'], 'HPP '))
@@ -271,10 +313,19 @@
                                             @endif
                                             @endforeach
                                         </select>
-                                        <input type="text" class="form-control descriptionInput" style="width: 50%;" name="transactions[0][description]">
+                                        <input type="text" class="form-control descriptionInput" name="transactions[0][description]" style="width: 50%;">
                                     </div>
                                     @else
                                     <input type="text" class="form-control descriptionInput" name="transactions[0][description]">
+                                    @endif
+                                </td>
+                                <td>
+                                    @if (in_array($voucher->voucher_type, ['PJ', 'PB', 'PH', 'PK']))
+                                    <select class="form-control sizeInput" name="transactions[0][size]">
+                                        <option value="">Pilih Ukuran</option>
+                                    </select>
+                                    @else
+                                    <input type="text" class="form-control sizeInput" name="transactions[0][size]">
                                     @endif
                                 </td>
                                 <td>
@@ -292,7 +343,7 @@
                         </tbody>
                         <tfoot>
                             <tr>
-                                <td colspan="3" class="text-end"><strong>Total Nominal:</strong></td>
+                                <td colspan="4" class="text-end"><strong>Total Nominal:</strong></td>
                                 <td>
                                     <input type="text" class="form-control" id="totalNominal" name="total_nominal" value="{{ number_format($voucher->total_nominal, 2, ',', '.') }}" readonly>
                                 </td>
@@ -303,7 +354,7 @@
                     <button type="button" id="addTransactionRowBtn" class="btn btn-primary">Tambah Transaksi</button>
                 </div>
             </div>
-            <!-- Rincian Voucher -->
+            <!-- Voucher Details Table -->
             <div class="table-responsive">
                 <table class="table table-bordered" id="voucherDetailsTable">
                     <thead>
@@ -358,7 +409,7 @@
                 <label for="totalDebit" class="col-sm-3 col-form-label">Total Debit:</label>
                 <div class="col-sm-3">
                     <input type="text" class="form-control" id="totalDebit" name="total_debit" value="{{ number_format($voucher->total_debit, 2, ',', '.') }}" readonly>
-                    <input type="hidden" id="totalDebitRaw" name="total_de h4>bit_raw" value="{{ $voucher->total_debit }}">
+                    <input type="hidden" id="totalDebitRaw" name="total_debit_raw" value="{{ $voucher->total_debit }}">
                 </div>
                 <label for="totalCredit" class="col-sm-3 col-form-label">Total Kredit:</label>
                 <div class="col-sm-3">
@@ -373,7 +424,6 @@
                     <input type="text" class="form-control" id="validation" readonly value="Silakan isi formulir.">
                 </div>
             </div>
-
             <div class="text-center">
                 <button type="submit" class="btn btn-primary" id="saveVoucherBtn">Simpan Perubahan</button>
             </div>
@@ -405,6 +455,8 @@
             const existingInvoiceContainer = document.getElementById('existingInvoiceContainer');
             const useExistingInvoiceYes = document.getElementById('useExistingInvoiceYes');
             const useExistingInvoiceNo = document.getElementById('useExistingInvoiceNo');
+            const recipeContainer = document.getElementById('recipeContainer');
+            const descriptionTextArea = document.getElementById('description');
 
             // --- Data from Laravel ---
             const existingInvoices = @json($existingInvoices);
@@ -412,14 +464,14 @@
             const subsidiaries = @json($subsidiariesData);
             const accounts = @json($accountsData);
             const stocks = @json($stocks);
-            const transactions = @json($transactionsData);
-            const currentVoucherType = @json($voucher -> voucher_type);
-            const hasInvoice = @json($voucher -> invoice ? true : false);
             const transferStocks = @json($transferStocks);
             const usedStocks = @json($usedStocks);
+            const transactionsData = @json($transactionsData);
             const recipes = @json($recipes);
+            const currentVoucherType = @json($voucher -> voucher_type);
+            const hasInvoice = @json($voucher -> invoice ? true : false);
 
-            // Define voucher types with stock property
+            // --- Voucher Types ---
             const voucherTypes = {
                 PJ: {
                     value: 'PJ',
@@ -462,378 +514,218 @@
                     text: 'Pemakaian',
                     description: 'Voucher Pemakaian - Dokumen untuk mencatat pemakaian barang dalam operasional perusahaan.',
                     stock: true
-                },
+                }
             };
-
-            // Convert voucherTypes object to an array for filtering
             const voucherTypeOptions = Object.values(voucherTypes);
 
             // --- Update Voucher Type Dropdown ---
             function updateVoucherTypeOptions() {
                 const useStock = useStockYes.checked ? 'yes' : 'no';
                 voucherTypeSelect.innerHTML = '';
-                const validOptions = voucherTypeOptions.filter(option =>
-                    useStock === 'yes' ? option.stock : !option.stock
-                );
-
+                const validOptions = voucherTypeOptions.filter(option => useStock === 'yes' ? option.stock : !option.stock);
                 validOptions.forEach(option => {
                     const opt = document.createElement('option');
                     opt.value = option.value;
                     opt.textContent = option.text;
-                    if (option.value === currentVoucherType) {
-                        opt.selected = true;
-                    }
+                    if (option.value === currentVoucherType) opt.selected = true;
                     voucherTypeSelect.appendChild(opt);
                 });
-
                 if (!validOptions.some(opt => opt.value === voucherTypeSelect.value)) {
                     voucherTypeSelect.value = validOptions[0]?.value || '';
                 }
-
-                const changeEvent = new Event('change', {
-                    bubbles: true
-                });
-                voucherTypeSelect.dispatchEvent(changeEvent);
+                updateDescription();
+                refreshTransactionTable();
+                updateRecipeContainer();
+                updateAllCalculationsAndValidations();
             }
 
-            // --- Validation Functions ---
-            function validateForm() {
-                let isValid = true;
-                const requiredFields = voucherForm.querySelectorAll('[required]');
-                requiredFields.forEach(field => {
-                    if (!field.value.trim()) {
-                        field.classList.add('is-invalid');
-                        isValid = false;
+            // --- Update Description ---
+            function updateDescription() {
+                const selectedType = voucherTypeSelect.value;
+                descriptionTextArea.value = voucherTypes[selectedType]?.description || '';
+            }
+
+            // --- Recipe Handling ---
+            function updateRecipeContainer() {
+                const useStock = useStockYes.checked ? 'yes' : 'no';
+                const voucherType = voucherTypeSelect.value;
+                if (recipeContainer) {
+                    recipeContainer.style.display = (useStock === 'yes' && voucherType === 'PK') ? 'block' : 'none';
+                }
+                const recipeSelect = document.getElementById('recipe');
+                if (recipeSelect) {
+                    recipeSelect.disabled = !(useStock === 'yes' && voucherType === 'PK');
+                    if (useStock === 'yes' && voucherType === 'PK') {
+                        handleRecipeChange();
                     } else {
-                        field.classList.remove('is-invalid');
+                        refreshTransactionTable();
                     }
-                });
-
-                const useInvoice = useInvoiceYes.checked ? 'yes' : 'no';
-                const useExistingInvoice = useExistingInvoiceYes.checked ? 'yes' : 'no';
-                const invoiceInput = document.getElementById('invoice');
-                const dueDateInput = document.getElementById('due_date');
-
-                if (useInvoice === 'yes' && !invoiceInput.value.trim()) {
-                    invoiceInput.classList.add('is-invalid');
-                    isValid = false;
-                } else {
-                    invoiceInput.classList.remove('is-invalid');
                 }
-
-                if (useInvoice === 'yes' && useExistingInvoice === 'no' && !dueDateInput.value) {
-                    dueDateInput.classList.add('is-invalid');
-                    isValid = false;
-                } else {
-                    dueDateInput.classList.remove('is-invalid');
-                }
-
-                // Validate HPP rows for PJ vouchers
-                if (voucherTypeSelect.value === 'PJ') {
-                    const rows = transactionTableBody.querySelectorAll('tr');
-                    const stockDescriptions = new Set();
-                    rows.forEach(row => {
-                        const description = row.querySelector('.descriptionInput')?.value || '';
-                        const isHpp = row.dataset.isHppRow === 'true';
-                        if (!isHpp && description && !description.startsWith('HPP ')) {
-                            stockDescriptions.add(description);
-                        }
-                    });
-                    rows.forEach(row => {
-                        const description = row.querySelector('.descriptionInput')?.value || '';
-                        const isHpp = row.dataset.isHppRow === 'true';
-                        if (isHpp && description) {
-                            const stockItem = description.replace(/^HPP /, '');
-                            if (!stockDescriptions.has(stockItem)) {
-                                validationInput.value = `Baris HPP untuk "${stockItem}" tidak memiliki transaksi stok yang sesuai.`;
-                                isValid = false;
-                            }
-                        }
-                    });
-                }
-
-                return isValid;
             }
 
-            // --- Subsidiary Code Check ---
-            function isSubsidiaryCodeUsed() {
-                const accountCodeInputs = voucherDetailsTableBody.querySelectorAll('.accountCodeInput');
-                for (let input of accountCodeInputs) {
-                    const code = input.value.trim();
-                    if (subsidiaries.some(s => s.subsidiary_code === code)) {
-                        return true;
-                    }
-                }
-                return false;
-            }
-
-            // --- Update Account Code Datalist ---
-            function updateAccountCodeDatalist(isNewRow = false) {
-                const useInvoice = useInvoiceYes.checked ? 'yes' : 'no';
-                const datalists = document.querySelectorAll('#dynamicAccountCodes');
-                const subsidiaryUsed = isSubsidiaryCodeUsed();
-
-                datalists.forEach(datalist => {
-                    datalist.innerHTML = '';
-                    const defaultOption = document.createElement('option');
-                    defaultOption.value = '';
-                    defaultOption.textContent = 'Pilih Kode Akun';
-                    datalist.appendChild(defaultOption);
-
-                    if (useInvoice === 'yes' && !subsidiaryUsed && !isNewRow) {
-                        subsidiaries.forEach(subsidiary => {
-                            const option = document.createElement('option');
-                            option.value = subsidiary.subsidiary_code;
-                            option.textContent = `${subsidiary.subsidiary_code} - ${subsidiary.account_name}`;
-                            datalist.appendChild(option);
-                        });
-                    } else {
-                        accounts.forEach(account => {
-                            const option = document.createElement('option');
-                            option.value = account.account_code;
-                            option.textContent = `${account.account_code} - ${account.account_name}`;
-                            datalist.appendChild(option);
-                        });
-                        subsidiaries.forEach(subsidiary => {
-                            const option = document.createElement('option');
-                            option.value = subsidiary.subsidiary_code;
-                            option.textContent = `${subsidiary.subsidiary_code} - ${subsidiary.account_name}`;
-                            datalist.appendChild(option);
-                        });
-                    }
-                });
-
-                voucherDetailsTableBody.querySelectorAll('.accountCodeInput').forEach(input => {
-                    const row = input.closest('tr');
-                    const accountNameInput = row.querySelector('.accountName');
-                    const enteredCode = input.value.trim();
-                    accountNameInput.value = '';
-
-                    if (useInvoice === 'yes' && subsidiaries.some(s => s.subsidiary_code === enteredCode)) {
-                        const subsidiary = subsidiaries.find(s => s.subsidiary_code === enteredCode);
-                        if (subsidiary) {
-                            accountNameInput.value = subsidiary.account_name;
-                        }
-                    } else {
-                        const account = accounts.find(a => a.account_code === enteredCode);
-                        if (account) {
-                            accountNameInput.value = account.account_name;
-                        }
-                    }
-                });
-            }
-
-            // --- Invoice and Store Field Logic ---
-            function createStoreDropdown() {
+            function createRecipeDropdown() {
+                if (!recipeContainer) return;
+                recipeContainer.innerHTML = '';
+                const label = document.createElement('label');
+                label.htmlFor = 'recipe';
+                label.className = 'col-sm-3 col-form-label';
+                label.textContent = 'Formula Produk:';
+                const selectDiv = document.createElement('div');
+                selectDiv.className = 'col-sm-9';
                 const select = document.createElement('select');
                 select.className = 'form-select';
-                select.id = 'store';
-                select.name = 'store';
-
-                const defaultOption = document.createElement('option');
-                defaultOption.value = '';
-                defaultOption.textContent = 'Pilih Nama Toko';
-                select.appendChild(defaultOption);
-
-                storeNames.forEach(store => {
+                select.id = 'recipe';
+                select.name = 'recipe';
+                select.innerHTML = '<option value="">Pilih Formula Produk</option>';
+                recipes.forEach(recipe => {
                     const option = document.createElement('option');
-                    option.value = store;
-                    option.textContent = store;
+                    option.value = recipe.id;
+                    option.textContent = recipe.name;
+                    if (recipe.id === @json($voucher -> recipe_id)) option.selected = true;
                     select.appendChild(option);
                 });
-
-                return select;
+                selectDiv.appendChild(select);
+                recipeContainer.appendChild(label);
+                recipeContainer.appendChild(selectDiv);
+                select.addEventListener('change', debounce(handleRecipeChange, 300));
             }
 
-            function createInvoiceDropdown() {
-                const select = document.createElement('select');
-                select.className = 'form-control';
-                select.id = 'invoice';
-                select.name = 'invoice';
+            function handleRecipeChange() {
+                const recipeSelect = document.getElementById('recipe');
+                const useStock = useStockYes.checked ? 'yes' : 'no';
+                const voucherType = voucherTypeSelect.value;
+                if (useStock !== 'yes' || voucherType !== 'PK') return;
+                const selectedRecipeId = recipeSelect.value;
+                if (selectedRecipeId) {
+                    populateTransactionTableFromRecipe(selectedRecipeId);
+                    addTransactionRowBtn.disabled = true;
+                    transactionTableBody.querySelectorAll('.removeTransactionRowBtn').forEach(btn => btn.disabled = true);
+                } else {
+                    refreshTransactionTable();
+                    addTransactionRowBtn.disabled = false;
+                    transactionTableBody.querySelectorAll('.removeTransactionRowBtn').forEach(btn => btn.disabled = false);
+                }
+                updateAllCalculationsAndValidations();
+            }
 
-                const defaultOption = document.createElement('option');
-                defaultOption.value = '';
-                defaultOption.textContent = 'Pilih Nomor Invoice';
-                select.appendChild(defaultOption);
-
-                existingInvoices.forEach(invoice => {
-                    if (invoice) {
-                        const option = document.createElement('option');
-                        option.value = invoice;
-                        option.textContent = invoice;
-                        select.appendChild(option);
-                    }
+            function populateTransactionTableFromRecipe(recipeId) {
+                const recipe = recipes.find(r => r.id == recipeId);
+                if (!recipe || !recipe.items) return;
+                transactionTableBody.innerHTML = '';
+                recipe.items.forEach((item, index) => {
+                    const row = generateTransactionTableRow(index, {
+                        description: item.item,
+                        size: item.size,
+                        quantity: item.quantity,
+                        nominal: item.nominal || 0,
+                        total: (item.quantity * (item.nominal || 0)).toFixed(2),
+                        isHppRow: false
+                    });
+                    transactionTableBody.appendChild(row);
                 });
-
-                return select;
+                attachTransactionRemoveButtonListeners();
+                attachTransactionInputListeners();
+                updateAllCalculationsAndValidations();
             }
 
-            function createInvoiceInput() {
-                const input = document.createElement('input');
-                input.type = 'text';
-                input.className = 'form-control';
-                input.id = 'invoice';
-                input.name = 'invoice';
-                return input;
+            // --- Stock and Size Handling ---
+            function getStockSource() {
+                const voucherType = voucherTypeSelect.value;
+                if (voucherType === 'PJ') return usedStocks;
+                if (voucherType === 'PH') return transferStocks;
+                if (voucherType === 'PK') return stocks;
+                return stocks;
             }
 
-            function updateInvoiceField() {
-                const useInvoice = useInvoiceYes.checked ? 'yes' : 'no';
-                const useExistingInvoice = useExistingInvoiceYes.checked ? 'yes' : 'no';
-                invoiceFieldContainer.innerHTML = '';
-                const invoiceLabel = document.createElement('label');
-                invoiceLabel.htmlFor = 'invoice';
-                invoiceLabel.className = 'col-sm-3 col-form-label';
-                invoiceLabel.textContent = 'Nomor Invoice:';
-                const invoiceInputDiv = document.createElement('div');
-                invoiceInputDiv.className = 'col-sm-9';
-                let invoiceInput;
-                if (useInvoice === 'yes') {
-                    invoiceInput = useExistingInvoice === 'yes' ? createInvoiceDropdown() : createInvoiceInput();
-                    if (hasInvoice) {
-                        invoiceInput.value = @json($voucher -> invoice);
-                    }
-                } else {
-                    invoiceInput = createInvoiceInput();
-                    invoiceInput.disabled = true;
-                    invoiceInput.value = '';
-                }
-                invoiceInputDiv.appendChild(invoiceInput);
-                invoiceFieldContainer.appendChild(invoiceLabel);
-                invoiceInputDiv.appendChild(document.createElement('div')).className = 'invalid-feedback';
-                invoiceInputDiv.querySelector('.invalid-feedback').textContent = 'Nomor Invoice wajib diisi jika menggunakan invoice.';
-                invoiceFieldContainer.appendChild(invoiceInputDiv);
-                updateAccountCodeDatalist();
-                validateForm();
-            }
-
-            function updateDueDateField() {
-                const useInvoice = useInvoiceYes.checked ? 'yes' : 'no';
-                const useExistingInvoice = useExistingInvoiceYes.checked ? 'yes' : 'no';
-                dueDateContainer.innerHTML = '';
-                const dueDateLabel = document.createElement('label');
-                dueDateLabel.htmlFor = 'due_date';
-                dueDateLabel.className = 'col-sm-3 col-form-label';
-                dueDateLabel.textContent = 'Tanggal Jatuh Tempo:';
-                const dueDateInputDiv = document.createElement('div');
-                dueDateInputDiv.className = 'col-sm-9';
-                const dueDateInput = document.createElement('input');
-                dueDateInput.type = 'date';
-                dueDateInput.className = 'form-control';
-                dueDateInput.id = 'due_date';
-                dueDateInput.name = 'due_date';
-                dueDateInput.disabled = useInvoice !== 'yes' || useExistingInvoice === 'yes';
-                if (useInvoice !== 'yes') {
-                    dueDateInput.value = '';
-                } else if (hasInvoice && @json($dueDate)) {
-                    dueDateInput.value = @json($dueDate);
-                }
-                dueDateInputDiv.appendChild(dueDateInput);
-                dueDateContainer.appendChild(dueDateLabel);
-                dueDateInputDiv.appendChild(document.createElement('div')).className = 'invalid-feedback';
-                dueDateInputDiv.querySelector('.invalid-feedback').textContent = 'Tanggal Jatuh Tempo wajib diisi untuk invoice baru.';
-                dueDateContainer.appendChild(dueDateInputDiv);
-                if (useInvoice === 'yes' && useExistingInvoice === 'no' && !dueDateInput.value) {
-                    setTodayDueDate();
-                }
-                validateForm();
-            }
-
-            function updateInvoiceAndStoreFields() {
-                const useInvoice = useInvoiceYes.checked ? 'yes' : 'no';
-                storeFieldContainer.innerHTML = '';
-
-                useExistingInvoiceYes.disabled = useInvoice !== 'yes';
-                useExistingInvoiceNo.disabled = useInvoice !== 'yes';
-
-                if (useInvoice === 'yes') {
-                    storeFieldContainer.appendChild(createStoreDropdown());
-                    if (hasInvoice) {
-                        storeFieldContainer.querySelector('#store').value = @json($voucher -> store ?? '');
-                    }
-                    invoiceFieldContainer.style.display = 'block';
-                    storeFieldContainer.style.display = 'block';
-                    existingInvoiceContainer.style.display = 'block';
-                    updateInvoiceField();
-                    updateDueDateField();
-                } else {
-                    storeFieldContainer.appendChild(createStoreDropdown());
-                    storeFieldContainer.querySelector('#store').value = '';
-                    invoiceFieldContainer.style.display = 'none';
-                    storeFieldContainer.style.display = 'none';
-                    existingInvoiceContainer.style.display = 'none';
-                    useExistingInvoiceYes.checked = false;
-                    useExistingInvoiceNo.checked = false;
-                    updateInvoiceField();
-                    updateDueDateField();
-                }
-                updateAccountCodeDatalist();
-            }
-
-            // --- Stock and HPP Logic ---
             function createStockDropdown(index, initialValue = '') {
                 const select = document.createElement('select');
                 select.className = 'form-control descriptionInput';
                 select.name = `transactions[${index}][description]`;
                 select.dataset.listenerAttached = 'false';
-
-                const defaultOption = document.createElement('option');
-                defaultOption.value = '';
-                defaultOption.textContent = 'Pilih Nama Stock';
-                select.appendChild(defaultOption);
-
-                const filteredStocks = stocks.filter(stock => !stock.item.startsWith('HPP '));
-                filteredStocks.forEach(stock => {
+                select.innerHTML = '<option value="">Pilih Nama Stock</option>';
+                const stockSource = getStockSource();
+                const filteredStocks = stockSource.filter(s => !s.item.startsWith('HPP '));
+                const uniqueItems = [...new Set(filteredStocks.map(s => s.item))];
+                uniqueItems.forEach(item => {
                     const option = document.createElement('option');
-                    option.value = stock.item;
-                    option.textContent = stock.item;
-                    if (stock.item === initialValue) {
-                        option.selected = true;
-                    }
+                    option.value = item;
+                    option.textContent = item;
+                    if (item === initialValue) option.selected = true;
                     select.appendChild(option);
                 });
-
                 return select;
             }
 
-            function createDescriptionInput(index, initialValue = '') {
-                const input = document.createElement('input');
-                input.type = 'text';
-                input.className = 'form-control descriptionInput';
-                input.name = `transactions[${index}][description]`;
-                input.value = initialValue;
-                return input;
+            function createSizeDropdown(index, item = '', initialValue = '') {
+                const select = document.createElement('select');
+                select.className = 'form-control sizeInput';
+                select.name = `transactions[${index}][size]`;
+                select.innerHTML = '<option value="">Pilih Ukuran</option>';
+                if (item) {
+                    const stockSource = getStockSource();
+                    const sizes = stockSource.filter(s => s.item === item).map(s => s.size);
+                    sizes.forEach(size => {
+                        const option = document.createElement('option');
+                        option.value = size;
+                        option.textContent = size;
+                        if (size === initialValue) option.selected = true;
+                        select.appendChild(option);
+                    });
+                }
+                return select;
             }
 
-            function calculateAverageHpp(item) {
-                if (!transactions || !Array.isArray(transactions) || transactions.length === 0) {
-                    return 0;
-                }
+            function updateSizeDropdown(row, item) {
+                const index = row.dataset.rowIndex;
+                const sizeCell = row.querySelector('td:nth-child(2)');
+                const currentSize = row.querySelector('.sizeInput')?.value || '';
+                sizeCell.innerHTML = '';
+                const sizeSelect = createSizeDropdown(index, item, currentSize);
+                sizeCell.appendChild(sizeSelect);
+                sizeSelect.addEventListener('change', () => {
+                    updateAllCalculationsAndValidations();
+                    if (voucherTypeSelect.value === 'PJ') {
+                        const quantity = parseFloat(row.querySelector('.quantityInput')?.value) || 1;
+                        updateHppRow(index, item, currentSize, quantity);
+                    }
+                });
+            }
 
-                const matchingTransactions = transactions.filter(t => t.description === item);
-                if (matchingTransactions.length === 0) {
-                    return 0;
-                }
-
+            // --- HPP Logic ---
+            function calculateAverageHpp(item, size) {
+                if (!transactionsData || !Array.isArray(transactionsData)) return 0;
+                const matchingTransactions = transactionsData.filter(t => t.description === item && t.size === size && !t.description.startsWith('HPP '));
+                if (matchingTransactions.length === 0) return 0;
                 const totalNominal = matchingTransactions.reduce((sum, t) => sum + (parseFloat(t.nominal) || 0), 0);
-                const transactionCount = matchingTransactions.length;
-                return transactionCount > 0 ? totalNominal / transactionCount : 0;
+                return matchingTransactions.length > 0 ? totalNominal / matchingTransactions.length : 0;
             }
 
-            function addHppRow(currentIndex, selectedItem, quantity) {
-                if (!selectedItem) return;
-
-                const currentRow = transactionTableBody.querySelector(`tr[data-row-index="${currentIndex}"]`);
+            function addHppRow(currentIndex, item, size, quantity) {
+                if (!item || !size) return;
                 const newIndex = transactionTableBody.querySelectorAll('tr').length;
                 const hppRow = document.createElement('tr');
                 hppRow.dataset.rowIndex = newIndex;
                 hppRow.dataset.isHppRow = 'true';
 
                 const descriptionCell = document.createElement('td');
-                const descriptionInput = createDescriptionInput(newIndex, `HPP ${selectedItem}`);
+                const descriptionInput = document.createElement('input');
+                descriptionInput.type = 'text';
+                descriptionInput.className = 'form-control descriptionInput';
+                descriptionInput.name = `transactions[${newIndex}][description]`;
+                descriptionInput.value = `HPP ${item}`;
                 descriptionInput.readOnly = true;
                 descriptionCell.appendChild(descriptionInput);
                 hppRow.appendChild(descriptionCell);
+
+                const sizeCell = document.createElement('td');
+                const sizeInput = document.createElement('input');
+                sizeInput.type = 'text';
+                sizeInput.className = 'form-control sizeInput';
+                sizeInput.name = `transactions[${newIndex}][size]`;
+                sizeInput.value = size;
+                sizeInput.readOnly = true;
+                sizeCell.appendChild(sizeInput);
+                hppRow.appendChild(sizeCell);
 
                 const quantityCell = document.createElement('td');
                 const quantityInput = document.createElement('input');
@@ -852,7 +744,7 @@
                 nominalInput.min = '0';
                 nominalInput.className = 'form-control nominalInput';
                 nominalInput.name = `transactions[${newIndex}][nominal]`;
-                const averageHpp = calculateAverageHpp(selectedItem);
+                const averageHpp = calculateAverageHpp(item, size);
                 nominalInput.value = averageHpp.toFixed(2);
                 nominalInput.readOnly = true;
                 nominalCell.appendChild(nominalInput);
@@ -878,6 +770,7 @@
                 actionCell.appendChild(deleteButton);
                 hppRow.appendChild(actionCell);
 
+                const currentRow = transactionTableBody.querySelector(`tr[data-row-index="${currentIndex}"]`);
                 if (currentRow.nextSibling) {
                     transactionTableBody.insertBefore(hppRow, currentRow.nextSibling);
                 } else {
@@ -888,20 +781,99 @@
                 updateAllCalculationsAndValidations();
             }
 
-            function updateHppRow(currentIndex, selectedItem, quantity) {
-                if (!selectedItem) return;
+            function addHppRowDirectly(index, description, size, quantity, nominal) {
+                const newIndex = transactionTableBody.querySelectorAll('tr').length;
+                const hppRow = document.createElement('tr');
+                hppRow.dataset.rowIndex = newIndex;
+                hppRow.dataset.isHppRow = 'true';
 
+                const descriptionCell = document.createElement('td');
+                const descriptionInput = document.createElement('input');
+                descriptionInput.type = 'text';
+                descriptionInput.className = 'form-control descriptionInput';
+                descriptionInput.name = `transactions[${newIndex}][description]`;
+                descriptionInput.value = `HPP ${description}`;
+                descriptionInput.readOnly = true;
+                descriptionCell.appendChild(descriptionInput);
+                hppRow.appendChild(descriptionCell);
+
+                const sizeCell = document.createElement('td');
+                const sizeInput = document.createElement('input');
+                sizeInput.type = 'text';
+                sizeInput.className = 'form-control sizeInput';
+                sizeInput.name = `transactions[${newIndex}][size]`;
+                sizeInput.value = size;
+                sizeInput.readOnly = true;
+                sizeCell.appendChild(sizeInput);
+                hppRow.appendChild(sizeCell);
+
+                const quantityCell = document.createElement('td');
+                const quantityInput = document.createElement('input');
+                quantityInput.type = 'number';
+                quantityInput.min = '1';
+                quantityInput.className = 'form-control quantityInput';
+                quantityInput.name = `transactions[${newIndex}][quantity]`;
+                quantityInput.value = quantity;
+                quantityInput.readOnly = true;
+                quantityCell.appendChild(quantityInput);
+                hppRow.appendChild(quantityCell);
+
+                const nominalCell = document.createElement('td');
+                const nominalInput = document.createElement('input');
+                nominalInput.type = 'number';
+                nominalInput.min = '0';
+                nominalInput.className = 'form-control nominalInput';
+                nominalInput.name = `transactions[${newIndex}][nominal]`;
+                nominalInput.value = nominal.toFixed(2);
+                nominalInput.readOnly = true;
+                nominalCell.appendChild(nominalInput);
+                hppRow.appendChild(nominalCell);
+
+                const totalCell = document.createElement('td');
+                const totalInput = document.createElement('input');
+                totalInput.type = 'number';
+                totalInput.className = 'form-control totalInput';
+                totalInput.name = `transactions[${newIndex}][total]`;
+                totalInput.value = (quantity * nominal).toFixed(2);
+                totalInput.readOnly = true;
+                totalCell.appendChild(totalInput);
+                hppRow.appendChild(totalCell);
+
+                const actionCell = document.createElement('td');
+                actionCell.className = 'text-center';
+                const deleteButton = document.createElement('button');
+                deleteButton.type = 'button';
+                deleteButton.className = 'btn btn-danger removeTransactionRowBtn';
+                deleteButton.textContent = 'Hapus';
+                deleteButton.disabled = true;
+                actionCell.appendChild(deleteButton);
+                hppRow.appendChild(actionCell);
+
+                const currentRow = transactionTableBody.querySelector(`tr[data-row-index="${index}"]`);
+                if (currentRow.nextSibling) {
+                    transactionTableBody.insertBefore(hppRow, currentRow.nextSibling);
+                } else {
+                    transactionTableBody.appendChild(hppRow);
+                }
+
+                updateTransactionRowIndices();
+                updateAllCalculationsAndValidations();
+            }
+
+            function updateHppRow(currentIndex, item, size, quantity) {
+                if (!item || !size) return;
                 const currentRow = transactionTableBody.querySelector(`tr[data-row-index="${currentIndex}"]`);
                 let nextRow = currentRow.nextSibling;
-
                 while (nextRow) {
-                    if (nextRow.dataset.isHppRow === 'true') {
+                    if (nextRow.dataset.isHppRow === 'true' && nextRow.querySelector('.descriptionInput')?.value === `HPP ${item}`) {
                         const descriptionInput = nextRow.querySelector('.descriptionInput');
-                        descriptionInput.value = `HPP ${selectedItem}`;
+                        descriptionInput.value = `HPP ${item}`;
+                        const sizeInput = nextRow.querySelector('.sizeInput');
+                        sizeInput.value = size;
                         const quantityInput = nextRow.querySelector('.quantityInput');
                         quantityInput.value = quantity;
                         const nominalInput = nextRow.querySelector('.nominalInput');
-                        const averageHpp = calculateAverageHpp(selectedItem);
+                        const averageHpp = calculateAverageHpp(item, size);
                         nominalInput.value = averageHpp.toFixed(2);
                         const totalInput = nextRow.querySelector('.totalInput');
                         totalInput.value = (quantity * averageHpp).toFixed(2);
@@ -910,54 +882,25 @@
                     }
                     nextRow = nextRow.nextSibling;
                 }
-
-                addHppRow(currentIndex, selectedItem, quantity);
+                addHppRow(currentIndex, item, size, quantity);
             }
 
-            function handleStockChange(index, event) {
-                const selectedItem = event.target.value;
-                const row = event.target.closest('tr');
-                const quantity = parseFloat(row.querySelector('.quantityInput')?.value) || 1;
-
-                if (selectedItem) {
-                    let nextRow = row.nextSibling;
-                    let hppRowExists = false;
-                    while (nextRow) {
-                        if (nextRow.dataset.isHppRow === 'true') {
-                            hppRowExists = true;
-                            break;
-                        }
-                        nextRow = nextRow.nextSibling;
-                    }
-
-                    if (hppRowExists) {
-                        updateHppRow(index, selectedItem, quantity);
-                    } else {
-                        addHppRow(index, selectedItem, quantity);
-                    }
-                } else {
-                    let nextRow = row.nextSibling;
-                    while (nextRow) {
-                        if (nextRow.dataset.isHppRow === 'true') {
-                            nextRow.remove();
-                            updateTransactionRowIndices();
-                            break;
-                        }
-                        nextRow = nextRow.nextSibling;
-                    }
+            // --- Stock Validation ---
+            function validateStockQuantity(item, size, quantity) {
+                const voucherType = voucherTypeSelect.value;
+                if (!['PJ', 'PH', 'PK'].includes(voucherType)) return true;
+                const stockSource = getStockSource();
+                const stock = stockSource.find(s => s.item === item && s.size === size);
+                if (!stock) {
+                    validationInput.value = `Stok untuk item "${item}" dengan ukuran "${size}" tidak ditemukan.`;
+                    return false;
                 }
-
-                updateAllCalculationsAndValidations();
-            }
-
-            // --- Update Total Column ---
-            function updateRowTotal(row) {
-                const quantity = parseFloat(row.querySelector('.quantityInput')?.value) || 0;
-                const nominal = parseFloat(row.querySelector('.nominalInput')?.value) || 0;
-                const totalInput = row.querySelector('.totalInput');
-                if (totalInput) {
-                    totalInput.value = (quantity * nominal).toFixed(2);
+                const availableQuantity = parseFloat(stock.quantity) || 0;
+                if (quantity > availableQuantity) {
+                    validationInput.value = `Kuantitas untuk item "${item}" dengan ukuran "${size}" melebihi stok tersedia (${availableQuantity}).`;
+                    return false;
                 }
+                return true;
             }
 
             // --- Transaction Table Row Generation ---
@@ -966,29 +909,85 @@
                 row.dataset.rowIndex = index;
                 row.dataset.isHppRow = transactionData?.isHppRow ? 'true' : 'false';
 
-                const descriptionCell = document.createElement('td');
-                let descriptionElement;
                 const voucherType = voucherTypeSelect.value;
                 const useStock = useStockYes.checked ? 'yes' : 'no';
-                const description = transactionData?.description || '';
                 const isHppRow = row.dataset.isHppRow === 'true';
 
+                // Description Cell
+                const descriptionCell = document.createElement('td');
+                let descriptionElement;
                 if (isHppRow) {
-                    descriptionElement = createDescriptionInput(index, description);
+                    descriptionElement = document.createElement('input');
+                    descriptionElement.type = 'text';
+                    descriptionElement.className = 'form-control descriptionInput';
+                    descriptionElement.name = `transactions[${index}][description]`;
+                    descriptionElement.value = transactionData?.description || '';
                     descriptionElement.readOnly = true;
-                } else if (useStock === 'yes' && (voucherType === 'PJ' || voucherType === 'PB')) {
-                    descriptionElement = createStockDropdown(index, description);
-                    if (descriptionElement.dataset.listenerAttached === 'false') {
-                        descriptionElement.addEventListener('change', handleStockChange.bind(null, index));
-                        descriptionElement.dataset.listenerAttached = 'true';
-                    }
+                } else if (useStock === 'yes' && ['PJ', 'PH', 'PK'].includes(voucherType)) {
+                    descriptionElement = createStockDropdown(index, transactionData?.description);
+                    descriptionElement.addEventListener('change', (e) => {
+                        const row = e.target.closest('tr');
+                        const item = e.target.value;
+                        updateSizeDropdown(row, item);
+                        if (voucherType === 'PJ' && item) {
+                            const quantity = parseFloat(row.querySelector('.quantityInput')?.value) || 1;
+                            const size = row.querySelector('.sizeInput')?.value || '';
+                            updateHppRow(index, item, size, quantity);
+                        }
+                        updateAllCalculationsAndValidations();
+                    });
+                } else if (voucherType === 'PB' && useStock === 'yes') {
+                    const inputGroup = document.createElement('div');
+                    inputGroup.className = 'input-group';
+                    const select = createStockDropdown(index, transactionData?.description_select || transactionData?.description);
+                    select.name = `transactions[${index}][description_select]`;
+                    select.style.width = '50%';
+                    select.addEventListener('change', (e) => {
+                        const row = e.target.closest('tr');
+                        const item = e.target.value;
+                        const descriptionInput = row.querySelector('.descriptionInput[type="text"]');
+                        descriptionInput.value = item;
+                        updateSizeDropdown(row, item);
+                        updateAllCalculationsAndValidations();
+                    });
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.className = 'form-control descriptionInput';
+                    input.name = `transactions[${index}][description]`;
+                    input.value = transactionData?.description || '';
+                    input.style.width = '50%';
+                    input.addEventListener('input', () => updateAllCalculationsAndValidations());
+                    inputGroup.appendChild(select);
+                    inputGroup.appendChild(input);
+                    descriptionElement = inputGroup;
                 } else {
-                    descriptionElement = createDescriptionInput(index, description);
+                    descriptionElement = document.createElement('input');
+                    descriptionElement.type = 'text';
+                    descriptionElement.className = 'form-control descriptionInput';
+                    descriptionElement.name = `transactions[${index}][description]`;
+                    descriptionElement.value = transactionData?.description || '';
+                    descriptionElement.addEventListener('input', () => updateAllCalculationsAndValidations());
                 }
-
                 descriptionCell.appendChild(descriptionElement);
                 row.appendChild(descriptionCell);
 
+                // Size Cell
+                const sizeCell = document.createElement('td');
+                let sizeElement;
+                if (isHppRow || useStock !== 'yes' || !['PJ', 'PB', 'PH', 'PK'].includes(voucherType)) {
+                    sizeElement = document.createElement('input');
+                    sizeElement.type = 'text';
+                    sizeElement.className = 'form-control sizeInput';
+                    sizeElement.name = `transactions[${index}][size]`;
+                    sizeElement.value = transactionData?.size || '';
+                    sizeElement.readOnly = isHppRow;
+                } else {
+                    sizeElement = createSizeDropdown(index, transactionData?.description, transactionData?.size);
+                }
+                sizeCell.appendChild(sizeElement);
+                row.appendChild(sizeCell);
+
+                // Quantity Cell
                 const quantityCell = document.createElement('td');
                 const quantityInput = document.createElement('input');
                 quantityInput.type = 'number';
@@ -996,10 +995,21 @@
                 quantityInput.className = 'form-control quantityInput';
                 quantityInput.name = `transactions[${index}][quantity]`;
                 quantityInput.value = transactionData?.quantity || '1';
-                if (isHppRow) quantityInput.readOnly = true;
+                quantityInput.readOnly = isHppRow;
+                quantityInput.addEventListener('input', () => {
+                    const row = quantityInput.closest('tr');
+                    updateRowTotal(row);
+                    if (voucherType === 'PJ' && !isHppRow) {
+                        const item = row.querySelector('.descriptionInput:not([type="text"])')?.value || row.querySelector('.descriptionInput[type="text"]')?.value || '';
+                        const size = row.querySelector('.sizeInput')?.value || '';
+                        updateHppRow(index, item, size, parseFloat(quantityInput.value) || 1);
+                    }
+                    updateAllCalculationsAndValidations();
+                });
                 quantityCell.appendChild(quantityInput);
                 row.appendChild(quantityCell);
 
+                // Nominal Cell
                 const nominalCell = document.createElement('td');
                 const nominalInput = document.createElement('input');
                 nominalInput.type = 'number';
@@ -1007,10 +1017,15 @@
                 nominalInput.className = 'form-control nominalInput';
                 nominalInput.name = `transactions[${index}][nominal]`;
                 nominalInput.value = transactionData?.nominal || '';
-                if (isHppRow) nominalInput.readOnly = true;
+                nominalInput.readOnly = isHppRow;
+                nominalInput.addEventListener('input', () => {
+                    updateRowTotal(nominalInput.closest('tr'));
+                    updateAllCalculationsAndValidations();
+                });
                 nominalCell.appendChild(nominalInput);
                 row.appendChild(nominalCell);
 
+                // Total Cell
                 const totalCell = document.createElement('td');
                 const totalInput = document.createElement('input');
                 totalInput.type = 'number';
@@ -1021,13 +1036,14 @@
                 totalCell.appendChild(totalInput);
                 row.appendChild(totalCell);
 
+                // Action Cell
                 const actionCell = document.createElement('td');
                 actionCell.className = 'text-center';
                 const deleteButton = document.createElement('button');
                 deleteButton.type = 'button';
                 deleteButton.className = 'btn btn-danger removeTransactionRowBtn';
                 deleteButton.textContent = 'Hapus';
-                deleteButton.disabled = isHppRow;
+                deleteButton.disabled = isHppRow || (useStock === 'yes' && voucherType === 'PK' && document.getElementById('recipe')?.value);
                 actionCell.appendChild(deleteButton);
                 row.appendChild(actionCell);
 
@@ -1047,78 +1063,75 @@
 
             function attachTransactionRemoveButtonListeners() {
                 transactionTableBody.querySelectorAll('.removeTransactionRowBtn').forEach(button => {
-                    const row = button.closest('tr');
-                    const isHppRow = row.dataset.isHppRow === 'true';
-                    button.disabled = isHppRow;
-
-                    button.addEventListener('click', function() {
-                        const totalRows = transactionTableBody.querySelectorAll('tr').length;
-                        if (totalRows > 1) {
-                            const row = this.closest('tr');
-                            const rowIndex = parseInt(row.dataset.rowIndex);
-                            const isHppRow = row.dataset.isHppRow === 'true';
-                            const voucherType = voucherTypeSelect.value;
-
-                            if (voucherType === 'PJ') {
-                                if (isHppRow) {
-                                    alert("Baris HPP tidak dapat dihapus secara langsung. Hapus baris item terkait terlebih dahulu.");
-                                    return;
-                                } else {
-                                    const description = row.querySelector('.descriptionInput:not([type="text"])')?.value || '';
-                                    let nextRow = row.nextSibling;
-                                    while (nextRow) {
-                                        if (nextRow.dataset.isHppRow === 'true' && nextRow.querySelector('.descriptionInput')?.value === `HPP ${description}`) {
-                                            nextRow.remove();
-                                            break;
-                                        }
-                                        nextRow = nextRow.nextSibling;
-                                    }
-                                }
-                            }
-
-                            row.remove();
-                            updateTransactionRowIndices();
-                            updateAllCalculationsAndValidations();
-                        } else {
-                            alert("Tidak dapat menghapus baris transaksi terakhir.");
-                        }
-                    });
+                    button.removeEventListener('click', handleRemoveTransactionRow);
+                    button.addEventListener('click', handleRemoveTransactionRow);
                 });
             }
 
+            function handleRemoveTransactionRow(event) {
+                const row = event.target.closest('tr');
+                const totalRows = transactionTableBody.querySelectorAll('tr').length;
+                if (totalRows <= 1) {
+                    alert("Tidak dapat menghapus baris transaksi terakhir.");
+                    return;
+                }
+                const rowIndex = parseInt(row.dataset.rowIndex);
+                const isHppRow = row.dataset.isHppRow === 'true';
+                const voucherType = voucherTypeSelect.value;
+
+                if (voucherType === 'PJ' && !isHppRow) {
+                    const description = row.querySelector('.descriptionInput:not([type="text"])')?.value || row.querySelector('.descriptionInput[type="text"]')?.value || '';
+                    let nextRow = row.nextSibling;
+                    while (nextRow) {
+                        if (nextRow.dataset.isHppRow === 'true' && nextRow.querySelector('.descriptionInput')?.value === `HPP ${description}`) {
+                            nextRow.remove();
+                            break;
+                        }
+                        nextRow = nextRow.nextSibling;
+                    }
+                }
+
+                row.remove();
+                updateTransactionRowIndices();
+                updateAllCalculationsAndValidations();
+            }
+
             function attachTransactionInputListeners() {
-                const transactionInputs = transactionTableBody.querySelectorAll('.quantityInput, .nominalInput, .descriptionInput');
-                transactionInputs.forEach(input => {
+                transactionTableBody.querySelectorAll('.quantityInput, .nominalInput, .descriptionInput, .sizeInput').forEach(input => {
                     input.removeEventListener('input', handleTransactionInput);
                     input.addEventListener('input', handleTransactionInput);
                 });
-
-                // Re-attach change listeners for stock dropdowns
                 transactionTableBody.querySelectorAll('.descriptionInput:not([type="text"])').forEach(select => {
                     if (select.dataset.listenerAttached !== 'true') {
-                        const index = parseInt(select.closest('tr').dataset.rowIndex);
-                        select.addEventListener('change', handleStockChange.bind(null, index));
                         select.dataset.listenerAttached = 'true';
+                        select.addEventListener('change', (e) => {
+                            const row = e.target.closest('tr');
+                            const index = parseInt(row.dataset.rowIndex);
+                            const item = e.target.value;
+                            updateSizeDropdown(row, item);
+                            if (voucherTypeSelect.value === 'PJ' && item) {
+                                const quantity = parseFloat(row.querySelector('.quantityInput')?.value) || 1;
+                                const size = row.querySelector('.sizeInput')?.value || '';
+                                updateHppRow(index, item, size, quantity);
+                            }
+                            updateAllCalculationsAndValidations();
+                        });
                     }
                 });
             }
 
             function handleTransactionInput(event) {
                 const row = event.target.closest('tr');
-                const index = parseInt(row.dataset.rowIndex);
-                const isHppRow = row.dataset.isHppRow === 'true';
-                const voucherType = voucherTypeSelect.value;
-
                 updateRowTotal(row);
-
-                if (voucherType === 'PJ' && !isHppRow) {
-                    const description = row.querySelector('.descriptionInput:not([type="text"])')?.value || '';
+                const voucherType = voucherTypeSelect.value;
+                if (voucherType === 'PJ' && row.dataset.isHppRow !== 'true') {
+                    const item = row.querySelector('.descriptionInput:not([type="text"])')?.value || row.querySelector('.descriptionInput[type="text"]')?.value || '';
+                    const size = row.querySelector('.sizeInput')?.value || '';
                     const quantity = parseFloat(row.querySelector('.quantityInput')?.value) || 1;
-                    if (description) {
-                        updateHppRow(index, description, quantity);
+                    if (item && size) {
+                        updateHppRow(row.dataset.rowIndex, item, size, quantity);
                     }
                 }
-
                 updateAllCalculationsAndValidations();
             }
 
@@ -1127,60 +1140,62 @@
                 const transactionsData = Array.from(rows).map(row => {
                     const descriptionInput = row.querySelector('.descriptionInput[type="text"]');
                     const descriptionSelect = row.querySelector('.descriptionInput:not([type="text"])');
+                    const sizeInput = row.querySelector('.sizeInput');
                     const quantityInput = row.querySelector('.quantityInput');
                     const nominalInput = row.querySelector('.nominalInput');
                     const totalInput = row.querySelector('.totalInput');
-                    const isHppRow = row.dataset.isHppRow === 'true';
                     return {
                         description: descriptionInput?.value || descriptionSelect?.value || '',
+                        description_select: row.querySelector('[name$="[description_select]"]')?.value || '',
+                        size: sizeInput?.value || '',
                         quantity: quantityInput?.value || '1',
                         nominal: nominalInput?.value || '0',
                         total: totalInput?.value || '0',
-                        isHppRow: isHppRow
+                        isHppRow: row.dataset.isHppRow === 'true'
                     };
                 });
 
                 transactionTableBody.innerHTML = '';
-                transactionsData.forEach((data, index) => {
-                    const newRow = generateTransactionTableRow(index, data);
-                    transactionTableBody.appendChild(newRow);
-                });
+                const useStock = useStockYes.checked ? 'yes' : 'no';
+                const voucherType = voucherTypeSelect.value;
+                const recipeSelected = document.getElementById('recipe')?.value;
 
-                if (transactionTableBody.querySelectorAll('tr').length === 0) {
-                    const newRow = generateTransactionTableRow(0);
-                    transactionTableBody.appendChild(newRow);
-                }
-
-                attachTransactionRemoveButtonListeners();
-                attachTransactionInputListeners();
-
-                // Trigger handleStockChange for PJ vouchers to ensure HPP rows are added
-                if (voucherTypeSelect.value === 'PJ') {
-                    transactionTableBody.querySelectorAll('tr').forEach((row, index) => {
-                        const descriptionSelect = row.querySelector('.descriptionInput:not([type="text"])');
-                        if (descriptionSelect && descriptionSelect.value && row.dataset.isHppRow !== 'true') {
-                            const event = new Event('change', {
-                                bubbles: true
-                            });
-                            descriptionSelect.dispatchEvent(event);
+                if (useStock === 'yes' && voucherType === 'PK' && recipeSelected) {
+                    populateTransactionTableFromRecipe(recipeSelected);
+                } else {
+                    transactionsData.forEach((data, index) => {
+                        const newRow = generateTransactionTableRow(index, data);
+                        transactionTableBody.appendChild(newRow);
+                        if (useStock === 'yes' && ['PJ', 'PB', 'PH', 'PK'].includes(voucherType) && !data.isHppRow) {
+                            updateSizeDropdown(newRow, data.description || data.description_select);
                         }
                     });
+                    if (transactionTableBody.querySelectorAll('tr').length === 0) {
+                        const newRow = generateTransactionTableRow(0);
+                        transactionTableBody.appendChild(newRow);
+                        if (useStock === 'yes' && ['PJ', 'PB', 'PH', 'PK'].includes(voucherType)) {
+                            updateSizeDropdown(newRow, '');
+                        }
+                    }
+                    if (voucherType === 'PJ') {
+                        transactionTableBody.querySelectorAll('tr').forEach((row, index) => {
+                            if (row.dataset.isHppRow !== 'true') {
+                                const item = row.querySelector('.descriptionInput:not([type="text"])')?.value || row.querySelector('.descriptionInput[type="text"]')?.value || '';
+                                const size = row.querySelector('.sizeInput')?.value || '';
+                                const quantity = parseFloat(row.querySelector('.quantityInput')?.value) || 1;
+                                if (item && size) {
+                                    updateHppRow(index, item, size, quantity);
+                                }
+                            }
+                        });
+                    }
                 }
+                updateTransactionRowIndices();
             }
 
-            addTransactionRowBtn.addEventListener('click', function() {
-                const newIndex = transactionTableBody.querySelectorAll('tr').length;
-                const newRow = generateTransactionTableRow(newIndex);
-                transactionTableBody.appendChild(newRow);
-                attachTransactionRemoveButtonListeners();
-                attachTransactionInputListeners();
-                updateAllCalculationsAndValidations();
-            });
-
-            // --- Voucher Detail Table Row Generation ---
+            // --- Voucher Detail Table ---
             function generateVoucherDetailTableRow(index) {
                 const row = document.createElement('tr');
-
                 const accountCodeCell = document.createElement('td');
                 const accountCodeInput = document.createElement('input');
                 accountCodeInput.type = 'text';
@@ -1189,7 +1204,6 @@
                 accountCodeInput.placeholder = 'Ketik atau pilih kode akun';
                 accountCodeInput.setAttribute('list', 'dynamicAccountCodes');
                 accountCodeInput.required = true;
-                accountCodeInput.setAttribute('aria-required', 'true');
                 accountCodeCell.appendChild(accountCodeInput);
                 const invalidFeedback = document.createElement('div');
                 invalidFeedback.className = 'invalid-feedback';
@@ -1247,27 +1261,22 @@
                 attachVoucherDetailRowEventListenersToAll();
             }
 
-            addVoucherDetailRowBtn.addEventListener('click', function() {
-                const newRow = generateVoucherDetailTableRow(voucherDetailsTableBody.querySelectorAll('tr').length);
-                voucherDetailsTableBody.appendChild(newRow);
-                updateVoucherDetailRowIndices();
-                updateAccountCodeDatalist(true);
-                updateAllCalculationsAndValidations();
-            });
-
             function attachVoucherDetailRemoveButtonListeners() {
                 voucherDetailsTableBody.querySelectorAll('.removeVoucherDetailRowBtn').forEach(button => {
-                    button.addEventListener('click', function() {
-                        if (voucherDetailsTableBody.querySelectorAll('tr').length > 1) {
-                            this.closest('tr').remove();
-                            updateVoucherDetailRowIndices();
-                            updateAllCalculationsAndValidations();
-                            updateAccountCodeDatalist();
-                        } else {
-                            alert("Tidak dapat menghapus baris detail voucher terakhir.");
-                        }
-                    });
+                    button.removeEventListener('click', handleRemoveVoucherDetailRow);
+                    button.addEventListener('click', handleRemoveVoucherDetailRow);
                 });
+            }
+
+            function handleRemoveVoucherDetailRow() {
+                if (voucherDetailsTableBody.querySelectorAll('tr').length > 1) {
+                    this.closest('tr').remove();
+                    updateVoucherDetailRowIndices();
+                    updateAccountCodeDatalist();
+                    updateAllCalculationsAndValidations();
+                } else {
+                    alert("Tidak dapat menghapus baris detail voucher terakhir.");
+                }
             }
 
             function attachVoucherDetailRowEventListeners(row, index) {
@@ -1276,50 +1285,32 @@
                 const debitInput = row.querySelector('.debitInput');
                 const creditInput = row.querySelector('.creditInput');
 
-                if (accountCodeInput) {
-                    accountCodeInput.addEventListener('input', function() {
-                        const enteredCode = this.value.trim();
-                        accountNameInput.value = '';
-                        const useInvoice = useInvoiceYes.checked ? 'yes' : 'no';
+                accountCodeInput?.addEventListener('input', () => {
+                    const enteredCode = accountCodeInput.value.trim();
+                    accountNameInput.value = '';
+                    const useInvoice = useInvoiceYes.checked ? 'yes' : 'no';
+                    if (useInvoice === 'yes' && subsidiaries.some(s => s.subsidiary_code === enteredCode)) {
+                        const subsidiary = subsidiaries.find(s => s.subsidiary_code === enteredCode);
+                        if (subsidiary) accountNameInput.value = subsidiary.account_name;
+                    } else {
+                        const account = accounts.find(a => a.account_code === enteredCode);
+                        if (account) accountNameInput.value = account.account_name;
+                    }
+                    updateAccountCodeDatalist();
+                    validateForm();
+                });
 
-                        if (useInvoice === 'yes' && subsidiaries.some(s => s.subsidiary_code === enteredCode)) {
-                            const subsidiary = subsidiaries.find(s => s.subsidiary_code === enteredCode);
-                            if (subsidiary) {
-                                accountNameInput.value = subsidiary.account_name;
-                            }
-                        } else {
-                            const account = accounts.find(a => a.account_code === enteredCode);
-                            if (account) {
-                                accountNameInput.value = account.account_name;
-                            }
-                        }
-                        updateAccountCodeDatalist();
-                        validateForm();
-                    });
-                    accountCodeInput.name = `voucher_details[${index}][account_code]`;
-                }
+                debitInput?.addEventListener('input', () => {
+                    creditInput.value = debitInput.value ? '' : creditInput.value;
+                    creditInput.disabled = !!debitInput.value;
+                    updateAllCalculationsAndValidations();
+                });
 
-                if (debitInput) {
-                    debitInput.addEventListener('input', function() {
-                        creditInput.value = this.value ? '' : creditInput.value;
-                        creditInput.disabled = !!this.value;
-                        updateAllCalculationsAndValidations();
-                    });
-                    debitInput.name = `voucher_details[${index}][debit]`;
-                }
-
-                if (creditInput) {
-                    creditInput.addEventListener('input', function() {
-                        debitInput.value = this.value ? '' : debitInput.value;
-                        debitInput.disabled = !!this.value;
-                        updateAllCalculationsAndValidations();
-                    });
-                    creditInput.name = `voucher_details[${index}][credit]`;
-                }
-
-                if (accountNameInput) {
-                    accountNameInput.name = `voucher_details[${index}][account_name]`;
-                }
+                creditInput?.addEventListener('input', () => {
+                    debitInput.value = creditInput.value ? '' : debitInput.value;
+                    debitInput.disabled = !!creditInput.value;
+                    updateAllCalculationsAndValidations();
+                });
             }
 
             function attachVoucherDetailRowEventListenersToAll() {
@@ -1328,7 +1319,179 @@
                 });
             }
 
+            // --- Invoice and Store Fields ---
+            function createStoreDropdown() {
+                const select = document.createElement('select');
+                select.className = 'form-select';
+                select.id = 'store';
+                select.name = 'store';
+                select.innerHTML = '<option value="">Pilih Nama Toko</option>';
+                storeNames.forEach(store => {
+                    const option = document.createElement('option');
+                    option.value = store;
+                    option.textContent = store;
+                    if (store === @json($voucher -> store)) option.selected = true;
+                    select.appendChild(option);
+                });
+                return select;
+            }
+
+            function createInvoiceDropdown() {
+                const select = document.createElement('select');
+                select.className = 'form-control';
+                select.id = 'invoice';
+                select.name = 'invoice';
+                select.innerHTML = '<option value="">Pilih Nomor Invoice</option>';
+                existingInvoices.forEach(invoice => {
+                    if (invoice) {
+                        const option = document.createElement('option');
+                        option.value = invoice;
+                        option.textContent = invoice;
+                        if (invoice === @json($voucher -> invoice)) option.selected = true;
+                        select.appendChild(option);
+                    }
+                });
+                return select;
+            }
+
+            function createInvoiceInput() {
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.className = 'form-control';
+                input.id = 'invoice';
+                input.name = 'invoice';
+                input.value = @json($voucher -> invoice ?? '');
+                return input;
+            }
+
+            function updateInvoiceField() {
+                const useInvoice = useInvoiceYes.checked ? 'yes' : 'no';
+                const useExistingInvoice = useExistingInvoiceYes.checked ? 'yes' : 'no';
+                invoiceFieldContainer.innerHTML = '';
+                const invoiceLabel = document.createElement('label');
+                invoiceLabel.htmlFor = 'invoice';
+                invoiceLabel.className = 'col-sm-3 col-form-label';
+                invoiceLabel.textContent = 'Nomor Invoice:';
+                const invoiceInputDiv = document.createElement('div');
+                invoiceInputDiv.className = 'col-sm-9';
+                const invoiceInput = useInvoice === 'yes' && useExistingInvoice === 'yes' ? createInvoiceDropdown() : createInvoiceInput();
+                invoiceInputDiv.appendChild(invoiceInput);
+                const invalidFeedback = document.createElement('div');
+                invalidFeedback.className = 'invalid-feedback';
+                invalidFeedback.textContent = 'Nomor Invoice wajib diisi jika menggunakan invoice.';
+                invoiceInputDiv.appendChild(invalidFeedback);
+                invoiceFieldContainer.appendChild(invoiceLabel);
+                invoiceFieldContainer.appendChild(invoiceInputDiv);
+                updateAccountCodeDatalist();
+                validateForm();
+            }
+
+            function updateDueDateField() {
+                const useInvoice = useInvoiceYes.checked ? 'yes' : 'no';
+                const useExistingInvoice = useExistingInvoiceYes.checked ? 'yes' : 'no';
+                dueDateContainer.innerHTML = '';
+                const dueDateLabel = document.createElement('label');
+                dueDateLabel.htmlFor = 'due_date';
+                dueDateLabel.className = 'col-sm-3 col-form-label';
+                dueDateLabel.textContent = 'Tanggal Jatuh Tempo:';
+                const dueDateInputDiv = document.createElement('div');
+                dueDateInputDiv.className = 'col-sm-9';
+                const dueDateInput = document.createElement('input');
+                dueDateInput.type = 'date';
+                dueDateInput.className = 'form-control';
+                dueDateInput.id = 'due_date';
+                dueDateInput.name = 'due_date';
+                dueDateInput.disabled = useInvoice !== 'yes' || useExistingInvoice === 'yes';
+                dueDateInput.value = useInvoice === 'yes' && @json($dueDate) ? @json($dueDate) : '';
+                dueDateInputDiv.appendChild(dueDateInput);
+                const invalidFeedback = document.createElement('div');
+                invalidFeedback.className = 'invalid-feedback';
+                invalidFeedback.textContent = 'Tanggal Jatuh Tempo wajib diisi untuk invoice baru.';
+                dueDateInputDiv.appendChild(invalidFeedback);
+                dueDateContainer.appendChild(dueDateLabel);
+                dueDateContainer.appendChild(dueDateInputDiv);
+                if (useInvoice === 'yes' && useExistingInvoice === 'no' && !dueDateInput.value) {
+                    setTodayDueDate();
+                }
+                validateForm();
+            }
+
+            function updateInvoiceAndStoreFields() {
+                const useInvoice = useInvoiceYes.checked ? 'yes' : 'no';
+                storeFieldContainer.innerHTML = '';
+                useExistingInvoiceYes.disabled = useInvoice !== 'yes';
+                useExistingInvoiceNo.disabled = useInvoice !== 'yes';
+                if (useInvoice === 'yes') {
+                    storeFieldContainer.appendChild(createStoreDropdown());
+                    invoiceFieldContainer.style.display = 'block';
+                    storeFieldContainer.style.display = 'block';
+                    existingInvoiceContainer.style.display = 'block';
+                    updateInvoiceField();
+                    updateDueDateField();
+                } else {
+                    storeFieldContainer.appendChild(createStoreDropdown());
+                    storeFieldContainer.querySelector('#store').value = '';
+                    invoiceFieldContainer.style.display = 'none';
+                    storeFieldContainer.style.display = 'none';
+                    existingInvoiceContainer.style.display = 'none';
+                    useExistingInvoiceYes.checked = false;
+                    useExistingInvoiceNo.checked = false;
+                    updateInvoiceField();
+                    updateDueDateField();
+                }
+                updateAccountCodeDatalist();
+            }
+
+            // --- Account Code Datalist ---
+            function isSubsidiaryCodeUsed() {
+                const accountCodeInputs = voucherDetailsTableBody.querySelectorAll('.accountCodeInput');
+                return Array.from(accountCodeInputs).some(input => subsidiaries.some(s => s.subsidiary_code === input.value.trim()));
+            }
+
+            function updateAccountCodeDatalist(isNewRow = false) {
+                const useInvoice = useInvoiceYes.checked ? 'yes' : 'no';
+                const datalists = document.querySelectorAll('#dynamicAccountCodes');
+                const subsidiaryUsed = isSubsidiaryCodeUsed();
+                datalists.forEach(datalist => {
+                    datalist.innerHTML = '<option value="">Pilih Kode Akun</option>';
+                    if (useInvoice === 'yes' && !subsidiaryUsed && !isNewRow) {
+                        subsidiaries.forEach(subsidiary => {
+                            datalist.innerHTML += `<option value="${subsidiary.subsidiary_code}">${subsidiary.subsidiary_code} - ${subsidiary.account_name}</option>`;
+                        });
+                    } else {
+                        accounts.forEach(account => {
+                            datalist.innerHTML += `<option value="${account.account_code}">${account.account_code} - ${account.account_name}</option>`;
+                        });
+                        subsidiaries.forEach(subsidiary => {
+                            datalist.innerHTML += `<option value="${subsidiary.subsidiary_code}">${subsidiary.subsidiary_code} - ${subsidiary.account_name}</option>`;
+                        });
+                    }
+                });
+                voucherDetailsTableBody.querySelectorAll('.accountCodeInput').forEach(input => {
+                    const row = input.closest('tr');
+                    const accountNameInput = row.querySelector('.accountName');
+                    const enteredCode = input.value.trim();
+                    accountNameInput.value = '';
+                    if (useInvoice === 'yes' && subsidiaries.some(s => s.subsidiary_code === enteredCode)) {
+                        const subsidiary = subsidiaries.find(s => s.subsidiary_code === enteredCode);
+                        if (subsidiary) accountNameInput.value = subsidiary.account_name;
+                    } else {
+                        const account = accounts.find(a => a.account_code === enteredCode);
+                        if (account) accountNameInput.value = account.account_name;
+                    }
+                });
+            }
+
             // --- Calculations and Validations ---
+            function updateRowTotal(row) {
+                const quantity = parseFloat(row.querySelector('.quantityInput')?.value) || 0;
+                const nominal = parseFloat(row.querySelector('.nominalInput')?.value) || 0;
+                const totalInput = row.querySelector('.totalInput');
+                if (totalInput) {
+                    totalInput.value = (quantity * nominal).toFixed(2);
+                }
+            }
+
             function calculateTotalNominal() {
                 let totalNominalRaw = 0;
                 transactionTableBody.querySelectorAll('tr').forEach(row => {
@@ -1343,17 +1506,15 @@
             }
 
             function calculateTotalsAndValidate() {
-                let totalDebit = 0;
-                let totalCredit = 0;
-
+                let totalDebit = 0,
+                    totalCredit = 0;
                 voucherDetailsTableBody.querySelectorAll('.debitInput').forEach(input => {
                     totalDebit += parseFloat(input.value) || 0;
                 });
-
                 voucherDetailsTableBody.querySelectorAll('.creditInput').forEach(input => {
                     totalCredit += parseFloat(input.value) || 0;
                 });
-
+                // Update visible inputs with formatted values for display
                 totalDebitInput.value = totalDebit.toLocaleString('id-ID', {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2
@@ -1362,10 +1523,9 @@
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2
                 });
-
+                // Update hidden inputs with raw numeric values for submission
                 totalDebitRawInput.value = totalDebit.toFixed(2);
-                totalCreditRawInput.value = totalCredit.toFixed(2);
-
+                totalCreditRawInput.value = totalDebit.toFixed(2);
                 return {
                     totalDebitRaw: totalDebit,
                     totalCreditRaw: totalCredit
@@ -1378,7 +1538,6 @@
                     totalDebitRaw,
                     totalCreditRaw
                 } = calculateTotalsAndValidate();
-
                 if (totalNominalRaw !== totalDebitRaw || totalNominalRaw !== totalCreditRaw) {
                     validationInput.value = "Total Nominal pada Rincian Transaksi harus sama dengan Total Debit dan Total Kredit pada Rincian Voucher.";
                     saveVoucherBtn.disabled = true;
@@ -1394,10 +1553,92 @@
                 }
             }
 
-            function updateAllCalculationsAndValidations() {
-                transactionTableBody.querySelectorAll('tr').forEach(row => {
-                    updateRowTotal(row);
+            function validateForm() {
+                let isValid = true;
+                const requiredFields = voucherForm.querySelectorAll('[required]');
+                requiredFields.forEach(field => {
+                    if (!field.value.trim()) {
+                        field.classList.add('is-invalid');
+                        isValid = false;
+                    } else {
+                        field.classList.remove('is-invalid');
+                    }
                 });
+
+                const useInvoice = useInvoiceYes.checked ? 'yes' : 'no';
+                const useExistingInvoice = useExistingInvoiceYes.checked ? 'yes' : 'no';
+                const invoiceInput = document.getElementById('invoice');
+                const dueDateInput = document.getElementById('due_date');
+                if (useInvoice === 'yes' && !invoiceInput.value.trim()) {
+                    invoiceInput.classList.add('is-invalid');
+                    isValid = false;
+                } else {
+                    invoiceInput.classList.remove('is-invalid');
+                }
+                if (useInvoice === 'yes' && useExistingInvoice === 'no' && !dueDateInput.value) {
+                    dueDateInput.classList.add('is-invalid');
+                    isValid = false;
+                } else {
+                    dueDateInput.classList.remove('is-invalid');
+                }
+
+                // Validate stock quantities for PJ, PH, PK
+                const voucherType = voucherTypeSelect.value;
+                if (['PJ', 'PH', 'PK'].includes(voucherType)) {
+                    const stockDescriptions = new Set();
+                    transactionTableBody.querySelectorAll('tr').forEach(row => {
+                        const description = row.querySelector('.descriptionInput')?.value || '';
+                        const size = row.querySelector('.sizeInput')?.value || '';
+                        const quantity = parseFloat(row.querySelector('.quantityInput')?.value) || 0;
+                        const isHpp = row.dataset.isHppRow === 'true';
+                        if (!isHpp && description && size) {
+                            stockDescriptions.add(`${description}|${size}`);
+                            if (!validateStockQuantity(description, size, quantity)) {
+                                isValid = false;
+                            }
+                        }
+                    });
+
+                    // Validate HPP rows for PJ
+                    if (voucherType === 'PJ') {
+                        transactionTableBody.querySelectorAll('tr').forEach(row => {
+                            const description = row.querySelector('.descriptionInput')?.value || '';
+                            const size = row.querySelector('.sizeInput')?.value || '';
+                            const isHpp = row.dataset.isHppRow === 'true';
+                            if (isHpp && description) {
+                                const stockItem = description.replace(/^HPP /, '');
+                                if (!stockDescriptions.has(`${stockItem}|${size}`)) {
+                                    validationInput.value = `Baris HPP untuk "${stockItem}" dengan ukuran "${size}" tidak memiliki transaksi stok yang sesuai.`;
+                                    isValid = false;
+                                }
+                            }
+                        });
+                    }
+                }
+
+                // Ensure total_debit and total_credit are numeric
+                const totalDebitRaw = parseFloat(totalDebitRawInput.value) || 0;
+                const totalCreditRaw = parseFloat(totalCreditRawInput.value) || 0;
+                if (isNaN(totalDebitRaw)) {
+                    validationInput.value = "Total Debit harus berupa angka.";
+                    totalDebitInput.classList.add('is-invalid');
+                    isValid = false;
+                } else {
+                    totalDebitInput.classList.remove('is-invalid');
+                }
+                if (isNaN(totalCreditRaw)) {
+                    validationInput.value = "Total Kredit harus berupa angka.";
+                    totalCreditInput.classList.add('is-invalid');
+                    isValid = false;
+                } else {
+                    totalCreditInput.classList.remove('is-invalid');
+                }
+
+                return isValid;
+            }
+
+            function updateAllCalculationsAndValidations() {
+                transactionTableBody.querySelectorAll('tr').forEach(row => updateRowTotal(row));
                 const totalsValid = validateTotals();
                 const formValid = validateForm();
                 saveVoucherBtn.disabled = !(totalsValid && formValid);
@@ -1423,43 +1664,124 @@
                 document.getElementById('due_date').value = `${year}-${month}-${day}`;
             }
 
-            document.getElementById('voucherDate')?.addEventListener('change', updateVoucherDay);
+            // --- Debounce Utility ---
+            function debounce(func, wait) {
+                let timeout;
+                return function executedFunction(...args) {
+                    const later = () => {
+                        clearTimeout(timeout);
+                        func(...args);
+                    };
+                    clearTimeout(timeout);
+                    timeout = setTimeout(later, wait);
+                };
+            }
 
-            // --- Handle Stock Transaction Change ---
-            useStockYes.addEventListener('change', function() {
+            // --- Event Listeners ---
+            useStockYes.addEventListener('change', () => {
                 updateVoucherTypeOptions();
+                updateInvoiceAndStoreFields();
                 updateAllCalculationsAndValidations();
             });
 
-            useStockNo.addEventListener('change', function() {
+            useStockNo.addEventListener('change', () => {
                 updateVoucherTypeOptions();
+                updateInvoiceAndStoreFields();
                 updateAllCalculationsAndValidations();
             });
 
-            // --- Handle Voucher Type Change ---
-            voucherTypeSelect.addEventListener('change', function() {
+            voucherTypeSelect.addEventListener('change', () => {
+                updateDescription();
+                updateRecipeContainer();
                 refreshTransactionTable();
                 updateAllCalculationsAndValidations();
             });
 
-            // --- Form Submission ---
-            voucherForm.addEventListener('submit', function(event) {
-                if (!validateForm() || !validateTotals()) {
-                    event.preventDefault();
-                    alert('Silakan perbaiki kesalahan pada formulir sebelum mengirim.');
-                }
+            useInvoiceYes.addEventListener('change', updateInvoiceAndStoreFields);
+            useInvoiceNo.addEventListener('change', updateInvoiceAndStoreFields);
+            useExistingInvoiceYes.addEventListener('change', () => {
+                updateInvoiceField();
+                updateDueDateField();
+                updateAllCalculationsAndValidations();
+            });
+            useExistingInvoiceNo.addEventListener('change', () => {
+                updateInvoiceField();
+                updateDueDateField();
+                updateAllCalculationsAndValidations();
             });
 
+            document.getElementById('voucherDate')?.addEventListener('change', updateVoucherDay);
+
+            addTransactionRowBtn.addEventListener('click', () => {
+                const useStock = useStockYes.checked ? 'yes' : 'no';
+                const voucherType = voucherTypeSelect.value;
+                const recipeSelected = document.getElementById('recipe')?.value;
+                if (useStock === 'yes' && voucherType === 'PK' && recipeSelected) {
+                    alert("Tidak dapat menambah baris transaksi saat formula produk dipilih.");
+                    return;
+                }
+                const newIndex = transactionTableBody.querySelectorAll('tr').length;
+                const newRow = generateTransactionTableRow(newIndex);
+                transactionTableBody.appendChild(newRow);
+                if (useStock === 'yes' && ['PJ', 'PB', 'PH', 'PK'].includes(voucherType)) {
+                    updateSizeDropdown(newRow, '');
+                }
+                updateTransactionRowIndices();
+                updateAllCalculationsAndValidations();
+            });
+
+            addVoucherDetailRowBtn.addEventListener('click', () => {
+                const newRow = generateVoucherDetailTableRow(voucherDetailsTableBody.querySelectorAll('tr').length);
+                voucherDetailsTableBody.appendChild(newRow);
+                updateVoucherDetailRowIndices();
+                updateAccountCodeDatalist(true);
+                updateAllCalculationsAndValidations();
+            });
+
+            voucherForm.addEventListener('submit', (event) => {
+                event.preventDefault(); // Prevent default submission for custom handling
+                if (!validateForm() || !validateTotals()) {
+                    alert('Silakan perbaiki kesalahan pada formulir sebelum mengirim.');
+                    return;
+                }
+                // Ensure only raw numeric values are submitted
+                totalDebitInput.name = 'total_debit_display'; // Rename display field to avoid validation
+                totalCreditInput.name = 'total_credit_display'; // Rename display field to avoid validation
+                totalDebitRawInput.name = 'total_debit'; // Use raw value for submission
+                totalCreditRawInput.name = 'total_credit'; // Use raw value for submission
+
+                // Submit the form
+                voucherForm.submit();
+            });
+
+            // --- Initialize Existing HPP Rows ---
+            function initializeHppRows() {
+                const voucherType = voucherTypeSelect.value;
+                if (voucherType !== 'PJ') return;
+                const existingTransactions = @json($voucher -> transactions);
+                transactionTableBody.querySelectorAll('tr').forEach(row => {
+                    if (row.dataset.isHppRow !== 'true') {
+                        const index = parseInt(row.dataset.rowIndex);
+                        const description = row.querySelector('.descriptionInput')?.value || '';
+                        const size = row.querySelector('.sizeInput')?.value || '';
+                        const quantity = parseFloat(row.querySelector('.quantityInput')?.value) || 1;
+                        const transaction = existingTransactions.find(t => t.description === `HPP ${description}` && t.size === size);
+                        if (transaction) {
+                            addHppRowDirectly(index, description, size, transaction.quantity, transaction.nominal);
+                        }
+                    }
+                });
+            }
+
             // --- Initialization ---
-            updateVoucherTypeOptions(); // Initialize voucher type options and pre-select current voucher type
-            attachTransactionRemoveButtonListeners();
-            attachTransactionInputListeners();
-            attachVoucherDetailRemoveButtonListeners();
-            attachVoucherDetailRowEventListenersToAll();
-            updateAllCalculationsAndValidations();
+            updateVoucherTypeOptions();
+            if (recipeContainer) createRecipeDropdown();
             updateInvoiceAndStoreFields();
             updateAccountCodeDatalist();
             refreshTransactionTable();
+            initializeHppRows();
+            updateAllCalculationsAndValidations();
+            updateVoucherDay();
 
             const voucherDateInput = document.getElementById('voucherDate');
             if (voucherDateInput && !voucherDateInput.value) {
