@@ -14,9 +14,10 @@ use App\Http\Controllers\ZakatController;
 use Illuminate\Support\Facades\Route;
 
 // Landing Page (Guest Middleware)
-Route::middleware(['guest:web'])->group(function () {
-    Route::get('/', [AuthController::class, 'login_page'])->name('login_page')->middleware('guest');
-    Route::post('/login', [AuthController::class, 'login'])->name('login')->middleware('guest');
+Route::middleware(['guest:admin'])->group(function () {
+    Route::get('/', [AuthController::class, 'login_page'])->name('login_page')->middleware('guest:admin');
+    Route::get('/login', [AuthController::class, 'login_page'])->name('login')->middleware('guest:admin');
+    Route::post('/login', [AuthController::class, 'login'])->name('login.post')->middleware('guest:admin');
 });
 // Protected Routes (Auth Middleware)
 Route::middleware(['auth:admin'])->group(function () {

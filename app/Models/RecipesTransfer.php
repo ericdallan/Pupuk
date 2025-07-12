@@ -17,7 +17,7 @@ class RecipesTransfer extends Pivot
 
     public function recipe()
     {
-        return $this->belongsTo(Recipe::class);
+        return $this->belongsTo(Recipes::class);
     }
 
     public function transferStock()

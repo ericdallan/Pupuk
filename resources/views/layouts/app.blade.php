@@ -166,92 +166,99 @@
 <body>
     <div class="d-flex">
         <nav class="sidebar d-flex flex-column">
-            @if (auth()->check())
-            @php
-            $admin = auth()->user();
-            @endphp
-            @if ($admin)
-            <div class="text-center admin-info">
-                <a class="nav-link {{ request()->routeIs('admin_profile') ? 'active' : '' }}" href="{{ route('admin_profile') }}">
+            @if (auth()->guard('admin')->check())
+                @php
+                    $admin = auth()->guard('admin')->user();
+                @endphp
+                <div class="text-center admin-info">
+                    <a class="nav-link {{ request()->routeIs('admin_profile') ? 'active' : '' }}"
+                        href="{{ route('admin_profile') }}">
+                        <i class="fas fa-user-circle"></i>
+                        <div>{{ $admin ? $admin->name : 'No Admin Found' }}</div>
+                    </a>
+                </div>
+            @else
+                <div class="text-center admin-info">
                     <i class="fas fa-user-circle"></i>
-                    <div>{{ $admin->name }}</div>
-                </a>
-            </div>
-            @else
-            <div class="text-center admin-info">
-                <i class="fas fa-user-circle"></i>
-                <div>No Admin Found</div>
-            </div>
-            @endif
-            @else
-            <div class="text-center admin-info">
-                <i class="fas fa-user-circle"></i>
-                <div>No User Session</div>
-            </div>
+                    <div>No User Session</div>
+                </div>
             @endif
             <ul class="nav flex-column">
                 <li class="nav-item" hidden>
-                    <a class="nav-link {{ request()->routeIs('dashboard_page') ? 'active' : '' }}" href="{{ route('dashboard_page') }}">
+                    <a class="nav-link {{ request()->routeIs('dashboard_page') ? 'active' : '' }}"
+                        href="{{ route('dashboard_page') }}">
                         <i class="fas fa-tachometer-alt"></i> Dashboard
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('account_page') ? 'active' : '' }}" href="{{ route('account_page') }}">
+                    <a class="nav-link {{ request()->routeIs('account_page') ? 'active' : '' }}"
+                        href="{{ route('account_page') }}">
                         <i class="fas fa-solid fa-book"></i> Kode Perkiraan
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('voucher_page') ? 'active' : '' }}" href="{{ route('voucher_page') }}">
+                    <a class="nav-link {{ request()->routeIs('voucher_page') ? 'active' : '' }}"
+                        href="{{ route('voucher_page') }}">
                         <i class="fas fa-file-invoice-dollar"></i> Transaksi
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('stock_page') ? 'active' : '' }}" href="{{ route('stock_page') }}">
+                    <a class="nav-link {{ request()->routeIs('stock_page') ? 'active' : '' }}"
+                        href="{{ route('stock_page') }}">
                         <i class="fas fa-file-invoice-dollar"></i> Stock
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('generalledger_page') ? 'active' : '' }}" href="{{ route('generalledger_page') }}">
+                    <a class="nav-link {{ request()->routeIs('generalledger_page') ? 'active' : '' }}"
+                        href="{{ route('generalledger_page') }}">
                         <i class="fas fa-file-alt"></i> Buku Besar
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('subsidiary_piutang') ? 'active' : '' }}" href="{{ route('subsidiary_piutang') }}">
+                    <a class="nav-link {{ request()->routeIs('subsidiary_piutang') ? 'active' : '' }}"
+                        href="{{ route('subsidiary_piutang') }}">
                         <i class="fas fa-file"></i> Subsidiary Piutang
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('subsidiary_utang') ? 'active' : '' }}" href="{{ route('subsidiary_utang') }}">
+                    <a class="nav-link {{ request()->routeIs('subsidiary_utang') ? 'active' : '' }}"
+                        href="{{ route('subsidiary_utang') }}">
                         <i class="fas fa-file"></i> Subsidiary Utang
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('trialBalance_page') ? 'active' : '' }}" href="{{ route('trialBalance_page') }}">
+                    <a class="nav-link {{ request()->routeIs('trialBalance_page') ? 'active' : '' }}"
+                        href="{{ route('trialBalance_page') }}">
                         <i class="fas fa-file"></i> Neraca Saldo
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('incomeStatement_page') ? 'active' : '' }}" href="{{ route('incomeStatement_page') }}">
+                    <a class="nav-link {{ request()->routeIs('incomeStatement_page') ? 'active' : '' }}"
+                        href="{{ route('incomeStatement_page') }}">
                         <i class="fas fa-file-alt"></i> Laba Rugi
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('balanceSheet_page') ? 'active' : '' }}" href="{{ route('balanceSheet_page') }}">
+                    <a class="nav-link {{ request()->routeIs('balanceSheet_page') ? 'active' : '' }}"
+                        href="{{ route('balanceSheet_page') }}">
                         <i class="fas fa-file-alt"></i> Neraca Keuangan
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('zakat_page') ? 'active' : '' }}" href="{{ route('zakat_page') }}">
+                    <a class="nav-link {{ request()->routeIs('zakat_page') ? 'active' : '' }}"
+                        href="{{ route('zakat_page') }}">
                         <i class="fas fa-file-alt"></i> Zakat
                     </a>
                 </li>
                 <li class="nav-item" hidden>
-                    <a class="nav-link {{ request()->routeIs('employee_page') ? 'active' : '' }}" href="{{ route('employee_page') }}">
+                    <a class="nav-link {{ request()->routeIs('employee_page') ? 'active' : '' }}"
+                        href="{{ route('employee_page') }}">
                         <i class="fas fa-users"></i> Employee
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('company_page') ? 'active' : '' }}" href="{{ route('company_page') }}">
+                    <a class="nav-link {{ request()->routeIs('company_page') ? 'active' : '' }}"
+                        href="{{ route('company_page') }}">
                         <i class="fas fa-building"></i> Perusahaan
                     </a>
                 </li>
@@ -275,7 +282,8 @@
                     </div>
                 </div>
                 <div class="right-icons">
-                    <img src="{{ asset('logo/LogoInni.png') }}" alt="DeveloperLogo" style="max-width: 75px; max-height: 75px;">
+                    <img src="{{ asset('logo/LogoInni.png') }}" alt="DeveloperLogo"
+                        style="max-width: 75px; max-height: 75px;">
                 </div>
             </div>
             @yield('content')
@@ -300,7 +308,8 @@
             // Set active class for sidebar links based on current route
             const navLinks = document.querySelectorAll('.sidebar .nav-link');
             navLinks.forEach(link => {
-                if (link.getAttribute('href') === window.location.pathname || link.getAttribute('href') === window.location.route) {
+                if (link.getAttribute('href') === window.location.pathname || link.getAttribute('href') ===
+                    window.location.route) {
                     link.classList.add('active');
                 }
             });

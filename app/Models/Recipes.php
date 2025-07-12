@@ -26,6 +26,6 @@ class Recipes extends Model
 
     public function recipeTransfers()
     {
-        return $this->hasMany(RecipeTransfer::class, 'recipe_id');
+        return $this->hasMany(RecipesTransfer::class, 'recipe_id');
     }
 }

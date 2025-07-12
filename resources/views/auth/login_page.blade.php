@@ -36,18 +36,13 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            /* Center items horizontally */
         }
 
         .logo-container {
             margin-bottom: 20px;
-            /* Add space below the logo */
             display: flex;
-            /* Enable flexbox for centering content */
             justify-content: center;
-            /* Center content horizontally */
             width: 100%;
-            /* Ensure the container takes full width */
         }
 
         .logo-container img {
@@ -75,51 +70,58 @@
 <body>
     <div class="message-container">
         @if (session('success'))
-        <div class="alert alert-success mb-3">
-            {{ session('success') }}
-        </div>
+            <div class="alert alert-success mb-3">
+                {{ session('success') }}
+            </div>
         @endif
 
         @if (session('failed'))
-        <div class="alert alert-danger mb-3">
-            {{ session('failed') }}
-        </div>
+            <div class="alert alert-danger mb-3">
+                {{ session('failed') }}
+            </div>
         @endif
 
         @if ($errors->any())
-        <div class="alert alert-danger mb-3">
-            <ul>
-                @foreach ($errors->all() as $error)
-                <li>{{ $error }}</li>
-                @endforeach
-            </ul>
-        </div>
+            <div class="alert alert-danger mb-3">
+                <ul>
+                    @foreach ($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
         @elseif (session('message'))
-        <div class="alert alert-danger mb-3">
-            {{ session('message') }}
-        </div>
+            <div class="alert alert-danger mb-3">
+                {{ session('message') }}
+            </div>
+        @endif
+
+        @if (session('url.intended') && !session('success') && !session('failed') && !$errors->any())
+            <div class="alert alert-warning mb-3">
+                Anda Harus Login Terlebih Dahulu, Silahkan Login Akun.
+            </div>
         @endif
     </div>
 
     <div class="login-container">
         <div class="logo-container">
-            <img src="{{ asset('logo/LogoInni.png') }}" alt="DeveloperLogo" style="max-width: 150px; max-height: 150px;">
+            <img src="{{ asset('logo/LogoInni.png') }}" alt="DeveloperLogo"
+                style="max-width: 150px; max-height: 150px;">
         </div>
         <h2 class="text-center mb-4">Admin Login</h2>
-        <form method="POST" action="{{ route('login') }}">
+        <form method="POST" action="{{ route('login.post') }}">
             @csrf
             <div class="mb-3">
                 <label for="email" class="form-label">Email address</label>
                 <input type="email" class="form-control" id="email" name="email" value="{{ old('email') }}">
                 @error('email')
-                <div class="text-danger">{{ $message }}</div>
+                    <div class="text-danger">{{ $message }}</div>
                 @enderror
             </div>
             <div class="mb-3">
                 <label for="password" class="form-label">Password</label>
                 <input type="password" class="form-control" id="password" name="password">
                 @error('password')
-                <div class="text-danger">{{ $message }}</div>
+                    <div class="text-danger">{{ $message }}</div>
                 @enderror
             </div>
             <button type="submit" class="btn btn-primary">Login</button>

@@ -5,7 +5,8 @@
         cursor: not-allowed;
     }
 </style>
-<div class="modal fade" id="voucherModal" data-bs-backdrop="static" tabindex="-1" aria-labelledby="voucherModalLabel" aria-hidden="true">
+<div class="modal fade" id="voucherModal" data-bs-backdrop="static" tabindex="-1" aria-labelledby="voucherModalLabel"
+    aria-hidden="true">
     <div class="modal-dialog modal-xl">
         <div class="modal-content">
             <div class="modal-header">
@@ -19,30 +20,35 @@
                         <div class="row mb-3">
                             <label for="voucherNumber" class="col-sm-3 col-form-label">Nomor Voucher:</label>
                             <div class="col-sm-9">
-                                <input type="text" class="form-control" id="voucherNumber" name="voucher_number" value="[Auto Generate Number]" readonly>
+                                <input type="text" class="form-control" id="voucherNumber" name="voucher_number"
+                                    value="[Auto Generate Number]" readonly>
                             </div>
                         </div>
                         <div class="row mb-3">
                             <label for="companyName" class="col-sm-3 col-form-label">Nama Perusahaan:</label>
                             @if ($company && $company->company_name)
-                            <div class="col-sm-9">
-                                <input type="text" class="form-control" id="companyName" name="companyName" value="{{ $company->company_name }}" readonly>
-                            </div>
+                                <div class="col-sm-9">
+                                    <input type="text" class="form-control" id="companyName" name="companyName"
+                                        value="{{ $company->company_name }}" readonly>
+                                </div>
                             @else
-                            <div class="col-sm-9">
-                                <input type="text" class="form-control" id="companyName" name="companyName" value="Not Found" readonly>
-                            </div>
+                                <div class="col-sm-9">
+                                    <input type="text" class="form-control" id="companyName" name="companyName"
+                                        value="Not Found" readonly>
+                                </div>
                             @endif
                         </div>
                         <div class="row mb-3">
                             <label for="useStock" class="col-sm-3 col-form-label">Transaksi Stok?</label>
                             <div class="col-sm-9">
                                 <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="radio" id="useStockYes" name="use_stock" value="yes">
+                                    <input class="form-check-input" type="radio" id="useStockYes" name="use_stock"
+                                        value="yes">
                                     <label class="form-check-label" for="useStockYes">Ya</label>
                                 </div>
                                 <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="radio" id="useStockNo" name="use_stock" value="no">
+                                    <input class="form-check-input" type="radio" id="useStockNo" name="use_stock"
+                                        value="no">
                                     <label class="form-check-label" for="useStockNo">Tidak</label>
                                 </div>
                             </div>
@@ -78,7 +84,8 @@
                         <div class="row mb-3">
                             <label for="preparedBy" class="col-sm-3 col-form-label">Disiapkan Oleh:</label>
                             <div class="col-sm-9">
-                                <input type="text" class="form-control" id="preparedBy" name="prepared_by" value="{{ $admin->name }}" readonly>
+                                <input type="text" class="form-control" id="preparedBy" name="prepared_by"
+                                    value="{{ $admin ? $admin->name : 'N/A' }}" readonly>
                             </div>
                         </div>
                         <div class="row mb-3">
@@ -90,7 +97,8 @@
                         <div class="row mb-3">
                             <label for="approvedBy" class="col-sm-3 col-form-label">Disetujui Oleh:</label>
                             <div class="col-sm-9">
-                                <input type="text" class="form-control" id="approvedBy" name="approved_by" value="{{ $company->director }}" readonly>
+                                <input type="text" class="form-control" id="approvedBy" name="approved_by"
+                                    value="{{ $company->director }}" readonly>
                             </div>
                         </div>
                         <div class="row mb-3">
@@ -103,11 +111,13 @@
                             <label for="useInvoice" class="col-sm-3 col-form-label">Gunakan Invoice?</label>
                             <div class="col-sm-9">
                                 <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="radio" id="useInvoiceYes" name="use_invoice" value="yes">
+                                    <input class="form-check-input" type="radio" id="useInvoiceYes"
+                                        name="use_invoice" value="yes">
                                     <label class="form-check-label" for="useInvoiceYes">Ya</label>
                                 </div>
                                 <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="radio" type="radio" id="useInvoiceNo" name="use_invoice" value="no">
+                                    <input class="form-check-input" type="radio" type="radio" id="useInvoiceNo"
+                                        name="use_invoice" value="no">
                                     <label class="form-check-label" for="useInvoiceNo">Tidak</label>
                                 </div>
                             </div>
@@ -116,11 +126,13 @@
                             <label class="col-sm-3 col-form-label">Gunakan Invoice yang Sudah Ada?</label>
                             <div class="col-sm-9">
                                 <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="radio" id="useExistingInvoiceYes" name="use_existing_invoice" value="yes" disabled>
+                                    <input class="form-check-input" type="radio" id="useExistingInvoiceYes"
+                                        name="use_existing_invoice" value="yes" disabled>
                                     <label class="form-check-label" for="useExistingInvoiceYes">Ya</label>
                                 </div>
                                 <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="radio" id="useExistingInvoiceNo" name="use_existing_invoice" value="no" disabled>
+                                    <input class="form-check-input" type="radio" id="useExistingInvoiceNo"
+                                        name="use_existing_invoice" value="no" disabled>
                                     <label class="form-check-label" for="useExistingInvoiceNo">Tidak</label>
                                 </div>
                             </div>
@@ -149,7 +161,8 @@
                             <label for="recipe" class="col-sm-3 col-form-label">Formula Produk:</label>
                             <div class="col-sm-9">
                                 <div id="recipeFieldContainer">
-                                    <input type="text" class="form-control" id="recipe" name="recipe" disabled>
+                                    <input type="text" class="form-control" id="recipe" name="recipe"
+                                        disabled>
                                 </div>
                             </div>
                         </div>
@@ -174,33 +187,42 @@
                                     <tbody>
                                         <tr data-row-index="0">
                                             <td>
-                                                <input type="text" class="form-control descriptionInput" name="transactions[0][description]">
+                                                <input type="text" class="form-control descriptionInput"
+                                                    name="transactions[0][description]">
                                             </td>
                                             <td>
-                                                <input type="text" class="form-control sizeInput" name="transactions[0][size]">
+                                                <input type="text" class="form-control sizeInput"
+                                                    name="transactions[0][size]">
                                             </td>
                                             <td>
-                                                <input type="number" min="0" step="1" class="form-control quantityInput" name="transactions[0][quantity]" value="1">
+                                                <input type="number" min="0" step="1"
+                                                    class="form-control quantityInput"
+                                                    name="transactions[0][quantity]" value="1">
                                             </td>
                                             <td>
-                                                <input type="number" min="0" step="0.01" class="form-control nominalInput" name="transactions[0][nominal]">
+                                                <input type="number" min="0" step="0.01"
+                                                    class="form-control nominalInput" name="transactions[0][nominal]">
                                             </td>
                                             <td>
-                                                <input type="text" class="form-control totalInput" name="transactions[0][total]" readonly>
+                                                <input type="text" class="form-control totalInput"
+                                                    name="transactions[0][total]" readonly>
                                             </td>
                                             <td class="text-center">
-                                                <button type="button" class="btn btn-danger removeTransactionRowBtn">Hapus</button>
+                                                <button type="button"
+                                                    class="btn btn-danger removeTransactionRowBtn">Hapus</button>
                                             </td>
                                         </tr>
                                     </tbody>
                                 </table>
-                                <button type="button" id="addTransactionRowBtn" class="btn btn-primary">Tambah Transaksi</button>
+                                <button type="button" id="addTransactionRowBtn" class="btn btn-primary">Tambah
+                                    Transaksi</button>
                             </div>
                         </div>
                         <div class="row mb-3">
                             <label for="totalNominal" class="col-sm-3 col-form-label">Total Nominal:</label>
                             <div class="col-sm-9">
-                                <input type="text" class="form-control" id="totalNominal" name="total_nominal" value="[Auto Calculate]" readonly>
+                                <input type="text" class="form-control" id="totalNominal" name="total_nominal"
+                                    value="[Auto Calculate]" readonly>
                             </div>
                         </div>
                         <div class="mb-3">
@@ -223,37 +245,49 @@
                                     <tbody>
                                         <tr data-row-index="0">
                                             <td>
-                                                <input type="text" class="form-control accountCodeInput" name="voucher_details[0][account_code]" list="dynamicAccountCodes" placeholder="Ketik atau pilih kode akun">
+                                                <input type="text" class="form-control accountCodeInput"
+                                                    name="voucher_details[0][account_code]" list="dynamicAccountCodes"
+                                                    placeholder="Ketik atau pilih kode akun">
                                                 <datalist id="dynamicAccountCodes"></datalist>
                                             </td>
-                                            <td><input type="text" class="form-control accountName" name="voucher_details[0][account_name]" readonly></td>
-                                            <td><input type="number" min="0" step="0.01" class="form-control debitInput" name="voucher_details[0][debit]"></td>
-                                            <td><input type="number" min="0" step="0.01" class="form-control creditInput" name="voucher_details[0][credit]"></td>
+                                            <td><input type="text" class="form-control accountName"
+                                                    name="voucher_details[0][account_name]" readonly></td>
+                                            <td><input type="number" min="0" step="0.01"
+                                                    class="form-control debitInput" name="voucher_details[0][debit]">
+                                            </td>
+                                            <td><input type="number" min="0" step="0.01"
+                                                    class="form-control creditInput"
+                                                    name="voucher_details[0][credit]"></td>
                                             <td class="text-center">
-                                                <button type="button" class="btn btn-danger removeVoucherDetailRowBtn">Hapus</button>
+                                                <button type="button"
+                                                    class="btn btn-danger removeVoucherDetailRowBtn">Hapus</button>
                                             </td>
                                         </tr>
                                     </tbody>
                                 </table>
-                                <button type="button" id="addVoucherDetailRowBtn" class="btn btn-primary">Tambah Kode Akun</button>
+                                <button type="button" id="addVoucherDetailRowBtn" class="btn btn-primary">Tambah
+                                    Kode Akun</button>
                             </div>
                         </div>
                         <div class="row mb-3">
                             <label for="totalDebit" class="col-sm-3 col-form-label">Total Debit:</label>
                             <div class="col-sm-3">
-                                <input type="text" class="form-control" id="totalDebit" name="total_debit_formatted" value="[Dihitung]" readonly>
+                                <input type="text" class="form-control" id="totalDebit"
+                                    name="total_debit_formatted" value="[Dihitung]" readonly>
                                 <input type="hidden" name="total_debit" id="totalDebitRaw">
                             </div>
                             <label for="totalCredit" class="col-sm-3 col-form-label">Total Kredit:</label>
                             <div class="col-sm-3">
-                                <input type="text" class="form-control" id="totalCredit" name="total_credit_formatted" value="[Dihitung]" readonly>
+                                <input type="text" class="form-control" id="totalCredit"
+                                    name="total_credit_formatted" value="[Dihitung]" readonly>
                                 <input type="hidden" name="total_credit" id="totalCreditRaw">
                             </div>
                         </div>
                         <div class="row mb-3">
                             <label for="validation" class="col-sm-3 col-form-label">Pesan:</label>
                             <div class="col-sm-9">
-                                <input type="text" class="form-control" id="validation" name="validation" value="[Pesan]" readonly>
+                                <input type="text" class="form-control" id="validation" name="validation"
+                                    value="[Pesan]" readonly>
                             </div>
                         </div>
                     </div>
@@ -534,7 +568,8 @@
                 });
             }
 
-            voucherTypeSelect.value = currentValue && voucherTypeSelect.querySelector(`option[value="${currentValue}"]`) ? currentValue : '';
+            voucherTypeSelect.value = currentValue && voucherTypeSelect.querySelector(
+                `option[value="${currentValue}"]`) ? currentValue : '';
             deskripsiVoucherTextarea.value = voucherTypes[voucherTypeSelect.value]?.description || '';
             refreshTransactionTable();
             updateAllCalculationsAndValidations();
@@ -556,7 +591,8 @@
 
         function isSubsidiaryCodeUsed() {
             const accountCodeInputs = voucherDetailsTableBody.querySelectorAll('.accountCodeInput');
-            return Array.from(accountCodeInputs).some(input => subsidiaries.some(s => s.subsidiary_code === input.value.trim()));
+            return Array.from(accountCodeInputs).some(input => subsidiaries.some(s => s.subsidiary_code ===
+                input.value.trim()));
         }
 
         function updateAccountCodeDatalist() {
@@ -575,14 +611,16 @@
                     subsidiaries.forEach(subsidiary => {
                         const option = document.createElement('option');
                         option.value = subsidiary.subsidiary_code;
-                        option.textContent = `${subsidiary.subsidiary_code} - ${subsidiary.account_name}`;
+                        option.textContent =
+                            `${subsidiary.subsidiary_code} - ${subsidiary.account_name}`;
                         datalist.appendChild(option);
                     });
                 } else {
                     accounts.forEach(account => {
                         const option = document.createElement('option');
                         option.value = account.account_code;
-                        option.textContent = `${account.account_code} - ${account.account_name}`;
+                        option.textContent =
+                            `${account.account_code} - ${account.account_name}`;
                         datalist.appendChild(option);
                     });
                 }
@@ -614,9 +652,11 @@
                 accountCodeInput.addEventListener('input', function() {
                     const enteredCode = this.value.trim();
                     accountNameInput.value = '';
-                    const useInvoice = document.querySelector('input[name="use_invoice"]:checked')?.value || 'no';
+                    const useInvoice = document.querySelector('input[name="use_invoice"]:checked')
+                        ?.value || 'no';
 
-                    if (useInvoice === 'yes' && subsidiaries.some(s => s.subsidiary_code === enteredCode)) {
+                    if (useInvoice === 'yes' && subsidiaries.some(s => s.subsidiary_code ===
+                            enteredCode)) {
                         const subsidiary = subsidiaries.find(s => s.subsidiary_code === enteredCode);
                         if (subsidiary) accountNameInput.value = subsidiary.account_name;
                     } else {
@@ -776,7 +816,8 @@
             const invoiceInputDiv = document.createElement('div');
             invoiceInputDiv.className = 'col-sm-9';
             let invoiceInput;
-            if (useInvoice === 'yes' && document.querySelector('input[name="use_existing_invoice"]:checked')?.value === 'yes') {
+            if (useInvoice === 'yes' && document.querySelector('input[name="use_existing_invoice"]:checked')
+                ?.value === 'yes') {
                 invoiceInput = createInvoiceDropdown();
             } else {
                 invoiceInput = createInvoiceInput();
@@ -791,7 +832,8 @@
 
         function updateDueDateField() {
             const useInvoice = document.querySelector('input[name="use_invoice"]:checked')?.value || 'no';
-            const useExistingInvoice = document.querySelector('input[name="use_existing_invoice"]:checked')?.value || 'no';
+            const useExistingInvoice = document.querySelector('input[name="use_existing_invoice"]:checked')
+                ?.value || 'no';
             dueDateContainer.innerHTML = '';
             const dueDateLabel = document.createElement('label');
             dueDateLabel.htmlFor = 'dueDate';
@@ -950,17 +992,20 @@
 
             if (selectedItem && stockData && Array.isArray(stockData) && stockData.length > 0) {
                 const sizesWithQuantity = stockData
-                    .filter(stock => stock.item === selectedItem && stock.size && stock.quantity !== null && !stock.item.startsWith('HPP'))
+                    .filter(stock => stock.item === selectedItem && stock.size && stock.quantity !== null && !
+                        stock.item.startsWith('HPP'))
                     .map(stock => ({
                         size: stock.size,
                         quantity: stock.quantity,
-                        source: stock.source || (usedStocks.includes(stock) ? 'used_stocks' : 'transfer_stocks')
+                        source: stock.source || (usedStocks.includes(stock) ? 'used_stocks' :
+                            'transfer_stocks')
                     }))
                     .filter(item => item.size !== null && item.size !== undefined);
 
                 if (voucherType === 'PJ' && sizesWithQuantity.length > 0) {
                     const usedStockSizes = sizesWithQuantity.filter(item => item.source === 'used_stocks');
-                    const transferStockSizes = sizesWithQuantity.filter(item => item.source === 'transfer_stocks');
+                    const transferStockSizes = sizesWithQuantity.filter(item => item.source ===
+                        'transfer_stocks');
 
                     if (usedStockSizes.length > 0) {
                         const separator = document.createElement('option');
@@ -1042,7 +1087,8 @@
             const useStock = document.querySelector('input[name="use_stock"]:checked')?.value || 'no';
             let newSizeElement;
 
-            if (useStock === 'yes' && (voucherType === 'PB' || voucherType === 'PJ' || voucherType === 'PH' || voucherType === 'PK')) {
+            if (useStock === 'yes' && (voucherType === 'PB' || voucherType === 'PJ' || voucherType === 'PH' ||
+                    voucherType === 'PK')) {
                 if (voucherType === 'PB') {
                     newSizeElement = createSizeInputWithDropdown(index, selectedItem);
                 } else {
@@ -1089,7 +1135,8 @@
                 } else if (newSizeElement.tagName === 'DIV') {
                     const select = newSizeElement.querySelector('select');
                     const input = newSizeElement.querySelector('input');
-                    const validOption = select && Array.from(select.querySelectorAll('option')).find(option => option.value === previousValue);
+                    const validOption = select && Array.from(select.querySelectorAll('option')).find(option =>
+                        option.value === previousValue);
                     if (validOption) {
                         select.value = previousValue;
                         input.value = previousValue;
@@ -1309,7 +1356,8 @@
                 const newDescriptionElement = createProductDropdownForPK(index);
                 descriptionCell.appendChild(newDescriptionElement);
 
-                if (previousValue && newDescriptionElement.querySelector(`option[value="${previousValue}"]`)) {
+                if (previousValue && newDescriptionElement.querySelector(
+                        `option[value="${previousValue}"]`)) {
                     newDescriptionElement.value = previousValue;
                 }
 
@@ -1545,7 +1593,8 @@
             nominalInput.step = '0.01';
             nominalInput.className = 'form-control nominalInput';
             nominalInput.name = `transactions[${newIndex}][nominal]`;
-            const averageHpp = calculateAverageHpp(selectedItem, size) || 0; // Fallback ke 0 jika tidak ada data
+            const averageHpp = calculateAverageHpp(selectedItem, size) ||
+                0; // Fallback ke 0 jika tidak ada data
             nominalInput.value = averageHpp.toFixed(2);
             nominalInput.readOnly = true;
             nominalCell.appendChild(nominalInput);
@@ -1625,7 +1674,8 @@
 
                 // console.log(`Updated HPP row for PJ: item=${selectedItem}, size=${size}, rowIndex=${hppRowToUpdate.dataset.rowIndex}, hpp=${averageHpp}`);
                 updateAllCalculationsAndValidations();
-            } else if (!transactionTableBody.querySelector(`tr[data-is-hpp-row="true"][data-item="${selectedItem}"][data-size="${size || ''}"]`)) {
+            } else if (!transactionTableBody.querySelector(
+                    `tr[data-is-hpp-row="true"][data-item="${selectedItem}"][data-size="${size || ''}"]`)) {
                 addHppRowForPJ(currentIndex, selectedItem, size, quantity);
             }
         }
@@ -1633,7 +1683,8 @@
         function handleStockChange(index, event) {
             const selectedElement = event.target;
             // Hanya lanjutkan jika target event adalah input/select yang relevan
-            if (!selectedElement.classList.contains('descriptionInput') && !selectedElement.classList.contains('sizeInput')) {
+            if (!selectedElement.classList.contains('descriptionInput') && !selectedElement.classList.contains(
+                    'sizeInput')) {
                 // console.warn(`Ignoring handleStockChange at index ${index}: Event target is not a description or size input.`);
                 return;
             }
@@ -1670,11 +1721,14 @@
                 let inferredSize = initialSize; // Track the inferred size
                 if (voucherType === 'PJ') {
                     isValidItem =
-                        usedStocks.some(s => s.item.trim().toLowerCase() === selectedItem.trim().toLowerCase()) ||
-                        (transferStocks && transferStocks.some(s => s.item.trim().toLowerCase() === selectedItem.trim().toLowerCase()));
+                        usedStocks.some(s => s.item.trim().toLowerCase() === selectedItem.trim()
+                            .toLowerCase()) ||
+                        (transferStocks && transferStocks.some(s => s.item.trim().toLowerCase() === selectedItem
+                            .trim().toLowerCase()));
                     if (!isValidItem || !initialSize) {
                         // console.warn(`Invalid or empty item/size detected at index ${index} for PJ. Attempting to correct.`);
-                        const validItemFromSize = [...usedStocks, ...(transferStocks || [])].find(s => s.size === selectedItem)?.item;
+                        const validItemFromSize = [...usedStocks, ...(transferStocks || [])].find(s => s
+                            .size === selectedItem)?.item;
                         if (validItemFromSize) {
                             selectedItem = validItemFromSize;
                             updateDescriptionInput(row, validItemFromSize);
@@ -1695,7 +1749,8 @@
                             }
                         }
                         if (!initialSize && isValidItem) {
-                            const matchingStock = [...usedStocks, ...(transferStocks || [])].find(s => s.item === selectedItem);
+                            const matchingStock = [...usedStocks, ...(transferStocks || [])].find(s => s
+                                .item === selectedItem);
                             inferredSize = matchingStock ? matchingStock.size : '';
                             if (sizeElement && inferredSize) {
                                 sizeElement.value = inferredSize; // Update size without triggering change event
@@ -1704,7 +1759,8 @@
                         }
                     }
                 } else {
-                    isValidItem = stocks.some(s => s.item.trim().toLowerCase() === selectedItem.trim().toLowerCase());
+                    isValidItem = stocks.some(s => s.item.trim().toLowerCase() === selectedItem.trim()
+                        .toLowerCase());
                     if (!isValidItem || !initialSize) {
                         const validItemFromSize = stocks.find(s => s.size === selectedItem)?.item;
                         if (validItemFromSize) {
@@ -1713,7 +1769,8 @@
                             // console.log(`Corrected item to: ${validItemFromSize}`);
                             isValidItem = true;
                         } else {
-                            const similarItem = stocks.find(s => s.item.toLowerCase().includes(selectedItem.toLowerCase()));
+                            const similarItem = stocks.find(s => s.item.toLowerCase().includes(selectedItem
+                                .toLowerCase()));
                             if (similarItem) {
                                 selectedItem = similarItem.item;
                                 updateDescriptionInput(row, similarItem.item);
@@ -1772,9 +1829,11 @@
             let descriptionElement;
             const voucherType = voucherTypeSelect.value;
             const useStock = document.querySelector('input[name="use_stock"]:checked')?.value || 'no';
-            const recipeSelected = document.querySelector('#recipe')?.value && voucherType === 'PK' && useStock === 'yes';
+            const recipeSelected = document.querySelector('#recipe')?.value && voucherType === 'PK' &&
+                useStock === 'yes';
 
-            if (useStock === 'yes' && (voucherType === 'PJ' || voucherType === 'PB' || voucherType === 'PH' || voucherType === 'PK')) {
+            if (useStock === 'yes' && (voucherType === 'PJ' || voucherType === 'PB' || voucherType === 'PH' ||
+                    voucherType === 'PK')) {
                 if (voucherType === 'PB') {
                     descriptionElement = document.createElement('div');
                     descriptionElement.className = 'input-group';
@@ -2001,7 +2060,8 @@
             transactionTableBody.querySelectorAll('tr').forEach((row, index) => {
                 row.dataset.rowIndex = index;
                 row.querySelectorAll('[name*="transactions["]').forEach(element => {
-                    element.name = element.name.replace(/transactions\[\d+\]/, `transactions[${index}]`);
+                    element.name = element.name.replace(/transactions\[\d+\]/,
+                        `transactions[${index}]`);
                     if (element.tagName.toLowerCase() === 'select') {
                         element.removeEventListener('change', handleStockChange);
                         element.addEventListener('change', handleStockChange.bind(null, index));
@@ -2034,11 +2094,14 @@
                 const voucherType = voucherTypeSelect.value;
 
                 if (voucherType === 'PJ' && !isHppRow) {
-                    const description = row.querySelector('.descriptionInput:not([type="text"])')?.value || row.querySelector('.descriptionInput[type="text"]')?.value || '';
+                    const description = row.querySelector('.descriptionInput:not([type="text"])')?.value || row
+                        .querySelector('.descriptionInput[type="text"]')?.value || '';
                     const size = row.querySelector('.sizeInput')?.value || '';
                     let nextRow = row.nextSibling;
                     while (nextRow) {
-                        if (nextRow.dataset.isHppRow === 'true' && nextRow.querySelector('.descriptionInput')?.value === `HPP ${description}` && nextRow.querySelector('.sizeInput')?.value === size) {
+                        if (nextRow.dataset.isHppRow === 'true' && nextRow.querySelector('.descriptionInput')
+                            ?.value === `HPP ${description}` && nextRow.querySelector('.sizeInput')?.value ===
+                            size) {
                             nextRow.remove();
                             break;
                         }
@@ -2077,10 +2140,13 @@
             const isHppRow = row.dataset.isHppRow === 'true';
             if (!isHppRow) {
                 let nextRow = row.nextSibling;
-                const description = row.querySelector('.descriptionInput:not([type="text"])')?.value || row.querySelector('.descriptionInput[type="text"]')?.value || '';
+                const description = row.querySelector('.descriptionInput:not([type="text"])')?.value || row
+                    .querySelector('.descriptionInput[type="text"]')?.value || '';
                 const size = row.querySelector('.sizeInput')?.value || '';
                 while (nextRow) {
-                    if (nextRow.dataset.isHppRow === 'true' && nextRow.querySelector('.descriptionInput')?.value === `HPP ${description}` && nextRow.querySelector('.sizeInput')?.value === size) {
+                    if (nextRow.dataset.isHppRow === 'true' && nextRow.querySelector('.descriptionInput')
+                        ?.value === `HPP ${description}` && nextRow.querySelector('.sizeInput')?.value === size
+                    ) {
                         const hppQuantityInput = nextRow.querySelector('.quantityInput');
                         const currentQuantity = parseFloat(row.querySelector('.quantityInput')?.value) || 1;
                         const hppNominal = parseFloat(nextRow.querySelector('.nominalInput')?.value) || 0;
@@ -2112,7 +2178,8 @@
                 };
             }
 
-            let description = descriptionInput.tagName.toLowerCase() === 'select' ? descriptionInput.value?.trim() : descriptionInput.value?.trim() || '';
+            let description = descriptionInput.tagName.toLowerCase() === 'select' ? descriptionInput.value
+                ?.trim() : descriptionInput.value?.trim() || '';
             const quantity = parseFloat(quantityInput.value) || 0;
             const size = sizeInput?.value?.trim() || '';
             const isHppRow = row.dataset.isHppRow === 'true';
@@ -2153,7 +2220,8 @@
             let stock = null;
             if (!isNewItemRow) {
                 const cleanDescription = description.replace(/\(Stok: \d+\)/, '').trim().toLowerCase();
-                stock = stockData.find(s => s.item?.toLowerCase().replace(/\(stok: \d+\)/, '').trim() === cleanDescription && (!size || s.size === size));
+                stock = stockData.find(s => s.item?.toLowerCase().replace(/\(stok: \d+\)/, '').trim() ===
+                    cleanDescription && (!size || s.size === size));
 
                 if (!description) {
                     validationInput.value = 'Item belum dipilih di baris ini.';
@@ -2164,7 +2232,8 @@
                     };
                 }
                 if (!stock && voucherType !== 'PK') {
-                    validationInput.value = `Item ${description}${size ? ' (' + size + ')' : ''} tidak ditemukan di tabel ${tableName}.`;
+                    validationInput.value =
+                        `Item ${description}${size ? ' (' + size + ')' : ''} tidak ditemukan di tabel ${tableName}.`;
                     saveVoucherBtn.disabled = true;
                     return {
                         isValid: false,
@@ -2172,7 +2241,8 @@
                     };
                 }
                 if (stock && stock.quantity < quantity && voucherType !== 'PK') {
-                    validationInput.value = `Kuantitas untuk item ${description}${size ? ' (' + size + ')' : ''} melebihi stok tersedia di tabel ${tableName}. Tersedia: ${stock.quantity}, Dibutuhkan: ${quantity}`;
+                    validationInput.value =
+                        `Kuantitas untuk item ${description}${size ? ' (' + size + ')' : ''} melebihi stok tersedia di tabel ${tableName}. Tersedia: ${stock.quantity}, Dibutuhkan: ${quantity}`;
                     saveVoucherBtn.disabled = true;
                     return {
                         isValid: false,
@@ -2182,7 +2252,8 @@
             }
 
             if (voucherType === 'PK' && !isNewItemRow && stock && stock.quantity >= quantity) {
-                validationInput.value = `Stok ${description}${size ? ' (' + size + ')' : ''} cukup untuk dipindahkan ke ${targetTableName}. Tersedia: ${stock.quantity}, Dibutuhkan: ${quantity}`;
+                validationInput.value =
+                    `Stok ${description}${size ? ' (' + size + ')' : ''} cukup untuk dipindahkan ke ${targetTableName}. Tersedia: ${stock.quantity}, Dibutuhkan: ${quantity}`;
                 saveVoucherBtn.disabled = false;
                 return {
                     isValid: true,
@@ -2197,7 +2268,9 @@
         }
 
         function attachTransactionInputListeners() {
-            const transactionInputs = transactionTableBody.querySelectorAll('.quantityInput, .nominalInput:not([disabled]), .descriptionInput:not([disabled]), .sizeInput:not([disabled])');
+            const transactionInputs = transactionTableBody.querySelectorAll(
+                '.quantityInput, .nominalInput:not([disabled]), .descriptionInput:not([disabled]), .sizeInput:not([disabled])'
+            );
             transactionInputs.forEach(input => {
                 input.removeEventListener('input', handleTransactionInput);
                 input.addEventListener('input', handleTransactionInput);
@@ -2232,10 +2305,12 @@
 
             transactionTableBody.innerHTML = '';
             nonHppTransactions.forEach((t, index) => {
-                const newRow = t.isNewItem ? generateNewItemRow(index) : generateTransactionTableRow(index);
+                const newRow = t.isNewItem ? generateNewItemRow(index) : generateTransactionTableRow(
+                    index);
                 transactionTableBody.appendChild(newRow);
                 const rowDescriptionInput = newRow.querySelector('.descriptionInput[type="text"]');
-                const rowDescriptionSelect = newRow.querySelector('.descriptionInput:not([type="text"])');
+                const rowDescriptionSelect = newRow.querySelector(
+                    '.descriptionInput:not([type="text"])');
                 const rowSizeInput = newRow.querySelector('.sizeInput');
                 const rowQuantityInput = newRow.querySelector('.quantityInput');
                 const rowNominalInput = newRow.querySelector('.nominalInput');
@@ -2334,7 +2409,8 @@
             } = calculateTotalsAndValidate();
 
             if (totalNominalRaw !== totalDebitRaw || totalNominalRaw !== totalCreditRaw) {
-                validationInput.value = "Total Nominal pada Rincian Transaksi harus sama dengan Total Debit dan Total Kredit pada Rincian Voucher.";
+                validationInput.value =
+                    "Total Nominal pada Rincian Transaksi harus sama dengan Total Debit dan Total Kredit pada Rincian Voucher.";
                 saveVoucherBtn.disabled = true;
                 return {
                     isValid: false,

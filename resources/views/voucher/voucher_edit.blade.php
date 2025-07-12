@@ -207,7 +207,7 @@
                     <select class="form-select" id="recipe" name="recipe">
                         <option value="">Pilih Formula Produk</option>
                         @foreach($recipes as $recipe)
-                        <option value="{{ $recipe['id'] }}" {{ $voucher->recipe_id == $recipe['id'] ? 'selected' : '' }}>{{ $recipe['name'] }}</option>
+                        <option value="{{ $recipe['id'] }}" {{ $voucher->recipe_id == $recipe['id'] ? 'selected' : '' }}>{{ $recipe['product_name'] }}</option>
                         @endforeach
                     </select>
                 </div>
