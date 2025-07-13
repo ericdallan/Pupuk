@@ -157,7 +157,7 @@
                 <div>{{ $company->address ?? '' }}</div>
                 <div>No. Telp {{ $company->phone ?? '' }} | Email: {{ $company->email ?? '' }}</div>
             </div>
-            <div class="form-title">Formulir Pemakaian Barang</div>
+            <div class="form-title">Formulir Pemindahan Barang</div>
         </div>
 
         <div class="form-details">
