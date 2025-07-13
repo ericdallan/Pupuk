@@ -184,7 +184,7 @@
                 </div>
             @endif
             <ul class="nav flex-column">
-                <li class="nav-item" hidden>
+                <li class="nav-item">
                     <a class="nav-link {{ request()->routeIs('dashboard_page') ? 'active' : '' }}"
                         href="{{ route('dashboard_page') }}">
                         <i class="fas fa-tachometer-alt"></i> Dashboard

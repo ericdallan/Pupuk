@@ -21,7 +21,7 @@ class GeneralLedgerService
      * @param Carbon $endDate
      * @return array
      */
-    protected function calculateNetProfit(Carbon $startDate, Carbon $endDate): array
+    public function calculateNetProfit(Carbon $startDate, Carbon $endDate): array
     {
         $accountCategories = [
             'Pendapatan Penjualan' => ['4.'],

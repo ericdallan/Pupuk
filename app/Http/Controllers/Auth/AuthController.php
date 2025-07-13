@@ -25,7 +25,7 @@ class AuthController extends Controller
         if (Auth::guard('admin')->attempt($credentials)) {
             $request->session()->regenerate();
             session(['login' => true]);
-            return redirect()->intended('/account_page')->with('success', 'Admin Login Successful!');
+            return redirect()->intended('/dashboard')->with('success', 'Admin Login Successful!');
         } else {
             return redirect()->back()->with('failed', 'Admin Email or Password Incorrect!');
         }
@@ -39,4 +39,3 @@ class AuthController extends Controller
         return redirect()->route('login_page')->with('success', 'Logout Successful!');
     }
 }
-?>

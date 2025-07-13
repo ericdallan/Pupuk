@@ -5,6 +5,7 @@ use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\CompanyController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ExportController;
 use App\Http\Controllers\generalLedgerController;
 use App\Http\Controllers\StockController;
@@ -22,7 +23,7 @@ Route::middleware(['guest:admin'])->group(function () {
 // Protected Routes (Auth Middleware)
 Route::middleware(['auth:admin'])->group(function () {
     //LandingPage
-    Route::get('/dashboard', [AdminController::class, 'dashboard_page'])->name('dashboard_page');
+    Route::get('/dashboard', [DashboardController::class, 'dashboard_page'])->name('dashboard_page');
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
     //AdminPage
     Route::get('/admin_profile', [AdminController::class, 'admin_profile'])->name('admin_profile');
