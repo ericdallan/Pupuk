@@ -286,8 +286,8 @@ class VoucherController extends Controller
                     }
                 } elseif ($request->voucher_type === 'PJ') {
                     $usedStock = UsedStock::where('item', $item)->where('size', $size)->first();
-                    $transferStock = TransferStock::where('item', $item)->where('size', $size)->first();
-                    $totalQuantity = ($usedStock ? $usedStock->quantity : 0) + ($transferStock ? $transferStock->quantity : 0);
+                    $stocks = Stock::where('item', $item)->where('size', $size)->first();
+                    $totalQuantity = ($usedStock ? $usedStock->quantity : 0) + ($stocks ? $stocks->quantity : 0);
                     if ($totalQuantity < $quantity) {
                         $validator->errors()->add(
                             $errorField,

@@ -222,8 +222,8 @@ class StockService
             };
 
             $outgoingVoucherTypes = match ($tableName) {
-                'stocks' => ['PH'],
-                'transfer_stocks' => ['PK', 'PJ'],
+                'stocks' => ['PH', 'PJ'],
+                'transfer_stocks' => ['PK'],
                 'used_stocks' => ['PJ'],
                 default => [],
             };

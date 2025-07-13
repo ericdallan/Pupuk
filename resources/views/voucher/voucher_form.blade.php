@@ -91,7 +91,7 @@
                         <div class="row mb-3">
                             <label for="given_to" class="col-sm-3 col-form-label">Diberikan Kepada:</label>
                             <div class="col-sm-9">
-                                <input type="text" class="form-control" id="given_to" name="given_to">
+                                <input type="text" class="form-control" id="given_to" name="given_to" required>
                             </div>
                         </div>
                         <div class="row mb-3">
@@ -104,7 +104,8 @@
                         <div class="row mb-3">
                             <label for="transaction" class="col-sm-3 col-form-label">Transaksi:</label>
                             <div class="col-sm-9">
-                                <input type="text" class="form-control" id="transaction" name="transaction">
+                                <input type="text" class="form-control" id="transaction" name="transaction"
+                                    required>
                             </div>
                         </div>
                         <div class="row mb-3">
@@ -983,7 +984,7 @@
 
             let stockData = [];
             if (voucherType === 'PJ') {
-                stockData = [...usedStocks, ...transferStocks];
+                stockData = [...usedStocks, ...stocks];
             } else if (voucherType === 'PH') {
                 stockData = stocks;
             } else if (voucherType === 'PK') {
@@ -998,14 +999,14 @@
                         size: stock.size,
                         quantity: stock.quantity,
                         source: stock.source || (usedStocks.includes(stock) ? 'used_stocks' :
-                            'transfer_stocks')
+                            'stocks')
                     }))
                     .filter(item => item.size !== null && item.size !== undefined);
 
                 if (voucherType === 'PJ' && sizesWithQuantity.length > 0) {
                     const usedStockSizes = sizesWithQuantity.filter(item => item.source === 'used_stocks');
-                    const transferStockSizes = sizesWithQuantity.filter(item => item.source ===
-                        'transfer_stocks');
+                    const StockSizes = sizesWithQuantity.filter(item => item.source ===
+                        'stocks');
 
                     if (usedStockSizes.length > 0) {
                         const separator = document.createElement('option');
@@ -1023,18 +1024,18 @@
                         });
                     }
 
-                    if (transferStockSizes.length > 0) {
+                    if (StockSizes.length > 0) {
                         const separator = document.createElement('option');
                         separator.value = '';
-                        separator.textContent = '---- Transfer Stocks ----';
+                        separator.textContent = '---- Stocks ----';
                         separator.disabled = true;
                         select.appendChild(separator);
 
-                        transferStockSizes.forEach(item => {
+                        StockSizes.forEach(item => {
                             const option = document.createElement('option');
                             option.value = item.size;
                             option.textContent = `${item.size} (Stok: ${item.quantity})`;
-                            option.dataset.source = 'transfer_stocks';
+                            option.dataset.source = 'stocks';
                             select.appendChild(option);
                         });
                     }
@@ -1115,7 +1116,7 @@
 
             // Infer default size if previousValue is empty and stock data is available
             if (!previousValue && voucherType === 'PJ' && selectedItem) {
-                const stockData = [...usedStocks, ...(transferStocks || [])];
+                const stockData = [...usedStocks, ...(stocks || [])];
                 const sizes = stockData
                     .filter(s => s.item === selectedItem && !s.item.startsWith('HPP'))
                     .map(s => s.size);
@@ -1167,6 +1168,7 @@
             select.className = 'form-control descriptionInput';
             select.name = `transactions[${index}][description]`;
 
+            // Create default option
             const defaultOption = document.createElement('option');
             defaultOption.value = '';
             defaultOption.textContent = 'Pilih Item Stok';
@@ -1174,22 +1176,30 @@
             defaultOption.selected = true;
             select.appendChild(defaultOption);
 
+            // Initialize stock data based on voucher type
             let stockData = [];
             if (voucherType === 'PJ') {
-                stockData = [...usedStocks, ...transferStocks];
+                stockData = [...(usedStocks || []), ...(stocks || [])];
             } else if (voucherType === 'PH' || voucherType === 'PB') {
-                stockData = stocks;
+                stockData = stocks || [];
             } else if (voucherType === 'PK') {
-                stockData = transferStocks;
+                stockData = transferStocks || [];
+            } else {
+                // Handle invalid voucher type
+                const invalidOption = document.createElement('option');
+                invalidOption.value = '';
+                invalidOption.textContent = 'Jenis voucher tidak valid';
+                invalidOption.disabled = true;
+                select.appendChild(invalidOption);
+                select.disabled = true;
+                return select;
             }
 
-            // console.log(`Stock Data for Voucher Type ${voucherType}:`, stockData);
-
+            // Populate items if stockData is valid
             if (stockData && Array.isArray(stockData) && stockData.length > 0) {
-                const uniqueItems = [...new Set(stockData.map(stock => stock.item))].filter(item =>
-                    !item.toLowerCase().startsWith('hpp')
-                );
-                // console.log('Unique Items:', uniqueItems);
+                const uniqueItems = [...new Set(stockData.map(stock => stock.item))]
+                    .filter(item => !item.toLowerCase().startsWith('hpp'))
+                    .sort(); // Sort items alphabetically
 
                 if (uniqueItems.length === 0) {
                     const noItemsOption = document.createElement('option');
@@ -1197,16 +1207,60 @@
                     noItemsOption.textContent = 'Tidak ada item stok tersedia';
                     noItemsOption.disabled = true;
                     select.appendChild(noItemsOption);
+                } else if (voucherType === 'PJ') {
+                    // Separate usedStocks and stocks for PJ voucher type
+                    const usedStockItems = uniqueItems.filter(item =>
+                        stockData.some(stock => stock.item === item && (usedStocks || []).includes(stock))
+                    );
+                    const stockItems = uniqueItems.filter(item =>
+                        stockData.some(stock => stock.item === item && (stocks || []).includes(stock))
+                    );
+
+                    if (stockItems.length > 0) {
+                        const separator = document.createElement('option');
+                        separator.value = '';
+                        separator.textContent = '-- Bahan Baku --';
+                        separator.disabled = true;
+                        select.appendChild(separator);
+
+                        stockItems.forEach(item => {
+                            const option = document.createElement('option');
+                            option.value = item;
+                            option.textContent = item;
+                            option.dataset.source = 'stocks';
+                            select.appendChild(option);
+                        });
+                    }
+
+                    if (usedStockItems.length > 0) {
+                        const separator = document.createElement('option');
+                        separator.value = '';
+                        separator.textContent = '-- Barang Jadi --';
+                        separator.disabled = true;
+                        select.appendChild(separator);
+
+                        usedStockItems.forEach(item => {
+                            const option = document.createElement('option');
+                            option.value = item;
+                            option.textContent = item;
+                            option.dataset.source = 'used_stocks';
+                            select.appendChild(option);
+                        });
+                    }
+
                 } else {
+                    // Non-PJ voucher types: list all items without separators
                     uniqueItems.forEach(item => {
                         const option = document.createElement('option');
                         option.value = item;
                         option.textContent = item;
+                        option.dataset.source = stockData.find(stock => stock.item === item)?.source ||
+                            'stocks';
                         select.appendChild(option);
                     });
                 }
             } else {
-                // console.warn(`No stock data available for voucher type: ${voucherType}`);
+                // No valid stock data
                 const noDataOption = document.createElement('option');
                 noDataOption.value = '';
                 noDataOption.textContent = 'Tidak ada data stok';
@@ -1214,13 +1268,19 @@
                 select.appendChild(noDataOption);
             }
 
+            // Disable dropdown if use_stock is not 'yes'
+            select.disabled = document.querySelector('input[name="use_stock"]:checked')?.value !== 'yes';
+
+            // Add change event listener
             select.addEventListener('change', function(event) {
                 const selectedValue = this.value.trim();
                 if (selectedValue) {
-                    handleStockChange(index, event);
-                    updateSizeDropdown(index, selectedValue); // Ensure size dropdown updates
-                } else {
-                    // console.log(`No valid item selected at index ${index}. Skipping handleStockChange.`);
+                    if (typeof handleStockChange === 'function') {
+                        handleStockChange(index, event);
+                    }
+                    if (typeof updateSizeDropdown === 'function') {
+                        updateSizeDropdown(index, selectedValue);
+                    }
                 }
             });
 
@@ -1377,7 +1437,7 @@
             // Determine the relevant stock data source based on voucherType
             let stockData = [];
             if (voucherType === 'PJ') {
-                stockData = [...(usedStocks || []), ...(transferStocks || [])];
+                stockData = [...(usedStocks || []), ...(stocks || [])];
             } else {
                 stockData = stocks || [];
             }
@@ -1723,11 +1783,11 @@
                     isValidItem =
                         usedStocks.some(s => s.item.trim().toLowerCase() === selectedItem.trim()
                             .toLowerCase()) ||
-                        (transferStocks && transferStocks.some(s => s.item.trim().toLowerCase() === selectedItem
+                        (stocks && stocks.some(s => s.item.trim().toLowerCase() === selectedItem
                             .trim().toLowerCase()));
                     if (!isValidItem || !initialSize) {
                         // console.warn(`Invalid or empty item/size detected at index ${index} for PJ. Attempting to correct.`);
-                        const validItemFromSize = [...usedStocks, ...(transferStocks || [])].find(s => s
+                        const validItemFromSize = [...usedStocks, ...(stocks || [])].find(s => s
                             .size === selectedItem)?.item;
                         if (validItemFromSize) {
                             selectedItem = validItemFromSize;
@@ -1735,7 +1795,7 @@
                             // console.log(`Corrected item to: ${validItemFromSize}`);
                             isValidItem = true;
                         } else {
-                            const similarItem = [...usedStocks, ...(transferStocks || [])].find(s =>
+                            const similarItem = [...usedStocks, ...(stocks || [])].find(s =>
                                 s.item.toLowerCase().includes(selectedItem.toLowerCase())
                             );
                             if (similarItem) {
@@ -1749,7 +1809,7 @@
                             }
                         }
                         if (!initialSize && isValidItem) {
-                            const matchingStock = [...usedStocks, ...(transferStocks || [])].find(s => s
+                            const matchingStock = [...usedStocks, ...(stocks || [])].find(s => s
                                 .item === selectedItem);
                             inferredSize = matchingStock ? matchingStock.size : '';
                             if (sizeElement && inferredSize) {
@@ -2204,7 +2264,7 @@
                 tableName = 'used_stocks';
                 targetTableName = 'used_stocks';
             } else if (voucherType === 'PJ') {
-                stockData = [...usedStocks, ...transferStocks];
+                stockData = [...usedStocks, ...stocks];
                 tableName = 'Stok Pemakaian atau Stok Pemindahan';
             }
 

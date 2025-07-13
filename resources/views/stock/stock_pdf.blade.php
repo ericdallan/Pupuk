@@ -149,14 +149,15 @@
     <div class="container">
         <div class="header">
             @if ($companyLogo)
-            <div class="logo"><img src="{{ public_path('storage/' . $companyLogo) }}" alt="{{ $company->company_name }} Logo" style="max-width: 125px; height: 100px;"></div>
+                <div class="logo"><img src="{{ public_path('storage/' . $companyLogo) }}"
+                        alt="{{ $company->company_name }} Logo" style="max-width: 125px; height: 100px;"></div>
             @endif
             <div class="company-info">
                 <div>{{ strtoupper($company->company_name ?? '') }}</div>
                 <div>{{ $company->address ?? '' }}</div>
                 <div>No. Telp {{ $company->phone ?? '' }} | Email: {{ $company->email ?? '' }}</div>
             </div>
-            <div class="form-title">Formulir Pemindahan Barang</div>
+            <div class="form-title">Formulir Pemakaian Barang</div>
         </div>
 
         <div class="form-details">
@@ -183,14 +184,15 @@
                 </tr>
             </thead>
             <tbody>
-                @for ($i = 1; $i <= 15; $i++) <tr>
-                    <td>{{ $i }}</td>
-                    <td>{{ $items[$i-1]['name'] ?? '' }}</td>
-                    <td>{{ $items[$i-1]['unit'] ?? '' }}</td>
-                    <td>{{ $items[$i-1]['quantity'] ?? '' }}</td>
-                    <td>{{ $items[$i-1]['notes'] ?? '' }}</td>
+                @for ($i = 1; $i <= 15; $i++)
+                    <tr>
+                        <td>{{ $i }}</td>
+                        <td>{{ $items[$i - 1]['name'] ?? '' }}</td>
+                        <td>{{ $items[$i - 1]['unit'] ?? '' }}</td>
+                        <td>{{ $items[$i - 1]['quantity'] ?? '' }}</td>
+                        <td>{{ $items[$i - 1]['notes'] ?? '' }}</td>
                     </tr>
-                    @endfor
+                @endfor
             </tbody>
         </table>
 

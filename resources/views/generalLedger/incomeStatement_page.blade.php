@@ -49,23 +49,26 @@
                 <label for="month" class="form-label">Bulan:</label>
                 <select name="month" id="month" class="form-select">
                     <option value="">Semua Bulan</option>
-                    @for ($i = 1; $i <= 12; $i++) <option value="{{ $i }}" {{ $month == $i ? 'selected' : '' }}>
-                        {{ date('F', mktime(0, 0, 0, $i, 10)) }}
+                    @for ($i = 1; $i <= 12; $i++)
+                        <option value="{{ $i }}" {{ $month == $i ? 'selected' : '' }}>
+                            {{ date('F', mktime(0, 0, 0, $i, 10)) }}
                         </option>
-                        @endfor
+                    @endfor
                 </select>
             </div>
             <div class="col-md-3">
                 <label for="year" class="form-label">Tahun:</label>
                 <select name="year" id="year" class="form-select">
                     @for ($y = date('Y'); $y >= date('Y') - 5; $y--)
-                    <option value="{{ $y }}" {{ $year == $y ? 'selected' : '' }}>{{ $y }}</option>
+                        <option value="{{ $y }}" {{ $year == $y ? 'selected' : '' }}>{{ $y }}
+                        </option>
                     @endfor
                 </select>
             </div>
             <div class="col-md-auto">
                 <button type="submit" class="btn btn-primary me-2">Filter</button>
-                <a href="{{ route('export_income_statement', ['month' => $month, 'year' => $year]) }}" class="btn btn-success">
+                <a href="{{ route('export_income_statement', ['month' => $month, 'year' => $year]) }}"
+                    class="btn btn-success">
                     Export as Excel
                 </a>
             </div>
@@ -122,7 +125,7 @@
                 <td class="text-end">({{ number_format($totalBebanPajak, 2, ',', '.') }})</td>
             </tr>
             <tr>
-                <td class="fw-bolder total">Laba Bersih</td>
+                <td class="fw-bolder total">Laba Bersih/Rugi</td>
                 <td class="text-end total">{{ number_format($labaBersih, 2, ',', '.') }}</td>
             </tr>
         </tbody>

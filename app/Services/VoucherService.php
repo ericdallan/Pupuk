@@ -351,8 +351,8 @@ class VoucherService
         $usedStock = UsedStock::where('item', $item)->where('size', $size)->first();
 
         if ($voucherType === 'PJ') {
-            $transferStock = TransferStock::where('item', $item)->where('size', $size)->first();
-            $totalQuantity = ($usedStock ? $usedStock->quantity : 0) + ($transferStock ? $transferStock->quantity : 0);
+            $stocks = Stock::where('item', $item)->where('size', $size)->first();
+            $totalQuantity = ($usedStock ? $usedStock->quantity : 0) + ($stocks ? $stocks->quantity : 0);
 
             if ($totalQuantity < $quantity) {
                 throw new \Exception("Stok untuk item {$item} (Ukuran: {$size}) tidak mencukupi di tabel used_stocks atau transfer_stocks. Tersedia: {$totalQuantity}, Dibutuhkan: {$quantity}.");
@@ -372,16 +372,16 @@ class VoucherService
                 ]);
                 $remainingQuantity -= $reduce;
             }
-            if ($transferStock && $remainingQuantity > 0) {
-                $transferStock->quantity -= $remainingQuantity;
-                $transferStock->save();
+            if ($stocks && $remainingQuantity > 0) {
+                $stocks->quantity -= $remainingQuantity;
+                $stocks->save();
                 Log::info('Reduced transfer_stocks:', [
                     'item' => $item,
                     'size' => $size,
                     'reduced_quantity' => $remainingQuantity,
-                    'new_quantity' => $transferStock->quantity,
+                    'new_quantity' => $stocks->quantity,
                 ]);
-                if ($transferStock->quantity < 0) {
+                if ($stocks->quantity < 0) {
                     throw new \Exception("Stok untuk item {$item} (Ukuran: {$size}) tidak mencukupi di tabel transfer_stocks setelah pengurangan.");
                 }
             }
@@ -1102,8 +1102,8 @@ class VoucherService
 
                     foreach ([$item, "HPP {$item}"] as $currentItem) {
                         $usedStock = UsedStock::where('item', $currentItem)->where('size', $size)->first();
-                        $transferStock = TransferStock::where('item', $currentItem)->where('size', $size)->first();
-                        $totalQuantity = ($usedStock ? $usedStock->quantity : 0) + ($transferStock ? $transferStock->quantity : 0);
+                        $stocks = Stock::where('item', $currentItem)->where('size', $size)->first();
+                        $totalQuantity = ($usedStock ? $usedStock->quantity : 0) + ($stocks ? $stocks->quantity : 0);
                         if ($totalQuantity < $quantity) {
                             throw new \Exception("Stok untuk item {$currentItem} dengan ukuran {$size} tidak mencukupi di tabel used_stocks atau transfer_stocks. Tersedia: {$totalQuantity}, Dibutuhkan: {$quantity}.");
                         }
