@@ -55,6 +55,8 @@
                                 <option value="pendapatan_vs_beban">Pendapatan vs Beban</option>
                                 <option value="saldo_akun_utama">Saldo Akun Utama</option>
                                 <option value="transactions_per_category">Transaksi per Kategori</option>
+                                <option value="stock_composition_qty">Komposisi Stok (Kuantitas)</option>
+                                <option value="stock_composition_amount">Komposisi Stok (Nominal)</option>
                             </select>
                         </div>
                     </div>
@@ -166,6 +168,44 @@
                         <canvas id="transactionsPerCategoryChart"></canvas>
                     </div>
                 </div>
+                <div id="stock_composition_qty_chart" class="card shadow-sm chart-container" style="display: none;">
+                    <div class="card-body">
+                        <h3 class="card-title">Komposisi Stok Berdasarkan Kuantitas (Top 5)</h3>
+                        <div class="mb-3">
+                            <label for="stock_qty_chart_type" class="form-label fw-bold">Tipe Grafik</label>
+                            <select id="stock_qty_chart_type" class="form-select rounded-3"
+                                onchange="toggleStockQtyChartType()">
+                                <option value="bar" selected>Bar</option>
+                                <option value="pie">Pie</option>
+                            </select>
+                        </div>
+                        @if (empty($dashboardData['stock_composition_qty']['labels']) ||
+                                $dashboardData['stock_composition_qty']['labels'][0] == 'No Stock Data')
+                            <p class="text-muted text-center">Tidak ada data stok untuk periode ini.</p>
+                        @else
+                            <canvas id="stockCompositionQtyChart"></canvas>
+                        @endif
+                    </div>
+                </div>
+                <div id="stock_composition_amount_chart" class="card shadow-sm chart-container" style="display: none;">
+                    <div class="card-body">
+                        <h3 class="card-title">Komposisi Stok Berdasarkan Nominal (Top 5)</h3>
+                        <div class="mb-3">
+                            <label for="stock_amount_chart_type" class="form-label fw-bold">Tipe Grafik</label>
+                            <select id="stock_amount_chart_type" class="form-select rounded-3"
+                                onchange="toggleStockAmountChartType()">
+                                <option value="bar" selected>Bar</option>
+                                <option value="pie">Pie</option>
+                            </select>
+                        </div>
+                        @if (empty($dashboardData['stock_composition_amount']['labels']) ||
+                                $dashboardData['stock_composition_amount']['labels'][0] == 'No Stock Data')
+                            <p class="text-muted text-center">Tidak ada data stok untuk periode ini.</p>
+                        @else
+                            <canvas id="stockCompositionAmountChart"></canvas>
+                        @endif
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -220,6 +260,86 @@
             });
             const selectedChart = document.getElementById('chart_selector').value;
             document.getElementById(`${selectedChart}_chart`).style.display = 'block';
+            // Trigger chart type toggle for stock charts
+            if (selectedChart === 'stock_composition_qty') {
+                toggleStockQtyChartType();
+            } else if (selectedChart === 'stock_composition_amount') {
+                toggleStockAmountChartType();
+            }
+        }
+
+        // Chart Instances
+        let stockQtyChart = null;
+        let stockAmountChart = null;
+
+        // Toggle Stock Composition by Quantity Chart Type
+        function toggleStockQtyChartType() {
+            if (stockQtyChart) {
+                stockQtyChart.destroy();
+            }
+            const chartType = document.getElementById('stock_qty_chart_type').value;
+            const stockQtyCtx = document.getElementById('stockCompositionQtyChart').getContext('2d');
+            stockQtyChart = new Chart(stockQtyCtx, {
+                type: chartType,
+                data: {
+                    labels: @json($dashboardData['stock_composition_qty']['labels']),
+                    datasets: [{
+                        label: 'Kuantitas Stok',
+                        data: @json($dashboardData['stock_composition_qty']['data']),
+                        backgroundColor: ['#4CAF50', '#2196F3', '#FF9800', '#F44336', '#9C27B0'],
+                        borderColor: ['#388E3C', '#1976D2', '#F57C00', '#D32F2F', '#7B1FA2'],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: chartType === 'bar' ? {
+                        y: {
+                            beginAtZero: true
+                        }
+                    } : {},
+                    plugins: {
+                        legend: {
+                            display: chartType === 'pie'
+                        }
+                    }
+                }
+            });
+        }
+
+        // Toggle Stock Composition by Amount Chart Type
+        function toggleStockAmountChartType() {
+            if (stockAmountChart) {
+                stockAmountChart.destroy();
+            }
+            const chartType = document.getElementById('stock_amount_chart_type').value;
+            const stockAmountCtx = document.getElementById('stockCompositionAmountChart').getContext('2d');
+            stockAmountChart = new Chart(stockAmountCtx, {
+                type: chartType,
+                data: {
+                    labels: @json($dashboardData['stock_composition_amount']['labels']),
+                    datasets: [{
+                        label: 'Nominal Stok (IDR)',
+                        data: @json($dashboardData['stock_composition_amount']['data']),
+                        backgroundColor: ['#4CAF50', '#2196F3', '#FF9800', '#F44336', '#9C27B0'],
+                        borderColor: ['#388E3C', '#1976D2', '#F57C00', '#D32F2F', '#7B1FA2'],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: chartType === 'bar' ? {
+                        y: {
+                            beginAtZero: true
+                        }
+                    } : {},
+                    plugins: {
+                        legend: {
+                            display: chartType === 'pie'
+                        }
+                    }
+                }
+            });
         }
 
         // Income Statement Chart
@@ -297,6 +417,8 @@
                 }
             }
         });
+
+        // Cash Flow Chart
         @if (!empty($dashboardData['cash_flow']['labels']) && $dashboardData['cash_flow']['labels'][0] != 'No Cash Flow Data')
             const cashFlowCtx = document.getElementById('cashFlowChart').getContext('2d');
             new Chart(cashFlowCtx, {
@@ -320,6 +442,7 @@
                 }
             });
         @endif
+
         // Operating Expenses Chart
         @if (
             !empty($dashboardData['operating_expenses']['labels']) &&
@@ -415,6 +538,20 @@
                 }
             }
         });
+
+        // Stock Composition by Quantity Chart
+        @if (
+            !empty($dashboardData['stock_composition_qty']['labels']) &&
+                $dashboardData['stock_composition_qty']['labels'][0] != 'No Stock Data')
+            toggleStockQtyChartType();
+        @endif
+
+        // Stock Composition by Amount Chart
+        @if (
+            !empty($dashboardData['stock_composition_amount']['labels']) &&
+                $dashboardData['stock_composition_amount']['labels'][0] != 'No Stock Data')
+            toggleStockAmountChartType();
+        @endif
 
         // Initialize chart visibility
         showChart();

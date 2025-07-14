@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\VoucherDetails;
 use App\Models\ChartOfAccount;
 use App\Services\GeneralLedgerService;
+use App\Services\StockService;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
@@ -15,10 +16,12 @@ use Carbon\Carbon;
 class DashboardService
 {
     protected $generalLedgerService;
+    protected $stockService;
 
-    public function __construct(GeneralLedgerService $generalLedgerService)
+    public function __construct(GeneralLedgerService $generalLedgerService, StockService $stockService)
     {
         $this->generalLedgerService = $generalLedgerService;
+        $this->stockService = $stockService;
     }
 
     /**
@@ -207,6 +210,8 @@ class DashboardService
                 });
                 return $mapped->isEmpty() ? collect(['No Data' => 0]) : $mapped;
             });
+
+            // Cash Flow
             $cashFlow = Cache::remember("cash_flow_{$startDate->format('Y-m-d')}_{$endDate->format('Y-m-d')}", 3600, function () use ($startDate, $endDate) {
                 $result = VoucherDetails::with('voucher')
                     ->whereHas('voucher', function ($query) use ($startDate, $endDate) {
@@ -220,6 +225,69 @@ class DashboardService
                 return $result->isEmpty() ? collect(['No Cash Flow Data' => 0]) : $result->mapWithKeys(function ($item) {
                     return [$item->account_name => $item->total];
                 });
+            });
+
+            // Stock Composition by Quantity (Top 5)
+            $stockCompositionQty = Cache::remember("stock_composition_qty_{$startDate->format('Y-m-d')}_{$endDate->format('Y-m-d')}", 3600, function () use ($startDate, $endDate) {
+                $stockData = $this->stockService->prepareStockData([
+                    'start_date' => $startDate->toDateString(),
+                    'end_date' => $endDate->toDateString(),
+                    'table_filter' => 'stocks',
+                ])['stockData'];
+
+                $items = collect();
+                foreach ($stockData as $itemEntries) {
+                    foreach ($itemEntries as $entry) {
+                        if ($entry->final_stock_qty > 0) { // Only include positive quantities
+                            $items->push([
+                                'label' => $entry->item . ($entry->size ? ' (' . $entry->size . ')' : ''),
+                                'value' => $entry->final_stock_qty,
+                            ]);
+                        }
+                    }
+                }
+                // Sort by quantity and take top 5
+                $topItems = $items->sortByDesc('value')->take(5);
+                $result = $topItems->isEmpty() ? collect(['No Stock Data' => 0]) : $topItems->mapWithKeys(function ($item) {
+                    return [$item['label'] => $item['value']];
+                });
+                // Log for debugging
+                Log::debug('Stock Composition by Quantity Data', [
+                    'result' => $result->toArray(),
+                ]);
+                return $result;
+            });
+
+            // Stock Composition by Amount (Top 5)
+            $stockCompositionAmount = Cache::remember("stock_composition_amount_{$startDate->format('Y-m-d')}_{$endDate->format('Y-m-d')}", 3600, function () use ($startDate, $endDate) {
+                $stockData = $this->stockService->prepareStockData([
+                    'start_date' => $startDate->toDateString(),
+                    'end_date' => $endDate->toDateString(),
+                    'table_filter' => 'stocks',
+                ])['stockData'];
+
+                $items = collect();
+                foreach ($stockData as $itemEntries) {
+                    foreach ($itemEntries as $entry) {
+                        if ($entry->final_stock_qty > 0) { // Only include positive quantities
+                            $amount = $entry->final_stock_qty * $entry->final_hpp;
+                            $items->push([
+                                'label' => $entry->item . ($entry->size ? ' (' . $entry->size . ')' : ''),
+                                'value' => $amount,
+                            ]);
+                        }
+                    }
+                }
+                // Sort by amount and take top 5
+                $topItems = $items->sortByDesc('value')->take(5);
+                $result = $topItems->isEmpty() ? collect(['No Stock Data' => 0]) : $topItems->mapWithKeys(function ($item) {
+                    return [$item['label'] => $item['value']];
+                });
+                // Log for debugging
+                Log::debug('Stock Composition by Amount Data', [
+                    'result' => $result->toArray(),
+                ]);
+                return $result;
             });
 
             // Format data for visualization
@@ -275,6 +343,14 @@ class DashboardService
                 'cash_flow' => [
                     'labels' => $cashFlow->keys()->toArray(),
                     'data' => $cashFlow->values()->toArray(),
+                ],
+                'stock_composition_qty' => [
+                    'labels' => $stockCompositionQty->keys()->toArray(),
+                    'data' => $stockCompositionQty->values()->toArray(),
+                ],
+                'stock_composition_amount' => [
+                    'labels' => $stockCompositionAmount->keys()->toArray(),
+                    'data' => $stockCompositionAmount->values()->toArray(),
                 ],
                 'start_date' => $startDate->format('Y-m-d'),
                 'end_date' => $endDate->format('Y-m-d'),
