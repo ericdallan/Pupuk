@@ -24,7 +24,8 @@ class GeneralLedgerService
     public function calculateNetProfit(Carbon $startDate, Carbon $endDate): array
     {
         $accountCategories = [
-            'Pendapatan Penjualan' => ['4.'],
+            'Pendapatan Penjualan Barang Dagangan' => ['4.1.'],
+            'Pendapatan Penjualan Barang Jadi' => ['4.2.'],
             'Harga Pokok Penjualan' => ['5.1.', '5.2.', '5.3.'],
             'Beban Operasional' => ['6.1.', '6.2.', '6.3.'],
             'Pendapatan Lain-lain' => ['7.1.'],
@@ -34,71 +35,75 @@ class GeneralLedgerService
 
         $totals = array_fill_keys(array_keys($accountCategories), 0);
 
-        try {
-            $voucherDetails = VoucherDetails::with('voucher')
-                ->whereHas('voucher', function ($query) use ($startDate, $endDate) {
-                    $query->whereBetween('voucher_date', [$startDate, $endDate]);
-                })
-                ->select('account_code')
-                ->selectRaw('SUM(credit - debit) as pendapatan_balance')
-                ->selectRaw('SUM(debit - credit) as beban_balance')
-                ->where(function ($query) use ($accountCategories) {
-                    foreach ($accountCategories as $prefixes) {
-                        foreach ($prefixes as $prefix) {
-                            $query->orWhere('account_code', 'like', $prefix . '%');
-                        }
-                    }
-                })
-                ->groupBy('account_code')
-                ->get();
-
-            foreach ($voucherDetails as $detail) {
-                $accountCode = $detail->account_code;
-                foreach ($accountCategories as $category => $prefixes) {
+        $voucherDetails = VoucherDetails::with('voucher')
+            ->whereHas('voucher', function ($query) use ($startDate, $endDate) {
+                $query->whereBetween('voucher_date', [$startDate, $endDate]);
+            })
+            ->select('account_code')
+            ->selectRaw('SUM(credit - debit) as pendapatan_balance')
+            ->selectRaw('SUM(debit - credit) as beban_balance')
+            ->where(function ($query) use ($accountCategories) {
+                foreach ($accountCategories as $prefixes) {
                     foreach ($prefixes as $prefix) {
-                        if (strpos($accountCode, $prefix) === 0) {
-                            if (in_array($category, ['Pendapatan Penjualan', 'Pendapatan Lain-lain'])) {
-                                if ($category === 'Pendapatan Lain-lain' && strpos($accountCode, '7.1.02.') === 0) {
-                                    continue;
-                                }
-                                $totals[$category] += $detail->pendapatan_balance;
-                            } else {
-                                $totals[$category] += $detail->beban_balance;
-                            }
-                            break;
+                        $query->orWhere('account_code', 'like', $prefix . '%');
+                    }
+                }
+            })
+            ->groupBy('account_code')
+            ->get();
+
+        // Debug each account code and its balance
+        foreach ($voucherDetails as $detail) {
+            $accountCode = $detail->account_code;
+            Log::debug('Processing account code', ['account_code' => $accountCode, 'pendapatan_balance' => $detail->pendapatan_balance, 'beban_balance' => $detail->beban_balance]);
+            foreach ($accountCategories as $category => $prefixes) {
+                foreach ($prefixes as $prefix) {
+                    if (strpos($accountCode, $prefix) === 0) {
+                        if (in_array($category, ['Pendapatan Penjualan Barang Dagangan', 'Pendapatan Penjualan Barang Jadi', 'Pendapatan Lain-lain'])) {
+                            $totals[$category] += $detail->pendapatan_balance;
+                        } else {
+                            $totals[$category] += $detail->beban_balance;
                         }
+                        break;
                     }
                 }
             }
-
-            $pendapatanPenjualan = $totals['Pendapatan Penjualan'] ?? 0;
-            $hpp = $totals['Harga Pokok Penjualan'] ?? 0;
-            $totalBebanOperasional = $totals['Beban Operasional'] ?? 0;
-            $totalPendapatanLain = $totals['Pendapatan Lain-lain'] ?? 0;
-            $totalBebanLain = $totals['Beban Lain-lain'] ?? 0;
-            $totalBebanPajak = $totals['Pajak Penghasilan'] ?? 0;
-
-            $labaKotor = $pendapatanPenjualan - $hpp;
-            $labaOperasi = $labaKotor - $totalBebanOperasional;
-            $labaSebelumPajak = $labaOperasi + $totalPendapatanLain - $totalBebanLain;
-            $labaBersih = $labaSebelumPajak - $totalBebanPajak;
-
-            return [
-                'pendapatanPenjualan' => $pendapatanPenjualan,
-                'hpp' => $hpp,
-                'labaKotor' => $labaKotor,
-                'totalBebanOperasional' => $totalBebanOperasional,
-                'labaOperasi' => $labaOperasi,
-                'totalPendapatanLain' => $totalPendapatanLain,
-                'totalBebanLain' => $totalBebanLain,
-                'labaSebelumPajak' => $labaSebelumPajak,
-                'totalBebanPajak' => $totalBebanPajak,
-                'labaBersih' => $labaBersih,
-            ];
-        } catch (\Exception $e) {
-            Log::error('Error calculating net profit: ' . $e->getMessage());
-            throw $e;
         }
+
+        $pendapatanPenjualanDagangan = $totals['Pendapatan Penjualan Barang Dagangan'] ?? 0;
+        $pendapatanPenjualanJadi = $totals['Pendapatan Penjualan Barang Jadi'] ?? 0;
+        $pendapatanPenjualan = $pendapatanPenjualanDagangan + $pendapatanPenjualanJadi;
+        $hpp = $totals['Harga Pokok Penjualan'] ?? 0;
+        $totalBebanOperasional = $totals['Beban Operasional'] ?? 0;
+        $totalPendapatanLain = $totals['Pendapatan Lain-lain'] ?? 0;
+        $totalBebanLain = $totals['Beban Lain-lain'] ?? 0;
+        $totalBebanPajak = $totals['Pajak Penghasilan'] ?? 0;
+
+        $labaKotor = $pendapatanPenjualan - $hpp;
+        $labaOperasi = $labaKotor - $totalBebanOperasional;
+        $labaSebelumPajak = $labaOperasi + $totalPendapatanLain - $totalBebanLain;
+        $labaBersih = $labaSebelumPajak - $totalBebanPajak;
+
+        Log::debug('Calculated Totals', [
+            'pendapatanPenjualanDagangan' => $pendapatanPenjualanDagangan,
+            'pendapatanPenjualanJadi' => $pendapatanPenjualanJadi,
+            'pendapatanPenjualan' => $pendapatanPenjualan,
+        ]);
+
+        return [
+            'pendapatanPenjualan' => $pendapatanPenjualan,
+            'pendapatanPenjualanDagangan' => $pendapatanPenjualanDagangan,
+            'pendapatanPenjualanJadi' => $pendapatanPenjualanJadi,
+            'hpp' => $hpp,
+            'labaKotor' => $labaKotor,
+            'totalBebanOperasional' => $totalBebanOperasional,
+            'labaOperasi' => $labaOperasi,
+            'totalPendapatanLain' => $totalPendapatanLain,
+            'totalBebanLain' => $totalBebanLain,
+            'labaSebelumPajak' => $labaSebelumPajak,
+            'totalBebanPajak' => $totalBebanPajak,
+            'labaBersih' => $labaBersih,
+        ];
     }
 
     /**

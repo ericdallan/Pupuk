@@ -23,6 +23,16 @@ use Illuminate\Support\Collection;
 
 class VoucherService
 {
+    protected $dashboardService;
+
+    /**
+     * Constructor with DashboardService dependency
+     */
+    public function __construct(DashboardService $dashboardService)
+    {
+        $this->dashboardService = $dashboardService;
+    }
+
     /**
      * Prepare data for the voucher page
      *
@@ -166,7 +176,7 @@ class VoucherService
             'accountsData',
             'stocksData',
             'transactionsData',
-            'recipes' // Add recipes to the return data
+            'recipes'
         );
     }
 
@@ -767,6 +777,11 @@ class VoucherService
                     ]);
                 }
             }
+            // Clear cache for the voucher's period
+            $this->dashboardService->clearCacheForPeriod(
+                $voucher->voucher_date->year,
+                $voucher->voucher_date->month
+            );
 
             DB::commit();
             Log::info('Voucher creation completed successfully:', ['voucher_id' => $voucher->id]);
@@ -1265,6 +1280,11 @@ class VoucherService
                     'credit' => floatval($detail['credit'] ?? 0),
                 ]);
             }
+            // Clear cache for the voucher's period
+            $this->dashboardService->clearCacheForPeriod(
+                $voucher->voucher_date->year,
+                $voucher->voucher_date->month
+            );
 
             DB::commit();
         } catch (\Exception $e) {
@@ -1356,6 +1376,12 @@ class VoucherService
                     }
                 }
             }
+             // Clear cache for the voucher's period
+            $this->dashboardService->clearCacheForPeriod(
+                $voucherToDelete->voucher_date->year,
+                $voucherToDelete->voucher_date->month
+            );
+
 
             $voucherToDelete->delete();
 

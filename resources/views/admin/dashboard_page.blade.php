@@ -22,538 +22,511 @@
     @endif
 
     <div class="container">
-        <!-- Enhanced Date Filter Form -->
-        <div class="row mb-4">
-            <div class="col-12">
-                <form action="{{ route('dashboard_page') }}" method="GET" class="card p-4 shadow-sm">
-                    <div class="row align-items-end">
-                        <div class="col-md-4 col-sm-6 mb-3">
-                            <label for="start_date" class="form-label fw-bold">Start Date</label>
-                            <input type="date" name="start_date" id="start_date" class="form-control rounded-3"
-                                value="{{ $dashboardData['start_date'] }}" required>
-                        </div>
-                        <div class="col-md-4 col-sm-6 mb-3">
-                            <label for="end_date" class="form-label fw-bold">End Date</label>
-                            <input type="date" name="end_date" id="end_date" class="form-control rounded-3"
-                                value="{{ $dashboardData['end_date'] }}" required>
-                        </div>
-                        <div class="col-md-4 col-sm-12 mb-3 d-flex justify-content-md-start justify-content-center">
-                            <button type="submit" class="btn btn-primary me-2 px-4 rounded-3">Filter</button>
-                            <button type="button" onclick="resetForm()"
-                                class="btn btn-outline-secondary px-4 rounded-3">Reset</button>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-12">
-                            <label for="chart_selector" class="form-label fw-bold">Pilih Grafik</label>
-                            <select id="chart_selector" class="form-select rounded-3" onchange="showChart()">
-                                <option value="income_statement" selected>Laporan Laba Rugi</option>
-                                <option value="profit_trend">Tren Laba Bersih (Bulanan)</option>
-                                <option value="cash_flow">Arus Kas</option>
-                                <option value="daily_profit">Laba Bersih Harian</option>
-                                <option value="operating_expenses">Distribusi Beban Operasional</option>
-                                <option value="pendapatan_vs_beban">Pendapatan vs Beban</option>
-                                <option value="saldo_akun_utama">Saldo Akun Utama</option>
-                                <option value="transactions_per_category">Transaksi per Kategori</option>
-                                <option value="stock_composition_qty">Komposisi Stok (Kuantitas)</option>
-                                <option value="stock_composition_amount">Komposisi Stok (Nominal)</option>
-                            </select>
-                        </div>
-                    </div>
-                </form>
-            </div>
-        </div>
-
-        <!-- Summary Cards -->
-        <div class="row">
-            <div class="col-md-3 col-sm-6 mb-4">
-                <div class="card shadow-sm">
-                    <div class="card-body">
-                        <h5 class="card-title">Laba Bersih</h5>
-                        <p class="card-text">{{ number_format($dashboardData['income_statement']['laba_bersih'], 2) }}</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3 col-sm-6 mb-4">
-                <div class="card shadow-sm">
-                    <div class="card-body">
-                        <h5 class="card-title">Total Aset</h5>
-                        <p class="card-text">
-                            {{ number_format($dashboardData['balance_sheet']['aset_lancar'] + $dashboardData['balance_sheet']['aset_tetap'], 2) }}
-                        </p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3 col-sm-6 mb-4">
-                <div class="card shadow-sm">
-                    <div class="card-body">
-                        <h5 class="card-title">Piutang Usaha</h5>
-                        <p class="card-text">
-                            {{ number_format($dashboardData['trial_balance']['key_accounts']['piutang_usaha'], 2) }}</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3 col-sm-6 mb-4">
-                <div class="card shadow-sm">
-                    <div class="card-body">
-                        <h5 class="card-title">Utang Usaha</h5>
-                        <p class="card-text">
-                            {{ number_format($dashboardData['trial_balance']['key_accounts']['utang_usaha'], 2) }}</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
         <!-- Charts -->
         <div class="row">
-            <div class="col-md-12">
-                <div id="income_statement_chart" class="card shadow-sm chart-container">
+            <!-- Row 1, Column 1: Profit Trend -->
+            <div class="col-md-6 mb-4">
+                <div class="card shadow-sm chart-container">
                     <div class="card-body">
-                        <h3 class="card-title">Laporan Laba Rugi</h3>
-                        <canvas id="incomeStatementChart"></canvas>
+                        <h3 class="card-title">Tren Laba Bersih (12 Bulan Terakhir)</h3>
+                        <canvas id="profitTrendChart" height="300"></canvas>
                     </div>
                 </div>
-                <div id="profit_trend_chart" class="card shadow-sm chart-container" style="display: none;">
+            </div>
+            <!-- Row 1, Column 2: Sales Trend -->
+            <div class="col-md-6 mb-4">
+                <div class="card shadow-sm chart-container">
                     <div class="card-body">
-                        <h3 class="card-title">Tren Laba Bersih (6 Bulan Terakhir)</h3>
-                        <canvas id="profitTrendChart"></canvas>
+                        <h3 class="card-title">Tren Penjualan (12 Bulan Terakhir)</h3>
+                        <canvas id="salesTrendChart" height="300"></canvas>
                     </div>
                 </div>
-                <div id="daily_profit_chart" class="card shadow-sm chart-container" style="display: none;">
+            </div>
+            <!-- Row 2, Column 1: Stock Composition by Quantity -->
+            <div class="col-md-6 mb-4">
+                <div class="card shadow-sm chart-container">
                     <div class="card-body">
-                        <h3 class="card-title">Laba Bersih Harian</h3>
-                        <canvas id="dailyProfitChart"></canvas>
-                    </div>
-                </div>
-                <div id="operating_expenses_chart" class="card shadow-sm chart-container" style="display: none;">
-                    <div class="card-body">
-                        <h3 class="card-title">Distribusi Beban Operasional</h3>
-                        @if (empty($dashboardData['operating_expenses']['labels']) ||
-                                $dashboardData['operating_expenses']['labels'][0] == 'No Data')
-                            <p class="text-muted text-center">Tidak ada data beban operasional untuk periode ini.</p>
-                        @else
-                            <canvas id="operatingExpensesChart"></canvas>
-                        @endif
-                    </div>
-                </div>
-                <div id="cash_flow_chart" class="card shadow-sm chart-container" style="display: none;">
-                    <div class="card-body">
-                        <h3 class="card-title">Arus Kas</h3>
-                        @if (empty($dashboardData['cash_flow']['labels']) || $dashboardData['cash_flow']['labels'][0] == 'No Cash Flow Data')
-                            <p class="text-muted text-center">Tidak ada data arus kas untuk periode ini.</p>
-                        @else
-                            <canvas id="cashFlowChart"></canvas>
-                        @endif
-                    </div>
-                </div>
-                <div id="pendapatan_vs_beban_chart" class="card shadow-sm chart-container" style="display: none;">
-                    <div class="card-body">
-                        <h3 class="card-title">Pendapatan vs Beban</h3>
-                        <canvas id="pendapatanVsBebanChart"></canvas>
-                    </div>
-                </div>
-                <div id="saldo_akun_utama_chart" class="card shadow-sm chart-container" style="display: none;">
-                    <div class="card-body">
-                        <h3 class="card-title">Saldo Akun Utama</h3>
-                        @if (empty($dashboardData['saldo_akun_utama']['labels']) || $dashboardData['saldo_akun_utama']['labels'][0] == 'No Data')
-                            <p class="text-muted text-center">Tidak ada data saldo akun utama untuk periode ini.</p>
-                        @else
-                            <canvas id="saldoAkunUtamaChart"></canvas>
-                        @endif
-                    </div>
-                </div>
-                <div id="transactions_per_category_chart" class="card shadow-sm chart-container" style="display: none;">
-                    <div class="card-body">
-                        <h3 class="card-title">Transaksi per Kategori</h3>
-                        <canvas id="transactionsPerCategoryChart"></canvas>
-                    </div>
-                </div>
-                <div id="stock_composition_qty_chart" class="card shadow-sm chart-container" style="display: none;">
-                    <div class="card-body">
-                        <h3 class="card-title">Komposisi Stok Berdasarkan Kuantitas (Top 5)</h3>
-                        <div class="mb-3">
-                            <label for="stock_qty_chart_type" class="form-label fw-bold">Tipe Grafik</label>
-                            <select id="stock_qty_chart_type" class="form-select rounded-3"
-                                onchange="toggleStockQtyChartType()">
-                                <option value="bar" selected>Bar</option>
-                                <option value="pie">Pie</option>
-                            </select>
-                        </div>
+                        <h3 class="card-title">Komposisi Stok Berdasarkan Kuantitas</h3>
+                        <form action="{{ route('dashboard_page') }}" method="GET" class="mb-3">
+                            <div class="row align-items-end">
+                                <div class="col-md-4 col-sm-6 mb-3">
+                                    <label for="stock_qty_month" class="form-label fw-bold">Bulan</label>
+                                    <select name="stock_qty_month" id="stock_qty_month" class="form-select rounded-3"
+                                        required>
+                                        @for ($i = 1; $i <= 12; $i++)
+                                            <option value="{{ $i }}"
+                                                {{ $dashboardData['stock_qty_month'] == $i ? 'selected' : '' }}>
+                                                {{ \Carbon\Carbon::create()->month($i)->translatedFormat('F') }}
+                                            </option>
+                                        @endfor
+                                    </select>
+                                </div>
+                                <div class="col-md-4 col-sm-6 mb-3">
+                                    <label for="stock_qty_year" class="form-label fw-bold">Tahun</label>
+                                    <select name="stock_qty_year" id="stock_qty_year" class="form-select rounded-3"
+                                        required>
+                                        @for ($i = \Carbon\Carbon::now()->year; $i >= \Carbon\Carbon::now()->year - 5; $i--)
+                                            <option value="{{ $i }}"
+                                                {{ $dashboardData['stock_qty_year'] == $i ? 'selected' : '' }}>
+                                                {{ $i }}
+                                            </option>
+                                        @endfor
+                                    </select>
+                                </div>
+                                <div class="col-md-4 col-sm-12 mb-3">
+                                    <button type="submit" class="btn btn-primary px-4 rounded-3">Filter</button>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 col-sm-12">
+                                    <label for="stock_qty_limit" class="form-label fw-bold">Tampilkan</label>
+                                    <select id="stock_qty_limit" class="form-select rounded-3"
+                                        onchange="toggleStockQtyChartType()">
+                                        <option value="5" selected>Top 5</option>
+                                        <option value="10">Top 10</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6 col-sm-12">
+                                    <label for="stock_qty_chart_type" class="form-label fw-bold">Tipe Grafik</label>
+                                    <select id="stock_qty_chart_type" class="form-select rounded-3"
+                                        onchange="toggleStockQtyChartType()">
+                                        <option value="bar" selected>Bar</option>
+                                        <option value="pie">Pie</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </form>
                         @if (empty($dashboardData['stock_composition_qty']['labels']) ||
                                 $dashboardData['stock_composition_qty']['labels'][0] == 'No Stock Data')
                             <p class="text-muted text-center">Tidak ada data stok untuk periode ini.</p>
                         @else
-                            <canvas id="stockCompositionQtyChart"></canvas>
-                        @endif
-                    </div>
-                </div>
-                <div id="stock_composition_amount_chart" class="card shadow-sm chart-container" style="display: none;">
-                    <div class="card-body">
-                        <h3 class="card-title">Komposisi Stok Berdasarkan Nominal (Top 5)</h3>
-                        <div class="mb-3">
-                            <label for="stock_amount_chart_type" class="form-label fw-bold">Tipe Grafik</label>
-                            <select id="stock_amount_chart_type" class="form-select rounded-3"
-                                onchange="toggleStockAmountChartType()">
-                                <option value="bar" selected>Bar</option>
-                                <option value="pie">Pie</option>
-                            </select>
-                        </div>
-                        @if (empty($dashboardData['stock_composition_amount']['labels']) ||
-                                $dashboardData['stock_composition_amount']['labels'][0] == 'No Stock Data')
-                            <p class="text-muted text-center">Tidak ada data stok untuk periode ini.</p>
-                        @else
-                            <canvas id="stockCompositionAmountChart"></canvas>
+                            <canvas id="stockCompositionQtyChart" height="200"></canvas>
                         @endif
                     </div>
                 </div>
             </div>
-        </div>
-
-        <!-- Recent Transactions Table -->
-        <div class="row mt-4">
-            <div class="col-md-12">
-                <div class="card shadow-sm">
+            <!-- Row 2, Column 2: Stock Composition by Amount -->
+            <div class="col-md-6 mb-4">
+                <div class="card shadow-sm chart-container">
                     <div class="card-body">
-                        <h3 class="card-title">Transaksi Terbaru</h3>
-                        <table class="table table-striped">
-                            <thead>
-                                <tr>
-                                    <th>Tanggal</th>
-                                    <th>Nama Akun</th>
-                                    <th>Debit</th>
-                                    <th>Kredit</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach ($dashboardData['recent_transactions'] as $transaction)
-                                    <tr>
-                                        <td>{{ $transaction['voucher_date'] ? \Carbon\Carbon::parse($transaction['voucher_date'])->format('d M Y') : 'N/A' }}
-                                        </td>
-                                        <td>{{ $transaction['account_name'] }}</td>
-                                        <td>{{ number_format($transaction['debit'], 2) }}</td>
-                                        <td>{{ number_format($transaction['credit'], 2) }}</td>
-                                    </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
+                        <h3 class="card-title">Komposisi Stok Berdasarkan Nominal</h3>
+                        <form action="{{ route('dashboard_page') }}" method="GET" class="mb-3">
+                            <div class="row align-items-end">
+                                <div class="col-md-4 col-sm-6 mb-3">
+                                    <label for="stock_amount_month" class="form-label fw-bold">Bulan</label>
+                                    <select name="stock_amount_month" id="stock_amount_month" class="form-select rounded-3"
+                                        required>
+                                        @for ($i = 1; $i <= 12; $i++)
+                                            <option value="{{ $i }}"
+                                                {{ $dashboardData['stock_amount_month'] == $i ? 'selected' : '' }}>
+                                                {{ \Carbon\Carbon::create()->month($i)->translatedFormat('F') }}
+                                            </option>
+                                        @endfor
+                                    </select>
+                                </div>
+                                <div class="col-md-4 col-sm-6 mb-3">
+                                    <label for="stock_amount_year" class="form-label fw-bold">Tahun</label>
+                                    <select name="stock_amount_year" id="stock_amount_year" class="form-select rounded-3"
+                                        required>
+                                        @for ($i = \Carbon\Carbon::now()->year; $i >= \Carbon\Carbon::now()->year - 5; $i--)
+                                            <option value="{{ $i }}"
+                                                {{ $dashboardData['stock_amount_year'] == $i ? 'selected' : '' }}>
+                                                {{ $i }}
+                                            </option>
+                                        @endfor
+                                    </select>
+                                </div>
+                                <div class="col-md-4 col-sm-12 mb-3">
+                                    <button type="submit" class="btn btn-primary px-4 rounded-3">Filter</button>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 col-sm-12">
+                                    <label for="stock_amount_limit" class="form-label fw-bold">Tampilkan</label>
+                                    <select id="stock_amount_limit" class="form-select rounded-3"
+                                        onchange="toggleStockAmountChartType()">
+                                        <option value="5" selected>Top 5</option>
+                                        <option value="10">Top 10</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6 col-sm-12">
+                                    <label for="stock_amount_chart_type" class="form-label fw-bold">Tipe Grafik</label>
+                                    <select id="stock_amount_chart_type" class="form-select rounded-3"
+                                        onchange="toggleStockAmountChartType()">
+                                        <option value="bar" selected>Bar</option>
+                                        <option value="pie">Pie</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </form>
+                        @if (empty($dashboardData['stock_composition_amount']['labels']) ||
+                                $dashboardData['stock_composition_amount']['labels'][0] == 'No Stock Data')
+                            <p class="text-muted text-center">Tidak ada data stok untuk periode ini.</p>
+                        @else
+                            <canvas id="stockCompositionAmountChart" height="200"></canvas>
+                        @endif
                     </div>
                 </div>
             </div>
         </div>
     </div>
-
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-        // Reset Form Function
-        function resetForm() {
-            document.getElementById('start_date').value = '';
-            document.getElementById('end_date').value = '';
-            document.querySelector('form').submit();
-        }
+        // Ensure DOM is fully loaded before initializing charts
+        document.addEventListener('DOMContentLoaded', function() {
+            // Stock Composition by Quantity Chart
+            let stockQtyChart = null;
+            window.toggleStockQtyChartType = function() {
+                if (stockQtyChart) {
+                    stockQtyChart.destroy();
+                }
+                const chartType = document.getElementById('stock_qty_chart_type').value;
+                const limit = parseInt(document.getElementById('stock_qty_limit').value);
+                const labels = @json($dashboardData['stock_composition_qty']['labels']).slice(0, limit) || [];
+                const data = @json($dashboardData['stock_composition_qty']['data']).slice(0, limit) || [];
+                const stockQtyCtx = document.getElementById('stockCompositionQtyChart').getContext('2d');
+                if (stockQtyCtx) {
+                    stockQtyChart = new Chart(stockQtyCtx, {
+                        type: chartType,
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                label: 'Kuantitas Stok',
+                                data: data,
+                                backgroundColor: ['#4CAF50', '#2196F3', '#FF9800', '#F44336',
+                                    '#9C27B0', '#FFEB3B', '#795548', '#607D8B', '#E91E63',
+                                    '#3F51B5'
+                                ],
+                                borderColor: ['#388E3C', '#1976D2', '#F57C00', '#D32F2F',
+                                    '#7B1FA2', '#FBC02D', '#5D4037', '#455A64', '#C2185B',
+                                    '#303F9F'
+                                ],
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            scales: chartType === 'bar' ? {
+                                x: {
+                                    title: {
+                                        display: true,
+                                        text: 'Item'
+                                    }
+                                },
+                                y: {
+                                    title: {
+                                        display: true,
+                                        text: 'Kuantitas'
+                                    },
+                                    beginAtZero: true
+                                }
+                            } : {},
+                            plugins: {
+                                legend: {
+                                    display: chartType === 'pie'
+                                },
+                                afterDraw: function(chart) {
+                                    if (chartType === 'pie') {
+                                        const ctx = chart.ctx;
+                                        const width = chart.width;
+                                        const height = chart.height;
+                                        const centerX = width / 2;
+                                        const centerY = height / 2;
+                                        const total = data.reduce((acc, val) => acc + val, 0);
 
-        // Chart Filter Function
-        function showChart() {
-            const chartContainers = document.querySelectorAll('.chart-container');
-            chartContainers.forEach(container => {
-                container.style.display = 'none';
-            });
-            const selectedChart = document.getElementById('chart_selector').value;
-            document.getElementById(`${selectedChart}_chart`).style.display = 'block';
-            // Trigger chart type toggle for stock charts
-            if (selectedChart === 'stock_composition_qty') {
+                                        ctx.save();
+                                        ctx.textAlign = 'center';
+                                        ctx.textBaseline = 'middle';
+                                        ctx.font = 'bold 16px Arial';
+                                        ctx.fillStyle = '#000000';
+                                        ctx.fillText(`Total: ${total} Items`, centerX, centerY);
+                                        ctx.restore();
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+            };
+
+            // Stock Composition by Amount Chart
+            let stockAmountChart = null;
+            window.toggleStockAmountChartType = function() {
+                if (stockAmountChart) {
+                    stockAmountChart.destroy();
+                }
+                const chartType = document.getElementById('stock_amount_chart_type').value;
+                const limit = parseInt(document.getElementById('stock_amount_limit').value);
+                const labels = @json($dashboardData['stock_composition_amount']['labels']).slice(0, limit) || [];
+                const data = @json($dashboardData['stock_composition_amount']['data']).slice(0, limit) || [];
+                const stockAmountCtx = document.getElementById('stockCompositionAmountChart').getContext('2d');
+                if (stockAmountCtx) {
+                    stockAmountChart = new Chart(stockAmountCtx, {
+                        type: chartType,
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                label: 'Nominal Stok (IDR)',
+                                data: data,
+                                backgroundColor: ['#4CAF50', '#2196F3', '#FF9800', '#F44336',
+                                    '#9C27B0', '#FFEB3B', '#795548', '#607D8B', '#E91E63',
+                                    '#3F51B5'
+                                ],
+                                borderColor: ['#388E3C', '#1976D2', '#F57C00', '#D32F2F',
+                                    '#7B1FA2', '#FBC02D', '#5D4037', '#455A64', '#C2185B',
+                                    '#303F9F'
+                                ],
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            scales: chartType === 'bar' ? {
+                                x: {
+                                    title: {
+                                        display: true,
+                                        text: 'Item'
+                                    }
+                                },
+                                y: {
+                                    title: {
+                                        display: true,
+                                        text: 'Nominal (IDR)'
+                                    },
+                                    beginAtZero: true
+                                }
+                            } : {},
+                            plugins: {
+                                legend: {
+                                    display: chartType === 'pie'
+                                },
+                                afterDraw: function(chart) {
+                                    if (chartType === 'pie') {
+                                        const ctx = chart.ctx;
+                                        const width = chart.width;
+                                        const height = chart.height;
+                                        const centerX = width / 2;
+                                        const centerY = height / 2;
+                                        const total = data.reduce((acc, val) => acc + val, 0);
+
+                                        ctx.save();
+                                        ctx.textAlign = 'center';
+                                        ctx.textBaseline = 'middle';
+                                        ctx.font = 'bold 16px Arial';
+                                        ctx.fillStyle = '#000000';
+                                        ctx.fillText(
+                                            `Total: ${new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(total)}`,
+                                            centerX, centerY);
+                                        ctx.restore();
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+            };
+
+            // < -- Profit Trend Chart(Line) with Vertical Lines -- >
+            const profitTrendCtx = document.getElementById('profitTrendChart').getContext('2d');
+            if (profitTrendCtx) {
+                const labels = @json($dashboardData['profit_trend']['labels']) || [];
+                const data = @json($dashboardData['profit_trend']['data']) || [];
+                // Tambahkan bulan kosong di awal dan akhir
+                const extendedLabels = ['', ...labels, ''];
+                const extendedData = [null, ...data, null];
+                const annotations = {};
+                extendedData.forEach((value, index) => {
+                    if (value !== null && value !== undefined) {
+                        annotations[`line${index}`] = {
+                            type: 'line',
+                            xMin: index,
+                            xMax: index,
+                            yMin: 0,
+                            yMax: value,
+                            borderColor: value < 0 ? '#FF0000' :
+                            '#00FF00', // Merah untuk profit negatif, hijau untuk positif/nol
+                            borderWidth: 2,
+                            borderDash: [5, 5] // Membuat garis putus-putus (5px garis, 5px spasi)
+                        };
+                    }
+                });
+                new Chart(profitTrendCtx, {
+                    type: 'line',
+                    data: {
+                        labels: extendedLabels,
+                        datasets: [{
+                            label: 'Laba Bersih (IDR)',
+                            data: extendedData,
+                            backgroundColor: '#2196F3',
+                            borderColor: '#1976D2',
+                            fill: false,
+                            tension: 0.1,
+                            pointRadius: 0
+                        }]
+                    },
+                    options: {
+                        scales: {
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Bulan'
+                                },
+                                ticks: {
+                                    padding: 15
+                                }
+                            },
+                            y: {
+                                title: {
+                                    display: true,
+                                    text: 'Laba Bersih (IDR)',
+                                    rotation: 90
+                                },
+                                beginAtZero: true,
+                                ticks: {
+                                    padding: 15
+                                }
+                            }
+                        },
+                        elements: {
+                            line: {
+                                tension: 0.1
+                            },
+                            point: {
+                                radius: 0,
+                                hitRadius: 5
+                            }
+                        },
+                        plugins: {
+                            annotation: {
+                                annotations: annotations
+                            }
+                        },
+                        interaction: {
+                            mode: 'index',
+                            intersect: false
+                        },
+                    }
+                });
+            }
+            // < -- Sales Trend Chart(Dual Line) with Interactions -- >
+            const salesTrendCtx = document.getElementById('salesTrendChart').getContext('2d');
+            if (salesTrendCtx) {
+                console.log('Sales Trend Data:', {
+                    labels: @json($dashboardData['sales_trend']['labels']) || [],
+                    sales_dagangan: @json($dashboardData['sales_trend']['data']['sales_dagangan']) || [],
+                    sales_jadi: @json($dashboardData['sales_trend']['data']['sales_jadi']) || []
+                });
+                const labels = @json($dashboardData['sales_trend']['labels']) || [];
+                const salesDagangan = @json($dashboardData['sales_trend']['data']['sales_dagangan']) || [];
+                const salesJadi = @json($dashboardData['sales_trend']['data']['sales_jadi']) || [];
+                // Tambahkan bulan kosong di awal dan akhir
+                const extendedLabels = ['', ...labels, ''];
+                const extendedSalesDagangan = [null, ...salesDagangan, null];
+                const extendedSalesJadi = [null, ...salesJadi, null];
+                const salesTrendChart = new Chart(salesTrendCtx, {
+                    type: 'line',
+                    data: {
+                        labels: extendedLabels,
+                        datasets: [{
+                            label: 'Penjualan Barang Dagangan (IDR)',
+                            data: extendedSalesDagangan,
+                            backgroundColor: '#4CAF50',
+                            borderColor: '#388E3C',
+                            fill: false,
+                            tension: 0.1,
+                            pointRadius: 0,
+                            pointHoverRadius: 5,
+                            pointHoverBackgroundColor: '#FFFFFF',
+                            pointHoverBorderColor: '#388E3C'
+                        }, {
+                            label: 'Penjualan Barang Jadi (IDR)',
+                            data: extendedSalesJadi,
+                            backgroundColor: '#2196F3',
+                            borderColor: '#1976D2',
+                            fill: false,
+                            tension: 0.1,
+                            pointRadius: 0,
+                            pointHoverRadius: 5,
+                            pointHoverBackgroundColor: '#FFFFFF',
+                            pointHoverBorderColor: '#1976D2'
+                        }]
+                    },
+                    options: {
+                        scales: {
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Bulan'
+                                },
+                                ticks: {
+                                    padding: 15
+                                }
+                            },
+                            y: {
+                                title: {
+                                    display: true,
+                                    text: 'Nominal (IDR)'
+                                },
+                                beginAtZero: true,
+                                ticks: {
+                                    padding: 15
+                                }
+                            }
+                        },
+                        plugins: {
+                            tooltip: {
+                                mode: 'index',
+                                intersect: false,
+                                callbacks: {
+                                    label: function(context) {
+                                        let label = context.dataset.label || '';
+                                        if (label) {
+                                            label += ': ';
+                                        }
+                                        label += new Intl.NumberFormat('id-ID', {
+                                            style: 'currency',
+                                            currency: 'IDR'
+                                        }).format(context.raw);
+                                        return label;
+                                    }
+                                }
+                            }
+                        },
+                        interaction: {
+                            mode: 'nearest',
+                            intersect: false,
+                            axis: 'x'
+                        },
+                        onClick: function(event, elements) {
+                            if (elements.length > 0) {
+                                const index = elements[0].index;
+                                const label = extendedLabels[index];
+                                const value = elements[0].dataset.data[index];
+                                if (value !== null) {
+                                    alert(
+                                        `Bulan: ${label || 'Tidak ada label'}, Nilai: ${new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(value)}`
+                                    );
+                                }
+                            }
+                        },
+                        hover: {
+                            mode: 'nearest',
+                            intersect: false
+                        }
+                    }
+                });
+            }
+
+            // Initialize Stock Charts
+            @if (
+                !empty($dashboardData['stock_composition_qty']['labels']) &&
+                    $dashboardData['stock_composition_qty']['labels'][0] != 'No Stock Data')
                 toggleStockQtyChartType();
-            } else if (selectedChart === 'stock_composition_amount') {
+            @endif
+            @if (
+                !empty($dashboardData['stock_composition_amount']['labels']) &&
+                    $dashboardData['stock_composition_amount']['labels'][0] != 'No Stock Data')
                 toggleStockAmountChartType();
-            }
-        }
-
-        // Chart Instances
-        let stockQtyChart = null;
-        let stockAmountChart = null;
-
-        // Toggle Stock Composition by Quantity Chart Type
-        function toggleStockQtyChartType() {
-            if (stockQtyChart) {
-                stockQtyChart.destroy();
-            }
-            const chartType = document.getElementById('stock_qty_chart_type').value;
-            const stockQtyCtx = document.getElementById('stockCompositionQtyChart').getContext('2d');
-            stockQtyChart = new Chart(stockQtyCtx, {
-                type: chartType,
-                data: {
-                    labels: @json($dashboardData['stock_composition_qty']['labels']),
-                    datasets: [{
-                        label: 'Kuantitas Stok',
-                        data: @json($dashboardData['stock_composition_qty']['data']),
-                        backgroundColor: ['#4CAF50', '#2196F3', '#FF9800', '#F44336', '#9C27B0'],
-                        borderColor: ['#388E3C', '#1976D2', '#F57C00', '#D32F2F', '#7B1FA2'],
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    scales: chartType === 'bar' ? {
-                        y: {
-                            beginAtZero: true
-                        }
-                    } : {},
-                    plugins: {
-                        legend: {
-                            display: chartType === 'pie'
-                        }
-                    }
-                }
-            });
-        }
-
-        // Toggle Stock Composition by Amount Chart Type
-        function toggleStockAmountChartType() {
-            if (stockAmountChart) {
-                stockAmountChart.destroy();
-            }
-            const chartType = document.getElementById('stock_amount_chart_type').value;
-            const stockAmountCtx = document.getElementById('stockCompositionAmountChart').getContext('2d');
-            stockAmountChart = new Chart(stockAmountCtx, {
-                type: chartType,
-                data: {
-                    labels: @json($dashboardData['stock_composition_amount']['labels']),
-                    datasets: [{
-                        label: 'Nominal Stok (IDR)',
-                        data: @json($dashboardData['stock_composition_amount']['data']),
-                        backgroundColor: ['#4CAF50', '#2196F3', '#FF9800', '#F44336', '#9C27B0'],
-                        borderColor: ['#388E3C', '#1976D2', '#F57C00', '#D32F2F', '#7B1FA2'],
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    scales: chartType === 'bar' ? {
-                        y: {
-                            beginAtZero: true
-                        }
-                    } : {},
-                    plugins: {
-                        legend: {
-                            display: chartType === 'pie'
-                        }
-                    }
-                }
-            });
-        }
-
-        // Income Statement Chart
-        const incomeStatementCtx = document.getElementById('incomeStatementChart').getContext('2d');
-        new Chart(incomeStatementCtx, {
-            type: 'bar',
-            data: {
-                labels: ['Pendapatan Penjualan', 'Laba Kotor', 'Beban Operasional', 'Laba Bersih'],
-                datasets: [{
-                    label: 'Jumlah (IDR)',
-                    data: [
-                        {{ $dashboardData['income_statement']['pendapatan_penjualan'] }},
-                        {{ $dashboardData['income_statement']['laba_kotor'] }},
-                        {{ $dashboardData['income_statement']['total_beban_operasional'] }},
-                        {{ $dashboardData['income_statement']['laba_bersih'] }}
-                    ],
-                    backgroundColor: ['#4CAF50', '#2196F3', '#FF9800', '#F44336'],
-                    borderColor: ['#388E3C', '#1976D2', '#F57C00', '#D32F2F'],
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                scales: {
-                    y: {
-                        beginAtZero: true
-                    }
-                }
-            }
+            @endif
         });
-
-        // Profit Trend Chart (Monthly)
-        const profitTrendCtx = document.getElementById('profitTrendChart').getContext('2d');
-        new Chart(profitTrendCtx, {
-            type: 'line',
-            data: {
-                labels: @json($dashboardData['profit_trend']['labels']),
-                datasets: [{
-                    label: 'Laba Bersih (IDR)',
-                    data: @json($dashboardData['profit_trend']['data']),
-                    backgroundColor: '#2196F3',
-                    borderColor: '#1976D2',
-                    fill: false,
-                    tension: 0.1
-                }]
-            },
-            options: {
-                scales: {
-                    y: {
-                        beginAtZero: true
-                    }
-                }
-            }
-        });
-
-        // Daily Profit Chart
-        const dailyProfitCtx = document.getElementById('dailyProfitChart').getContext('2d');
-        new Chart(dailyProfitCtx, {
-            type: 'line',
-            data: {
-                labels: @json($dashboardData['daily_profit']['labels']),
-                datasets: [{
-                    label: 'Laba Bersih Harian (IDR)',
-                    data: @json($dashboardData['daily_profit']['data']),
-                    backgroundColor: '#4CAF50',
-                    borderColor: '#388E3C',
-                    fill: false,
-                    tension: 0.1
-                }]
-            },
-            options: {
-                scales: {
-                    y: {
-                        beginAtZero: true
-                    }
-                }
-            }
-        });
-
-        // Cash Flow Chart
-        @if (!empty($dashboardData['cash_flow']['labels']) && $dashboardData['cash_flow']['labels'][0] != 'No Cash Flow Data')
-            const cashFlowCtx = document.getElementById('cashFlowChart').getContext('2d');
-            new Chart(cashFlowCtx, {
-                type: 'bar',
-                data: {
-                    labels: @json($dashboardData['cash_flow']['labels']),
-                    datasets: [{
-                        label: 'Arus Kas (IDR)',
-                        data: @json($dashboardData['cash_flow']['data']),
-                        backgroundColor: ['#4CAF50', '#2196F3'],
-                        borderColor: ['#388E3C', '#1976D2'],
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    scales: {
-                        y: {
-                            beginAtZero: true
-                        }
-                    }
-                }
-            });
-        @endif
-
-        // Operating Expenses Chart
-        @if (
-            !empty($dashboardData['operating_expenses']['labels']) &&
-                $dashboardData['operating_expenses']['labels'][0] != 'No Data')
-            const operatingExpensesCtx = document.getElementById('operatingExpensesChart').getContext('2d');
-            new Chart(operatingExpensesCtx, {
-                type: 'pie',
-                data: {
-                    labels: @json($dashboardData['operating_expenses']['labels']),
-                    datasets: [{
-                        label: 'Beban Operasional (IDR)',
-                        data: @json($dashboardData['operating_expenses']['data']),
-                        backgroundColor: ['#4CAF50', '#2196F3', '#FF9800', '#F44336', '#9C27B0', '#FFEB3B'],
-                        borderColor: ['#388E3C', '#1976D2', '#F57C00', '#D32F2F', '#7B1FA2', '#FBC02D'],
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true
-                }
-            });
-        @endif
-
-        // Pendapatan vs Beban Chart
-        const pendapatanVsBebanCtx = document.getElementById('pendapatanVsBebanChart').getContext('2d');
-        new Chart(pendapatanVsBebanCtx, {
-            type: 'bar',
-            data: {
-                labels: @json($dashboardData['pendapatan_vs_beban']['labels']),
-                datasets: [{
-                    label: 'Jumlah (IDR)',
-                    data: @json($dashboardData['pendapatan_vs_beban']['data']),
-                    backgroundColor: ['#4CAF50', '#66BB6A', '#FF9800', '#F44336', '#D81B60', '#7B1FA2'],
-                    borderColor: ['#388E3C', '#4CAF50', '#F57C00', '#D32F2F', '#AD1457', '#6A1B9A'],
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                scales: {
-                    y: {
-                        beginAtZero: true
-                    }
-                }
-            }
-        });
-
-        // Saldo Akun Utama Chart
-        @if (
-            !empty($dashboardData['saldo_akun_utama']['labels']) &&
-                $dashboardData['saldo_akun_utama']['labels'][0] != 'No Data')
-            const saldoAkunUtamaCtx = document.getElementById('saldoAkunUtamaChart').getContext('2d');
-            new Chart(saldoAkunUtamaCtx, {
-                type: 'bar',
-                data: {
-                    labels: @json($dashboardData['saldo_akun_utama']['labels']),
-                    datasets: [{
-                        label: 'Saldo (IDR)',
-                        data: @json($dashboardData['saldo_akun_utama']['data']),
-                        backgroundColor: ['#4CAF50', '#2196F3', '#FF9800', '#F44336'],
-                        borderColor: ['#388E3C', '#1976D2', '#F57C00', '#D32F2F'],
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    scales: {
-                        y: {
-                            beginAtZero: true
-                        }
-                    }
-                }
-            });
-        @endif
-
-        // Transactions per Category Chart
-        const transactionsPerCategoryCtx = document.getElementById('transactionsPerCategoryChart').getContext('2d');
-        new Chart(transactionsPerCategoryCtx, {
-            type: 'bar',
-            data: {
-                labels: @json($dashboardData['transactions_per_category']['labels']),
-                datasets: [{
-                    label: 'Total Transaksi (IDR)',
-                    data: @json($dashboardData['transactions_per_category']['data']),
-                    backgroundColor: ['#4CAF50', '#2196F3', '#FF9800', '#F44336', '#9C27B0'],
-                    borderColor: ['#388E3C', '#1976D2', '#F57C00', '#D32F2F', '#7B1FA2'],
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                scales: {
-                    y: {
-                        beginAtZero: true
-                    }
-                }
-            }
-        });
-
-        // Stock Composition by Quantity Chart
-        @if (
-            !empty($dashboardData['stock_composition_qty']['labels']) &&
-                $dashboardData['stock_composition_qty']['labels'][0] != 'No Stock Data')
-            toggleStockQtyChartType();
-        @endif
-
-        // Stock Composition by Amount Chart
-        @if (
-            !empty($dashboardData['stock_composition_amount']['labels']) &&
-                $dashboardData['stock_composition_amount']['labels'][0] != 'No Stock Data')
-            toggleStockAmountChartType();
-        @endif
-
-        // Initialize chart visibility
-        showChart();
     </script>
 @endsection
