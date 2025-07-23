@@ -286,8 +286,8 @@
                     </div>
                 </div>
                 <div class="right-icons">
-                    <img src="{{ asset('logo/LogoInni.png') }}" alt="DeveloperLogo"
-                        style="max-width: 75px; max-height: 75px;">
+                    <img src="{{ asset('logo/LogoInniDigi.png') }}" alt="DeveloperLogo"
+                        style="max-width: 100px; max-height: 100px;">
                 </div>
             </div>
             @yield('content')

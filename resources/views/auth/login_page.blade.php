@@ -104,8 +104,8 @@
 
     <div class="login-container">
         <div class="logo-container">
-            <img src="{{ asset('logo/LogoInni.png') }}" alt="DeveloperLogo"
-                style="max-width: 150px; max-height: 150px;">
+            <img src="{{ asset('logo/LogoInniDigi.png') }}" alt="DeveloperLogo"
+                style="max-width: 200px; max-height: 200px;">
         </div>
         <h2 class="text-center mb-4">Admin Login</h2>
         <form method="POST" action="{{ route('login.post') }}">
