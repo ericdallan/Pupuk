@@ -33,10 +33,18 @@ class DashboardService
         try {
             // Validate parameters
             $validator = Validator::make($params, [
+                'profit_trend_period' => 'nullable|in:last_12_months,yearly',
+                'profit_trend_year' => 'nullable|integer|min:1900',
+                'sales_trend_period' => 'nullable|in:last_12_months,yearly',
+                'sales_trend_year' => 'nullable|integer|min:1900',
                 'stock_qty_month' => 'nullable|integer|between:1,12',
                 'stock_qty_year' => 'nullable|integer|min:1900',
                 'stock_amount_month' => 'nullable|integer|between:1,12',
                 'stock_amount_year' => 'nullable|integer|min:1900',
+                'stock_qty_limit' => 'nullable|integer|in:5,10',
+                'stock_qty_chart_type' => 'nullable|in:bar,pie',
+                'stock_amount_limit' => 'nullable|integer|in:5,10',
+                'stock_amount_chart_type' => 'nullable|in:bar,pie',
             ]);
 
             if ($validator->fails()) {
@@ -48,50 +56,101 @@ class DashboardService
             $stockQtyYear = $params['stock_qty_year'] ?? Carbon::now()->year;
             $stockAmountMonth = $params['stock_amount_month'] ?? Carbon::now()->month;
             $stockAmountYear = $params['stock_amount_year'] ?? Carbon::now()->year;
+            $stockQtyLimit = $params['stock_qty_limit'] ?? 5;
+            $stockQtyChartType = $params['stock_qty_chart_type'] ?? 'bar';
+            $stockAmountLimit = $params['stock_amount_limit'] ?? 5;
+            $stockAmountChartType = $params['stock_amount_chart_type'] ?? 'bar';
 
             $stockQtyStartDate = Carbon::create($stockQtyYear, $stockQtyMonth, 1)->startOfMonth();
             $stockQtyEndDate = $stockQtyStartDate->copy()->endOfMonth();
             $stockAmountStartDate = Carbon::create($stockAmountYear, $stockAmountMonth, 1)->startOfMonth();
             $stockAmountEndDate = $stockAmountStartDate->copy()->endOfMonth();
 
-            // Get monthly profit trend (last 12 months)
+            // Get monthly profit trend
             $profitTrend = [];
-            $labels = [];
-            $currentDate = Carbon::now()->subMonths(11)->startOfMonth(); // Start from 12 months ago
-            for ($i = 0; $i < 12; $i++) {
-                $date = $currentDate->copy()->addMonths($i);
-                // Log::debug('Processing profit month', ['date' => $date->toDateString()]);
-                $profitData = Cache::remember("profit_{$date->year}_{$date->month}", 60, function () use ($date) {
-                    return $this->generalLedgerService->prepareIncomeStatementData([
-                        'year' => $date->year,
-                        'month' => $date->month,
-                    ]) ?: ['labaBersih' => 0]; // Fallback to 0 if no data
-                });
-                // Log::debug('Profit data', ['date' => $date->toDateString(), 'data' => $profitData]);
-                $profitTrend[] = $profitData['labaBersih'] ?? 0;
-                $labels[] = $date->format('M Y');
+            $profitLabels = [];
+            $profitTrendPeriod = $params['profit_trend_period'] ?? 'last_12_months';
+            $profitTrendYear = $params['profit_trend_year'] ?? Carbon::now()->year;
+
+            if ($profitTrendPeriod === 'yearly') {
+                // Full year (January to December of selected year)
+                $startDate = Carbon::create($profitTrendYear, 1, 1)->startOfMonth();
+                for ($i = 0; $i < 12; $i++) {
+                    $date = $startDate->copy()->addMonths($i);
+                    Log::debug('Processing profit month', ['date' => $date->toDateString()]);
+                    $profitData = Cache::remember("profit_{$date->year}_{$date->month}", 60, function () use ($date) {
+                        return $this->generalLedgerService->prepareIncomeStatementData([
+                            'year' => $date->year,
+                            'month' => $date->month,
+                        ]) ?: ['labaBersih' => 0];
+                    });
+                    $profitTrend[] = $profitData['labaBersih'] ?? 0;
+                    $profitLabels[] = $date->translatedFormat('M Y');
+                }
+            } else {
+                // Last 12 months
+                $currentDate = Carbon::now()->subMonths(11)->startOfMonth();
+                for ($i = 0; $i < 12; $i++) {
+                    $date = $currentDate->copy()->addMonths($i);
+                    Log::debug('Processing profit month', ['date' => $date->toDateString()]);
+                    $profitData = Cache::remember("profit_{$date->year}_{$date->month}", 60, function () use ($date) {
+                        return $this->generalLedgerService->prepareIncomeStatementData([
+                            'year' => $date->year,
+                            'month' => $date->month,
+                        ]) ?: ['labaBersih' => 0];
+                    });
+                    $profitTrend[] = $profitData['labaBersih'] ?? 0;
+                    $profitLabels[] = $date->translatedFormat('M Y');
+                }
             }
-            // Get monthly sales trend (last 12 months)
+
+            // Get monthly sales trend
             $salesTrend = [
                 'sales_dagangan' => [],
                 'sales_jadi' => [],
             ];
-            $currentDate = Carbon::now()->subMonths(11)->startOfMonth(); // Start from 12 months ago
-            for ($i = 0; $i < 12; $i++) {
-                $date = $currentDate->copy()->addMonths($i);
-                Log::debug('Processing sales month', ['date' => $date->toDateString()]);
-                $salesData = Cache::remember("sales_{$date->year}_{$date->month}", 60, function () use ($date) {
-                    return $this->generalLedgerService->calculateNetProfit(
-                        Carbon::create($date->year, $date->month, 1)->startOfMonth(),
-                        Carbon::create($date->year, $date->month, 1)->endOfMonth()
-                    ) ?: [
-                        'pendapatanPenjualanDagangan' => 0,
-                        'pendapatanPenjualanJadi' => 0
-                    ];
-                });
-                Log::debug('Sales data', ['date' => $date->toDateString(), 'data' => $salesData]);
-                $salesTrend['sales_dagangan'][] = $salesData['pendapatanPenjualanDagangan'] ?? 0;
-                $salesTrend['sales_jadi'][] = $salesData['pendapatanPenjualanJadi'] ?? 0;
+            $salesLabels = [];
+            $salesTrendPeriod = $params['sales_trend_period'] ?? 'last_12_months';
+            $salesTrendYear = $params['sales_trend_year'] ?? Carbon::now()->year;
+
+            if ($salesTrendPeriod === 'yearly') {
+                // Full year (January to December of selected year)
+                $startDate = Carbon::create($salesTrendYear, 1, 1)->startOfMonth();
+                for ($i = 0; $i < 12; $i++) {
+                    $date = $startDate->copy()->addMonths($i);
+                    Log::debug('Processing sales month', ['date' => $date->toDateString()]);
+                    $salesData = Cache::remember("sales_{$date->year}_{$date->month}", 60, function () use ($date) {
+                        return $this->generalLedgerService->calculateNetProfit(
+                            Carbon::create($date->year, $date->month, 1)->startOfMonth(),
+                            Carbon::create($date->year, $date->month, 1)->endOfMonth()
+                        ) ?: [
+                            'pendapatanPenjualanDagangan' => 0,
+                            'pendapatanPenjualanJadi' => 0
+                        ];
+                    });
+                    $salesTrend['sales_dagangan'][] = $salesData['pendapatanPenjualanDagangan'] ?? 0;
+                    $salesTrend['sales_jadi'][] = $salesData['pendapatanPenjualanJadi'] ?? 0;
+                    $salesLabels[] = $date->translatedFormat('M Y');
+                }
+            } else {
+                // Last 12 months
+                $currentDate = Carbon::now()->subMonths(11)->startOfMonth();
+                for ($i = 0; $i < 12; $i++) {
+                    $date = $currentDate->copy()->addMonths($i);
+                    Log::debug('Processing sales month', ['date' => $date->toDateString()]);
+                    $salesData = Cache::remember("sales_{$date->year}_{$date->month}", 60, function () use ($date) {
+                        return $this->generalLedgerService->calculateNetProfit(
+                            Carbon::create($date->year, $date->month, 1)->startOfMonth(),
+                            Carbon::create($date->year, $date->month, 1)->endOfMonth()
+                        ) ?: [
+                            'pendapatanPenjualanDagangan' => 0,
+                            'pendapatanPenjualanJadi' => 0
+                        ];
+                    });
+                    $salesTrend['sales_dagangan'][] = $salesData['pendapatanPenjualanDagangan'] ?? 0;
+                    $salesTrend['sales_jadi'][] = $salesData['pendapatanPenjualanJadi'] ?? 0;
+                    $salesLabels[] = $date->translatedFormat('M Y');
+                }
             }
 
             // Stock Composition by Quantity
@@ -153,11 +212,11 @@ class DashboardService
             return [
                 'profit_trend' => [
                     'data' => $profitTrend,
-                    'labels' => $labels,
+                    'labels' => $profitLabels,
                 ],
                 'sales_trend' => [
                     'data' => $salesTrend,
-                    'labels' => $labels,
+                    'labels' => $salesLabels,
                 ],
                 'stock_composition_qty' => [
                     'labels' => $stockCompositionQty->keys()->toArray(),
@@ -167,16 +226,25 @@ class DashboardService
                     'labels' => $stockCompositionAmount->keys()->toArray(),
                     'data' => $stockCompositionAmount->values()->toArray(),
                 ],
+                'profit_trend_period' => $profitTrendPeriod,
+                'profit_trend_year' => $profitTrendYear,
+                'sales_trend_period' => $salesTrendPeriod,
+                'sales_trend_year' => $salesTrendYear,
                 'stock_qty_month' => $stockQtyMonth,
                 'stock_qty_year' => $stockQtyYear,
                 'stock_amount_month' => $stockAmountMonth,
                 'stock_amount_year' => $stockAmountYear,
+                'stock_qty_limit' => $stockQtyLimit,
+                'stock_qty_chart_type' => $stockQtyChartType,
+                'stock_amount_limit' => $stockAmountLimit,
+                'stock_amount_chart_type' => $stockAmountChartType,
             ];
         } catch (\Exception $e) {
             Log::error('Error fetching dashboard data: ' . $e->getMessage());
             throw $e;
         }
     }
+
     /**
      * Clear cache for specific period
      *
