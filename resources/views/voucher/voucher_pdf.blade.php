@@ -10,6 +10,7 @@
             margin: 0;
             padding: 0;
         }
+
         .container {
             width: 98%;
             margin: 5px auto;
@@ -71,6 +72,7 @@
         .transaction-details-table {
             width: 100%;
             border-collapse: collapse;
+            margin-top: 10px;
             margin-bottom: 10px;
             border-style: solid;
             border-width: 0.5px;
@@ -166,7 +168,7 @@
         }
 
         .account-code-table th,
-        .account-code-table td {      
+        .account-code-table td {
             border-style: solid;
             border-width: 0.5px;
             border-color: blue;
@@ -190,7 +192,8 @@
     <div class="container">
         <div class="clearfix-2">
             @if ($companyLogo)
-            <div class="logo"><img src="{{ public_path('storage/' . $companyLogo) }}" alt="{{ $company->company_name }} Logo" style="max-width: 125px; height: 100px;"></div>
+                <div class="logo"><img src="{{ public_path('storage/' . $companyLogo) }}"
+                        alt="{{ $company->company_name }} Logo" style="max-width: 125px; height: 100px;"></div>
             @endif
             <div class="company-info">
                 <div>{{ strtoupper($company->company_name ?? '') }}</div>
@@ -207,7 +210,8 @@
                 <th>Transaction Approval /<br>Persetujuan Transaksi</th>
                 <td>{{ $voucher->transaction_approval ?? '' }}</td>
                 <th>Date / Tanggal</th>
-                <td>{{ $voucher->voucher_date ? \Carbon\Carbon::parse($voucher->voucher_date)->format('d M Y') : '' }}</td>
+                <td>{{ $voucher->voucher_date ? \Carbon\Carbon::parse($voucher->voucher_date)->format('d M Y') : '' }}
+                </td>
             </tr>
         </table>
 
@@ -243,7 +247,8 @@
                 <th>Given To / Diberikan kepada</th>
                 <td>{{ $voucher->given_to ?? '' }}</td>
                 <th>Approved Date / Tanggal Disetujui</th>
-                <td>{{ $voucher->voucher_date ? \Carbon\Carbon::parse($voucher->voucher_date)->format('d/m/Y') : '' }}</td>
+                <td>{{ $voucher->voucher_date ? \Carbon\Carbon::parse($voucher->voucher_date)->format('d/m/Y') : '' }}
+                </td>
             </tr>
         </table>
 
@@ -256,26 +261,31 @@
             </tr>
         </table>
 
-        <div><strong style="font-size: 0.9em;">Transaction Details</strong></div>
+        <div><strong style="font-size: 0.9em;">Transaction Details / Detail Transaksi</strong></div>
         <table class="transaction-details-table">
             <thead>
                 <tr>
                     <th>Deskripsi</th>
-                    <th>Quantity</th>
+                    <th>Ukuran </th>
+                    <th>Quantitas</th>
                     <th>Nominal</th>
                 </tr>
             </thead>
             <tbody>
-                @foreach($transaction as $trans)
-                <tr>
-                    <td>{{ $trans->description }}</td>
-                    <td style="text-align: center;">{{ $trans->quantity }}</td>
-                    <td style="text-align: right;">Rp. {{ number_format($trans->nominal, 2) }}</td>
-                </tr>
+                @foreach ($transaction as $trans)
+                    <tr>
+                        <td>{{ $trans->description }}</td>
+                        <td style="text-align: center;">{{ $trans->size ?? '-' }}</td>
+                        <td style="text-align: center;">{{ $trans->quantity }}</td>
+                        <td style="text-align: right;">Rp. {{ number_format($trans->nominal, 2) }}</td>
+                    </tr>
                 @endforeach
                 <tr>
                     <th colspan="2" style="text-align: right;">Total</th>
-                    <th style="text-align: right;">Rp. {{ number_format($transaction->sum(function ($t) { return $t->quantity * $t->nominal; }), 2) }}</th>
+                    <th style="text-align: center;">{{ $transaction->sum('quantity') }}</th>
+                    <th style="text-align: right;">Rp.
+                        {{ number_format($transaction->sum(function ($t) {return $t->quantity * $t->nominal;}),2) }}
+                    </th>
                 </tr>
             </tbody>
         </table>
@@ -295,7 +305,8 @@
                         </td>
                         <td>
                             <div class="signature-line"></div>
-                            <div class="signature-label">Checked and Approved by<br>{{ $company->director ?? '' }}</div>
+                            <div class="signature-label">Checked and Approved by<br>{{ $company->director ?? '' }}
+                            </div>
                         </td>
                     </tr>
                 </table>
@@ -312,13 +323,13 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach($details as $detail)
-                        <tr>
-                            <td>{{ $detail->account_code }}</td>
-                            <td>{{ $detail->account_name }}</td>
-                            <td style="text-align: right;">{{ number_format($detail->debit, 2) }}</td>
-                            <td style="text-align: right;">{{ number_format($detail->credit, 2) }}</td>
-                        </tr>
+                        @foreach ($details as $detail)
+                            <tr>
+                                <td>{{ $detail->account_code }}</td>
+                                <td>{{ $detail->account_name }}</td>
+                                <td style="text-align: right;">{{ number_format($detail->debit, 2) }}</td>
+                                <td style="text-align: right;">{{ number_format($detail->credit, 2) }}</td>
+                            </tr>
                         @endforeach
                         <tr class="account-code-total">
                             <th colspan="2">Total</th>

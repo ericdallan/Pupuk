@@ -1376,7 +1376,7 @@ class VoucherService
                     }
                 }
             }
-             // Clear cache for the voucher's period
+            // Clear cache for the voucher's period
             $this->dashboardService->clearCacheForPeriod(
                 $voucherToDelete->voucher_date->year,
                 $voucherToDelete->voucher_date->month
@@ -1445,6 +1445,31 @@ class VoucherService
         $voucher = Voucher::findOrFail($id);
         $details = VoucherDetails::where('voucher_id', $id)->get();
         $transaction = Transactions::where('voucher_id', $id)->get();
+
+        // Fetch stocks and used_stocks data for items in the transaction
+        $items = $transaction->pluck('description')->unique()->toArray();
+
+        // Get sizes from stocks
+        $stocks = Stock::whereIn('item', $items)
+            ->get()
+            ->pluck('size', 'item')
+            ->toArray();
+
+        // Get sizes from used_stocks (fallback if not found in stocks)
+        $usedStocks = UsedStock::whereIn('item', $items)
+            ->get()
+            ->pluck('size', 'item')
+            ->toArray();
+
+        // Merge stocks and used_stocks, prioritizing stocks
+        $itemSizes = $stocks + $usedStocks; // Stocks takes precedence due to array union
+
+        // Map sizes to transactions
+        $transaction = $transaction->map(function ($trans) use ($itemSizes) {
+            $trans->size = $itemSizes[$trans->description] ?? null;
+            return $trans;
+        });
+
         $companyLogo = Company::value('logo');
         $company = Company::select('company_name', 'phone', 'director', 'email', 'address')->firstOrFail();
 
