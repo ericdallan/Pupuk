@@ -59,7 +59,7 @@ class GeneralLedgerService
             foreach ($accountCategories as $category => $prefixes) {
                 foreach ($prefixes as $prefix) {
                     if (strpos($accountCode, $prefix) === 0) {
-                        if (in_array($category, ['Pendapatan Penjualan Barang Dagangan', 'Pendapatan Penjualan Barang Jadi', 'Pendapatan Lain-lain'])) {
+                        if (in_array($category, ['Pendapatan Penjualan Bahan Baku', 'Pendapatan Penjualan Barang Jadi', 'Pendapatan Lain-lain'])) {
                             $totals[$category] += $detail->pendapatan_balance;
                         } else {
                             $totals[$category] += $detail->beban_balance;
@@ -70,7 +70,7 @@ class GeneralLedgerService
             }
         }
 
-        $pendapatanPenjualanDagangan = $totals['Pendapatan Penjualan Barang Dagangan'] ?? 0;
+        $pendapatanPenjualanDagangan = $totals['Pendapatan Penjualan Bahan Baku'] ?? 0;
         $pendapatanPenjualanJadi = $totals['Pendapatan Penjualan Barang Jadi'] ?? 0;
         $pendapatanPenjualan = $pendapatanPenjualanDagangan + $pendapatanPenjualanJadi;
         $hpp = $totals['Harga Pokok Penjualan'] ?? 0;
