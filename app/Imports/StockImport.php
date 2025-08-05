@@ -19,7 +19,7 @@ class StockImport implements ToModel, WithHeadingRow
         return new Stock([
             'stock_name' => $row['stock_name'],
             'quantity' => $row['quantity'],
-            'unit' => $row['unit'],
+            'size' => $row['size'],
             'date' => \Carbon\Carbon::parse($row['date'])->toDateString(),
         ]);
     }
