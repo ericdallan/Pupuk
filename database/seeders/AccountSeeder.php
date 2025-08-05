@@ -130,10 +130,10 @@ class AccountSeeder extends Seeder
                 ],
             ],
             'PENDAPATAN_USAHA' => [
-                'Pendapatan Penjualan Barang Dagangan' => [
-                    'Harga Pokok Penjualan Barang Dagangan' => [
-                        ['Pendapatan Penjualan Barang Dagangan', '4.1.01.01'],
-                        ['Diskon Penjualan Barang Dagangan', '4.1.01.02'],
+                'Pendapatan Penjualan Bahan Baku' => [
+                    'Pendapatan Penjualan Bahan Baku' => [
+                        ['Pendapatan Penjualan Bahan Baku', '4.1.01.01'],
+                        ['Diskon Penjualan Bahan Baku', '4.1.01.02'],
                     ],
                 ],
                 'Pendapatan Penjualan Barang Jadi' => [
@@ -144,9 +144,9 @@ class AccountSeeder extends Seeder
                 ],
             ],
             'HARGA_POKOK_PRODUKSI_DAN_PENJUALAN' => [
-                'Harga Pokok Pembelian Barang Dagangan' => [
-                    'Harga Pokok Pembelian Barang Dagangan' => [
-                        ['Harga Pokok Pembelian Barang Dagangan', '5.1.01.01'],
+                'Harga Pokok Pembelian Bahan Baku' => [
+                    'Harga Pokok Pembelian Bahan Baku' => [
+                        ['Harga Pokok Pembelian Bahan Baku', '5.1.01.01'],
                     ],
                 ],
                 'Harga Pokok Pembelian Barang Jadi' => [

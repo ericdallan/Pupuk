@@ -24,7 +24,7 @@ class GeneralLedgerService
     public function calculateNetProfit(Carbon $startDate, Carbon $endDate): array
     {
         $accountCategories = [
-            'Pendapatan Penjualan Barang Dagangan' => ['4.1.'],
+            'Pendapatan Penjualan Bahan Baku' => ['4.1.'],
             'Pendapatan Penjualan Barang Jadi' => ['4.2.'],
             'Harga Pokok Penjualan' => ['5.1.', '5.2.', '5.3.'],
             'Beban Operasional' => ['6.1.', '6.2.', '6.3.'],
