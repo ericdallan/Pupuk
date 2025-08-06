@@ -104,8 +104,26 @@ class VoucherService
         });
 
         $transactionsData = Transactions::join('vouchers', 'transactions.voucher_id', '=', 'vouchers.id')
-            ->select(['transactions.description', 'transactions.size', 'transactions.nominal'])
-            ->get();
+            ->select([
+                'transactions.description',
+                'transactions.size',
+                'transactions.nominal',
+                'vouchers.voucher_type'
+            ])
+            ->get()
+            ->map(function ($transaction) {
+                return [
+                    'description' => $transaction->description,
+                    'size' => $transaction->size,
+                    'nominal' => floatval($transaction->nominal),
+                    'voucher_type' => $transaction->voucher_type,
+                ];
+            })->values()->toArray();
+
+        Log::info('Transactions data prepared for voucher page:', [
+            'transactions_count' => count($transactionsData),
+            'transactions' => $transactionsData
+        ]);
 
         $accounts = ChartOfAccount::orderBy('account_type')
             ->orderBy('account_section')

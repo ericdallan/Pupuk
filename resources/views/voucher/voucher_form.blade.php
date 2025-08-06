@@ -1428,70 +1428,91 @@
         function calculateAverageHpp(item, size, voucherType) {
             // Validate input parameters
             if (!item || typeof item !== 'string') {
-                // console.error(`Invalid item parameter: ${item}`);
-                return 0;
+                console.error(`Invalid item parameter: ${item}`);
+                return null;
             }
-            const trimmedItem = item.trim().toLowerCase();
-            const trimmedSize = size ? size.trim() : '';
 
-            // Determine the relevant stock data source based on voucherType
+            const trimmedItem = item.trim().toLowerCase();
+            const trimmedSize = size ? size.trim().replace(/\s*\(.*?\)/g, '') : '';
+            const effectiveVoucherType = voucherType || 'unknown'; // Handle undefined voucherType
+
+            // Determine stock data source based on voucherType
             let stockData = [];
-            if (voucherType === 'PJ') {
+            if (effectiveVoucherType === 'PJ') {
                 stockData = [...(usedStocks || []), ...(stocks || [])];
             } else {
                 stockData = stocks || [];
             }
 
-            if (!stockData || !Array.isArray(stockData) || stockData.length === 0) {
-                // console.warn(`No stock data available for HPP calculation: item=${item}, size=${trimmedSize}, voucherType=${voucherType}`);
-            }
+            // Check if stockData is valid
+            // if (!stockData || !Array.isArray(stockData) || stockData.length === 0) {
+            //     console.warn(
+            //         `No stock data available for item=${trimmedItem}, size=${trimmedSize}, voucherType=${effectiveVoucherType}`
+            //     );
+            // }
 
-            // Use transactions to calculate HPP
-            if (!transactions || !Array.isArray(transactions) || transactions.length === 0) {
-                // console.warn(`No transactions data available for HPP calculation: item=${item}, size=${trimmedSize}, voucherType=${voucherType}`);
-                // Fallback to quantity from stockData if no transactions
-                const fallbackEntry = stockData.find(t =>
-                    t.item.toLowerCase().replace(/^hpp\s+/i, '') === trimmedItem &&
-                    (!trimmedSize || t.size === trimmedSize)
-                );
-                if (fallbackEntry) {
-                    // console.warn(`Using quantity (${fallbackEntry.quantity}) as temporary HPP proxy for ${item} due to missing transactions data.`);
-                    return parseFloat(fallbackEntry.quantity) || 0;
-                }
-                return 0;
-            }
+            // Check if transactions data is valid
+            // if (!transactions || !Array.isArray(transactions) || transactions.length === 0) {
+            //     console.warn(
+            //         `No transactions data available for item=${trimmedItem}, size=${trimmedSize}, voucherType=${effectiveVoucherType}`
+            //     );
+            //     return null;
+            // }
 
-            // Filter transactions for the base item (without "HPP" prefix)
+            // Normalize base item by removing "HPP" prefix
             const baseItem = trimmedItem.replace(/^hpp\s+/i, '');
-            const matchingTransactions = transactions.filter(t =>
-                t.description.toLowerCase() === baseItem &&
-                (!trimmedSize || t.size === trimmedSize)
-            );
 
-            // console.log(`Matching transactions for item=${item}, size=${trimmedSize}, voucherType=${voucherType}:`, matchingTransactions);
-
-            if (matchingTransactions.length === 0) {
-                // console.warn(`No matching transactions found for item=${item}, size=${trimmedSize}, voucherType=${voucherType}`);
-                // Fallback to quantity if no transactions match
-                const fallbackEntry = stockData.find(t =>
-                    t.item.toLowerCase().replace(/^hpp\s+/i, '') === baseItem &&
-                    (!trimmedSize || t.size === trimmedSize)
+            // Filter transactions for matching item, size, and voucher_type='PB'
+            const matchingTransactions = transactions.filter(t => {
+                const transactionDescription = t.description ? t.description.trim().toLowerCase() : '';
+                const transactionSize = t.size ? t.size.trim().replace(/\s*\(.*?\)/g, '') : '';
+                const transactionVoucherType = t.voucher_type || '';
+                return (
+                    transactionDescription === baseItem &&
+                    (!trimmedSize || transactionSize === trimmedSize) &&
+                    transactionVoucherType === 'PB'
                 );
-                if (fallbackEntry) {
-                    // console.warn(`No transaction data found. Using quantity (${fallbackEntry.quantity}) as temporary HPP proxy for ${item}.`);
-                    return parseFloat(fallbackEntry.quantity) || 0;
-                }
-                return 0;
-            }
+            });
 
-            // Calculate average HPP from transaction nominal values
-            const totalHpp = matchingTransactions.reduce((sum, t) =>
-                sum + (parseFloat(t.nominal) || 0), 0
-            );
-            const averageHpp = totalHpp / matchingTransactions.length;
+            // console.debug(
+            //     `Matching transactions for item=${trimmedItem}, size=${trimmedSize}, voucherType=${effectiveVoucherType}:`,
+            //     matchingTransactions);
 
-            // console.log(`Calculated HPP for item=${item}, size=${trimmedSize}, voucherType=${voucherType}: ${averageHpp}`);
-            return averageHpp || 0;
+            // if (matchingTransactions.length === 0) {
+            //     console.warn(
+            //         `No matching PB transactions found for item=${trimmedItem}, size=${trimmedSize}, voucherType=${effectiveVoucherType}`
+            //     );
+            //     return null;
+            // }
+
+            // Calculate HPP: total cost (nominal) / total quantity
+            const totalCost = matchingTransactions.reduce((sum, t) => {
+                const nominal = parseFloat(t.nominal) || 0;
+                return sum + nominal;
+            }, 0);
+
+            const totalQuantity = matchingTransactions.reduce((sum, t) => {
+                const quantity = parseFloat(t.quantity) || 1; // Fallback to 1 if quantity is missing
+                // if (!t.quantity) {
+                //     console.warn(
+                //         `Missing or invalid quantity in transaction, using default quantity=1:`, t);
+                // }
+                return sum + quantity;
+            }, 0);
+
+            // if (totalQuantity === 0) {
+            //     console.warn(
+            //         `Total quantity is 0 for item=${trimmedItem}, size=${trimmedSize}, voucherType=${effectiveVoucherType}`
+            //     );
+            //     return null;
+            // }
+
+            const averageHpp = totalCost / totalQuantity;
+            // console.debug(
+            //     `Calculated HPP for item=${trimmedItem}, size=${trimmedSize}, voucherType=${effectiveVoucherType}: ${averageHpp}`
+            // );
+
+            return isNaN(averageHpp) ? null : parseFloat(averageHpp.toFixed(2));
         }
 
         function removeHppRowForItem(rowIndex) {
