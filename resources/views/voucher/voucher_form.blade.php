@@ -1444,21 +1444,6 @@
                 stockData = stocks || [];
             }
 
-            // Check if stockData is valid
-            // if (!stockData || !Array.isArray(stockData) || stockData.length === 0) {
-            //     console.warn(
-            //         `No stock data available for item=${trimmedItem}, size=${trimmedSize}, voucherType=${effectiveVoucherType}`
-            //     );
-            // }
-
-            // Check if transactions data is valid
-            // if (!transactions || !Array.isArray(transactions) || transactions.length === 0) {
-            //     console.warn(
-            //         `No transactions data available for item=${trimmedItem}, size=${trimmedSize}, voucherType=${effectiveVoucherType}`
-            //     );
-            //     return null;
-            // }
-
             // Normalize base item by removing "HPP" prefix
             const baseItem = trimmedItem.replace(/^hpp\s+/i, '');
 
@@ -1474,17 +1459,6 @@
                 );
             });
 
-            // console.debug(
-            //     `Matching transactions for item=${trimmedItem}, size=${trimmedSize}, voucherType=${effectiveVoucherType}:`,
-            //     matchingTransactions);
-
-            // if (matchingTransactions.length === 0) {
-            //     console.warn(
-            //         `No matching PB transactions found for item=${trimmedItem}, size=${trimmedSize}, voucherType=${effectiveVoucherType}`
-            //     );
-            //     return null;
-            // }
-
             // Calculate HPP: total cost (nominal) / total quantity
             const totalCost = matchingTransactions.reduce((sum, t) => {
                 const nominal = parseFloat(t.nominal) || 0;
@@ -1493,26 +1467,13 @@
 
             const totalQuantity = matchingTransactions.reduce((sum, t) => {
                 const quantity = parseFloat(t.quantity) || 1; // Fallback to 1 if quantity is missing
-                // if (!t.quantity) {
-                //     console.warn(
-                //         `Missing or invalid quantity in transaction, using default quantity=1:`, t);
-                // }
                 return sum + quantity;
             }, 0);
 
-            // if (totalQuantity === 0) {
-            //     console.warn(
-            //         `Total quantity is 0 for item=${trimmedItem}, size=${trimmedSize}, voucherType=${effectiveVoucherType}`
-            //     );
-            //     return null;
-            // }
-
             const averageHpp = totalCost / totalQuantity;
-            // console.debug(
-            //     `Calculated HPP for item=${trimmedItem}, size=${trimmedSize}, voucherType=${effectiveVoucherType}: ${averageHpp}`
-            // );
 
-            return isNaN(averageHpp) ? null : parseFloat(averageHpp.toFixed(2));
+            // Return rounded integer or null if invalid
+            return isNaN(averageHpp) ? null : Math.round(averageHpp);
         }
 
         function removeHppRowForItem(rowIndex) {

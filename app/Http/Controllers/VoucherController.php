@@ -360,7 +360,7 @@ class VoucherController extends Controller
             return 0;
         }
 
-        return $pbTransactions->average() ?: 0;
+        return round($pbTransactions->average()) ?: 0;
     }
 
     /**
