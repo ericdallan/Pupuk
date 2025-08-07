@@ -347,20 +347,20 @@ class VoucherController extends Controller
         $baseItem = trim(str_replace('HPP ', '', $item));
 
         // Join transactions with vouchers to filter by voucher_type
-        $pbTransactions = Transactions::join('vouchers', 'transactions.voucher_id', '=', 'vouchers.id')
-            ->where('vouchers.voucher_type', 'PB')
+        $transactions = Transactions::join('vouchers', 'transactions.voucher_id', '=', 'vouchers.id')
+            ->whereIn('vouchers.voucher_type', ['PB', 'PK'])
             ->where('transactions.description', $baseItem)
             ->when($size, function ($query, $size) {
                 return $query->where('transactions.size', $size);
             })
             ->pluck('transactions.nominal');
 
-        if ($pbTransactions->isEmpty()) {
-            Log::warning("No PB transactions found for item: {$baseItem}, size: {$size}");
+        if ($transactions->isEmpty()) {
+            Log::warning("No PB or PK transactions found for item: {$baseItem}, size: {$size}");
             return 0;
         }
 
-        return round($pbTransactions->average()) ?: 0;
+        return round($transactions->average()) ?: 0;
     }
 
     /**

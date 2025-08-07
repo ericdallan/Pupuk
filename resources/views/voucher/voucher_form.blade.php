@@ -1447,7 +1447,7 @@
             // Normalize base item by removing "HPP" prefix
             const baseItem = trimmedItem.replace(/^hpp\s+/i, '');
 
-            // Filter transactions for matching item, size, and voucher_type='PB'
+            // Filter transactions for matching item, size, and voucher_type='PB' or 'PK'
             const matchingTransactions = transactions.filter(t => {
                 const transactionDescription = t.description ? t.description.trim().toLowerCase() : '';
                 const transactionSize = t.size ? t.size.trim().replace(/\s*\(.*?\)/g, '') : '';
@@ -1455,7 +1455,7 @@
                 return (
                     transactionDescription === baseItem &&
                     (!trimmedSize || transactionSize === trimmedSize) &&
-                    transactionVoucherType === 'PB'
+                    (transactionVoucherType === 'PB' || transactionVoucherType === 'PK')
                 );
             });
 
