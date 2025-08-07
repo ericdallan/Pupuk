@@ -1595,8 +1595,9 @@
             const hppRow = document.createElement('tr');
             hppRow.dataset.rowIndex = newIndex;
             hppRow.dataset.isHppRow = 'true';
-            hppRow.dataset.item = selectedItem; // Referensi item
-            hppRow.dataset.size = size || ''; // Referensi size
+            hppRow.dataset.parentIndex = currentIndex; // Link to parent transaction row
+            hppRow.dataset.item = selectedItem;
+            hppRow.dataset.size = size || '';
 
             const descriptionCell = document.createElement('td');
             const descriptionInput = createDescriptionInput(newIndex);
@@ -1606,12 +1607,12 @@
             hppRow.appendChild(descriptionCell);
 
             const sizeCell = document.createElement('td');
-            const sizeInput = document.createElement('input'); // Tetap input untuk konsistensi
+            const sizeInput = document.createElement('input');
             sizeInput.type = 'text';
             sizeInput.className = 'form-control sizeInput';
             sizeInput.name = `transactions[${newIndex}][size]`;
             sizeInput.value = size || '';
-            sizeInput.readOnly = true; // Tetap readOnly
+            sizeInput.readOnly = true;
             sizeInput.disabled = document.querySelector('input[name="use_stock"]:checked')?.value !== 'yes';
             sizeCell.appendChild(sizeInput);
             hppRow.appendChild(sizeCell);
@@ -1632,12 +1633,11 @@
             const nominalInput = document.createElement('input');
             nominalInput.type = 'number';
             nominalInput.min = '0';
-            nominalInput.step = '0.01';
+            nominalInput.step = '1'; // Integer step since calculateAverageHpp returns integer
             nominalInput.className = 'form-control nominalInput';
             nominalInput.name = `transactions[${newIndex}][nominal]`;
-            const averageHpp = calculateAverageHpp(selectedItem, size) ||
-                0; // Fallback ke 0 jika tidak ada data
-            nominalInput.value = averageHpp.toFixed(2);
+            const averageHpp = calculateAverageHpp(selectedItem, size, 'PJ') || 0;
+            nominalInput.value = averageHpp; // Integer HPP value
             nominalInput.readOnly = true;
             nominalCell.appendChild(nominalInput);
             hppRow.appendChild(nominalCell);
@@ -1649,8 +1649,8 @@
             totalInput.name = `transactions[${newIndex}][total]`;
             totalInput.readOnly = true;
             totalInput.value = (quantity * averageHpp).toLocaleString('id-ID', {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0
             });
             totalCell.appendChild(totalInput);
             hppRow.appendChild(totalCell);
@@ -1666,10 +1666,12 @@
             hppRow.appendChild(actionCell);
 
             const currentRow = transactionTableBody.querySelector(`tr[data-row-index="${currentIndex}"]`);
-            if (currentRow.nextSibling) transactionTableBody.insertBefore(hppRow, currentRow.nextSibling);
-            else transactionTableBody.appendChild(hppRow);
+            if (currentRow && currentRow.nextSibling) {
+                transactionTableBody.insertBefore(hppRow, currentRow.nextSibling);
+            } else {
+                transactionTableBody.appendChild(hppRow);
+            }
 
-            // console.log(`Added HPP row for PJ: item=${selectedItem}, size=${size}, rowIndex=${newIndex}`);
             updateTransactionRowIndices();
             updateAllCalculationsAndValidations();
         }
@@ -1681,21 +1683,20 @@
             const currentRow = transactionTableBody.querySelector(`tr[data-row-index="${currentIndex}"]`);
             let hppRowToUpdate = null;
 
-            // Cari baris HPP yang sesuai
-            let nextRow = currentRow.nextSibling;
+            // Find HPP row linked to this transaction row
+            let nextRow = currentRow ? currentRow.nextSibling : null;
             while (nextRow && nextRow.dataset.isHppRow === 'true') {
-                if (nextRow.dataset.item === selectedItem && nextRow.dataset.size === (size || '')) {
+                if (nextRow.dataset.parentIndex === String(currentIndex)) {
                     hppRowToUpdate = nextRow;
                     break;
                 }
                 nextRow = nextRow.nextSibling;
             }
 
-            const averageHpp = calculateAverageHpp(selectedItem, size, 'PJ') || 0; // Pass voucherType
-            // console.log(`Calculated averageHpp for item=${selectedItem}, size=${size}: ${averageHpp}`);
+            const averageHpp = calculateAverageHpp(selectedItem, size, 'PJ') || 0;
 
             if (hppRowToUpdate) {
-                // Perbarui baris HPP yang sudah ada
+                // Update existing HPP row
                 const descriptionInput = hppRowToUpdate.querySelector('.descriptionInput');
                 descriptionInput.value = `HPP ${selectedItem}`;
                 const sizeInput = hppRowToUpdate.querySelector('.sizeInput');
@@ -1706,32 +1707,31 @@
                 quantityInput.value = quantity || 1;
                 quantityInput.readOnly = true;
                 const nominalInput = hppRowToUpdate.querySelector('.nominalInput');
-                nominalInput.value = averageHpp > 0 ? averageHpp.toFixed(2) : 'N/A';
+                nominalInput.value = averageHpp;
                 nominalInput.readOnly = true;
                 const totalInput = hppRowToUpdate.querySelector('.totalInput');
                 totalInput.value = averageHpp > 0 ? (quantity * averageHpp).toLocaleString('id-ID', {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 0
                 }) : 'N/A';
+                hppRowToUpdate.dataset.item = selectedItem;
+                hppRowToUpdate.dataset.size = size || '';
+                hppRowToUpdate.dataset.parentIndex = currentIndex;
 
-                // console.log(`Updated HPP row for PJ: item=${selectedItem}, size=${size}, rowIndex=${hppRowToUpdate.dataset.rowIndex}, hpp=${averageHpp}`);
                 updateAllCalculationsAndValidations();
-            } else if (!transactionTableBody.querySelector(
-                    `tr[data-is-hpp-row="true"][data-item="${selectedItem}"][data-size="${size || ''}"]`)) {
+            } else {
+                // Add new HPP row if none exists
                 addHppRowForPJ(currentIndex, selectedItem, size, quantity);
             }
         }
 
         function handleStockChange(index, event) {
             const selectedElement = event.target;
-            // Hanya lanjutkan jika target event adalah input/select yang relevan
             if (!selectedElement.classList.contains('descriptionInput') && !selectedElement.classList.contains(
                     'sizeInput')) {
-                // console.warn(`Ignoring handleStockChange at index ${index}: Event target is not a description or size input.`);
                 return;
             }
 
-            // Prevent recursive calls by checking if we're already processing
             if (selectedElement.dataset.isProcessing === 'true') {
                 return;
             }
@@ -1741,62 +1741,49 @@
                 const row = selectedElement.closest('tr');
                 const quantity = parseFloat(row.querySelector('.quantityInput')?.value) || 1;
                 const sizeElement = row.querySelector('.sizeInput');
-                const initialSize = sizeElement ? (sizeElement.value || '').trim() : ''; // Initial size value
+                const initialSize = sizeElement ? (sizeElement.value || '').trim() : '';
                 const voucherType = voucherTypeSelect.value;
 
-                // Ambil selectedItem dari elemen deskripsi (select atau input)
                 let selectedItem = (
                     row.querySelector('.descriptionInput:not([type="text"])')?.value ||
                     row.querySelector('.descriptionInput[type="text"]')?.value || ''
                 ).trim();
 
-                // console.log(`Initial selectedItem at index ${index}: "${selectedItem}", size: "${initialSize}"`);
-
-                // Skip if selectedItem is empty to avoid unnecessary correction
                 if (!selectedItem) {
-                    // console.warn(`Empty selectedItem at index ${index}. Skipping HPP update.`);
+                    // Remove HPP row if item is cleared
+                    removeHppRowForItem(index);
                     return;
                 }
 
-                // Validasi dan koreksi selectedItem berdasarkan voucherType
                 let isValidItem = false;
-                let inferredSize = initialSize; // Track the inferred size
+                let inferredSize = initialSize;
+
                 if (voucherType === 'PJ') {
-                    isValidItem =
-                        usedStocks.some(s => s.item.trim().toLowerCase() === selectedItem.trim()
-                            .toLowerCase()) ||
-                        (stocks && stocks.some(s => s.item.trim().toLowerCase() === selectedItem
-                            .trim().toLowerCase()));
+                    const stockData = [...usedStocks, ...(stocks || [])];
+                    isValidItem = stockData.some(s => s.item.trim().toLowerCase() === selectedItem.trim()
+                        .toLowerCase());
                     if (!isValidItem || !initialSize) {
-                        // console.warn(`Invalid or empty item/size detected at index ${index} for PJ. Attempting to correct.`);
-                        const validItemFromSize = [...usedStocks, ...(stocks || [])].find(s => s
-                            .size === selectedItem)?.item;
+                        const validItemFromSize = stockData.find(s => s.size === selectedItem)?.item;
                         if (validItemFromSize) {
                             selectedItem = validItemFromSize;
                             updateDescriptionInput(row, validItemFromSize);
-                            // console.log(`Corrected item to: ${validItemFromSize}`);
                             isValidItem = true;
                         } else {
-                            const similarItem = [...usedStocks, ...(stocks || [])].find(s =>
-                                s.item.toLowerCase().includes(selectedItem.toLowerCase())
-                            );
+                            const similarItem = stockData.find(s => s.item.toLowerCase().includes(selectedItem
+                                .toLowerCase()));
                             if (similarItem) {
                                 selectedItem = similarItem.item;
                                 updateDescriptionInput(row, similarItem.item);
-                                // console.log(`Corrected to similar item: ${similarItem.item}`);
                                 isValidItem = true;
                             } else {
-                                // console.error(`No valid item found for correction at index ${index} in usedStocks/transferStocks.`);
                                 selectedItem = '';
                             }
                         }
                         if (!initialSize && isValidItem) {
-                            const matchingStock = [...usedStocks, ...(stocks || [])].find(s => s
-                                .item === selectedItem);
+                            const matchingStock = stockData.find(s => s.item === selectedItem);
                             inferredSize = matchingStock ? matchingStock.size : '';
                             if (sizeElement && inferredSize) {
-                                sizeElement.value = inferredSize; // Update size without triggering change event
-                                // console.log(`Inferred size: "${inferredSize}"`);
+                                sizeElement.value = inferredSize;
                             }
                         }
                     }
@@ -1808,7 +1795,6 @@
                         if (validItemFromSize) {
                             selectedItem = validItemFromSize;
                             updateDescriptionInput(row, validItemFromSize);
-                            // console.log(`Corrected item to: ${validItemFromSize}`);
                             isValidItem = true;
                         } else {
                             const similarItem = stocks.find(s => s.item.toLowerCase().includes(selectedItem
@@ -1816,10 +1802,8 @@
                             if (similarItem) {
                                 selectedItem = similarItem.item;
                                 updateDescriptionInput(row, similarItem.item);
-                                // console.log(`Corrected to similar item: ${similarItem.item}`);
                                 isValidItem = true;
                             } else {
-                                // console.error(`No valid item found for correction at index ${index} in stocks.`);
                                 selectedItem = '';
                             }
                         }
@@ -1827,21 +1811,18 @@
                             const matchingStock = stocks.find(s => s.item === selectedItem);
                             inferredSize = matchingStock ? matchingStock.size : '';
                             if (sizeElement && inferredSize) {
-                                sizeElement.value = inferredSize; // Update size without triggering change event
-                                // console.log(`Inferred size: "${inferredSize}"`);
+                                sizeElement.value = inferredSize;
                             }
                         }
                     }
                 }
 
-                // Hentikan jika selectedItem atau inferredSize tetap kosong
                 if (!selectedItem || !inferredSize) {
-                    // console.warn(`No valid item or size found after correction at index ${index}. Skipping HPP update.`);
+                    removeHppRowForItem(index);
                     return;
                 }
 
-                // console.log(`Handling stock change: index=${index}, item=${selectedItem}, size=${inferredSize}, voucherType=${voucherType}`);
-
+                // Remove existing HPP row for this transaction row
                 removeHppRowForItem(index);
 
                 if (selectedItem && voucherType === 'PJ') {
@@ -1850,7 +1831,6 @@
 
                 updateAllCalculationsAndValidations();
             } finally {
-                // Reset processing flag
                 selectedElement.dataset.isProcessing = 'false';
             }
         }
