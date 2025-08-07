@@ -1133,14 +1133,14 @@ class VoucherService
                         throw new \Exception("Kuantitas HPP untuk item {$item} dengan ukuran {$size} tidak sesuai dengan kuantitas stok.");
                     }
 
-                    foreach ([$item, "HPP {$item}"] as $currentItem) {
-                        $usedStock = UsedStock::where('item', $currentItem)->where('size', $size)->first();
-                        $stocks = Stock::where('item', $currentItem)->where('size', $size)->first();
-                        $totalQuantity = ($usedStock ? $usedStock->quantity : 0) + ($stocks ? $stocks->quantity : 0);
-                        if ($totalQuantity < $quantity) {
-                            throw new \Exception("Stok untuk item {$currentItem} dengan ukuran {$size} tidak mencukupi di tabel used_stocks atau transfer_stocks. Tersedia: {$totalQuantity}, Dibutuhkan: {$quantity}.");
-                        }
-                    }
+                    // foreach ([$item, "HPP {$item}"] as $currentItem) {
+                    //     $usedStock = UsedStock::where('item', $currentItem)->where('size', $size)->first();
+                    //     $stocks = Stock::where('item', $currentItem)->where('size', $size)->first();
+                    //     $totalQuantity = ($usedStock ? $usedStock->quantity : 0) + ($stocks ? $stocks->quantity : 0);
+                    //     if ($totalQuantity < $quantity) {
+                    //         throw new \Exception("Stok untuk item {$currentItem} dengan ukuran {$size} tidak mencukupi di tabel used_stocks atau transfer_stocks. Tersedia: {$totalQuantity}, Dibutuhkan: {$quantity}.");
+                    //     }
+                    // }
                 }
             }
 
