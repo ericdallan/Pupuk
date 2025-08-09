@@ -1103,8 +1103,8 @@ class VoucherService
                         //     throw new \Exception("Kuantitas HPP untuk item {$stockItem} tidak sesuai dengan kuantitas stok.");
                         // }
                         // if ($transactionItems[$stockIndex]['size'] != $item['size']) {
-                            throw new \Exception("Ukuran HPP untuk item {$stockItem} tidak sesuai dengan ukuran stok.");
-                        }
+                        //     throw new \Exception("Ukuran HPP untuk item {$stockItem} tidak sesuai dengan ukuran stok.");
+                        // }
                     }
                 }
                 $nonHppCount = collect($transactionItems)->filter(function ($item) {
