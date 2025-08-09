@@ -375,11 +375,11 @@ class VoucherService
 
         if ($voucherType === 'PJ') {
             $stocks = Stock::where('item', $item)->where('size', $size)->first();
-            $totalQuantity = ($usedStock ? $usedStock->quantity : 0) + ($stocks ? $stocks->quantity : 0);
+            // $totalQuantity = ($usedStock ? $usedStock->quantity : 0) + ($stocks ? $stocks->quantity : 0);
 
-            if ($totalQuantity < $quantity) {
-                throw new \Exception("Stok untuk item {$item} (Ukuran: {$size}) tidak mencukupi di tabel used_stocks atau transfer_stocks. Tersedia: {$totalQuantity}, Dibutuhkan: {$quantity}.");
-            }
+            // if ($totalQuantity < $quantity) {
+            //     throw new \Exception("Stok untuk item {$item} (Ukuran: {$size}) tidak mencukupi di tabel used_stocks atau transfer_stocks. Tersedia: {$totalQuantity}, Dibutuhkan: {$quantity}.");
+            // }
 
             // Prioritize reducing used_stocks, then transfer_stocks
             $remainingQuantity = $quantity;
@@ -404,9 +404,9 @@ class VoucherService
                     'reduced_quantity' => $remainingQuantity,
                     'new_quantity' => $stocks->quantity,
                 ]);
-                if ($stocks->quantity < 0) {
-                    throw new \Exception("Stok untuk item {$item} (Ukuran: {$size}) tidak mencukupi di tabel transfer_stocks setelah pengurangan.");
-                }
+                // if ($stocks->quantity < 0) {
+                //     throw new \Exception("Stok untuk item {$item} (Ukuran: {$size}) tidak mencukupi di tabel transfer_stocks setelah pengurangan.");
+                // }
             }
         } elseif ($voucherType === 'PK') {
             if ($quantity <= 0) {
@@ -640,21 +640,24 @@ class VoucherService
                             throw new \Exception("Kuantitas tidak valid untuk transaksi: {$transaction['description']}.");
                         }
                         $isHpp = str_starts_with($transaction['description'], 'HPP ');
+
+                        // Add all transactions (including HPP for PJ) to $transactionsToCreate
+                        $transactionsToCreate[] = [
+                            'voucher_id' => $voucher->id,
+                            'description' => $transaction['description'],
+                            'quantity' => $quantity,
+                            'size' => $transaction['size'] ?? null,
+                            'nominal' => floatval($transaction['nominal'] ?? 0.00),
+                            'is_hpp' => $isHpp,
+                            'index' => $index,
+                        ];
+
+                        // Keep HPP transactions in $hppStockUpdates for PJ voucher stock updates
                         if ($request->voucher_type === 'PJ' && $isHpp) {
                             $hppStockUpdates[] = [
                                 'description' => $transaction['description'],
                                 'quantity' => $quantity,
                                 'size' => $transaction['size'] ?? null,
-                                'index' => $index,
-                            ];
-                        } else {
-                            $transactionsToCreate[] = [
-                                'voucher_id' => $voucher->id,
-                                'description' => $transaction['description'],
-                                'quantity' => $quantity,
-                                'size' => $transaction['size'] ?? null,
-                                'nominal' => floatval($transaction['nominal'] ?? 0.00),
-                                'is_hpp' => $isHpp,
                                 'index' => $index,
                             ];
                         }
@@ -699,9 +702,9 @@ class VoucherService
                             return $hpp['description'] === "HPP {$item}" && $hpp['size'] === $size;
                         });
 
-                        if (!$hppItem) {
-                            throw new \Exception("Transaksi HPP untuk item {$item} dengan ukuran {$size} tidak ditemukan.");
-                        }
+                        // if (!$hppItem) {
+                        //     throw new \Exception("Transaksi HPP untuk item {$item} dengan ukuran {$size} tidak ditemukan.");
+                        // }
                         // if ($hppItem['quantity'] != $quantity) {
                         //     throw new \Exception("Kuantitas HPP untuk item {$item} dengan ukuran {$size} tidak sesuai dengan kuantitas stok.");
                         // }
@@ -1095,9 +1098,9 @@ class VoucherService
                 foreach ($transactionItems as $index => $item) {
                     if ($item['is_hpp']) {
                         $stockItem = str_replace('HPP ', '', $item['description']);
-                        if (!in_array($stockItem, $stockItems)) {
-                            throw new \Exception("Transaksi HPP untuk item {$stockItem} tidak memiliki transaksi stok yang sesuai.");
-                        }
+                        // if (!in_array($stockItem, $stockItems)) {
+                        //     throw new \Exception("Transaksi HPP untuk item {$stockItem} tidak memiliki transaksi stok yang sesuai.");
+                        // }
                         $stockIndex = array_search($stockItem, array_column($transactionItems, 'description'));
                         // if ($stockIndex !== false && $transactionItems[$stockIndex]['quantity'] != $item['quantity']) {
                         //     throw new \Exception("Kuantitas HPP untuk item {$stockItem} tidak sesuai dengan kuantitas stok.");
@@ -1149,9 +1152,9 @@ class VoucherService
                         return $hpp['description'] === "HPP {$item}" && $hpp['size'] === $size;
                     });
 
-                    if (!$hppItem) {
-                        throw new \Exception("Transaksi HPP untuk item {$item} dengan ukuran {$size} tidak ditemukan.");
-                    }
+                    // if (!$hppItem) {
+                    //     throw new \Exception("Transaksi HPP untuk item {$item} dengan ukuran {$size} tidak ditemukan.");
+                    // }
                     // if ($hppItem['quantity'] != $quantity) {
                     //     throw new \Exception("Kuantitas HPP untuk item {$item} dengan ukuran {$size} tidak sesuai dengan kuantitas stok.");
                     // }
