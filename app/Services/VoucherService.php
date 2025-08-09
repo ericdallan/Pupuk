@@ -120,11 +120,6 @@ class VoucherService
                 ];
             })->values()->toArray();
 
-        Log::info('Transactions data prepared for voucher page:', [
-            'transactions_count' => count($transactionsData),
-            'transactions' => $transactionsData
-        ]);
-
         $accounts = ChartOfAccount::orderBy('account_type')
             ->orderBy('account_section')
             ->orderBy('account_subsection')
@@ -707,9 +702,9 @@ class VoucherService
                         if (!$hppItem) {
                             throw new \Exception("Transaksi HPP untuk item {$item} dengan ukuran {$size} tidak ditemukan.");
                         }
-                        if ($hppItem['quantity'] != $quantity) {
-                            throw new \Exception("Kuantitas HPP untuk item {$item} dengan ukuran {$size} tidak sesuai dengan kuantitas stok.");
-                        }
+                        // if ($hppItem['quantity'] != $quantity) {
+                        //     throw new \Exception("Kuantitas HPP untuk item {$item} dengan ukuran {$size} tidak sesuai dengan kuantitas stok.");
+                        // }
 
                         $this->updateUsedStock($item, $quantity, 'PJ', $size);
                         $this->updateUsedStock("HPP {$item}", $quantity, 'PJ', $size);
@@ -883,42 +878,70 @@ class VoucherService
             $subsidiariesData = [];
         }
 
-        $stocks = Stock::select('item')
+        $stocks = Stock::select('item', 'size', 'quantity')
             ->orderBy('item')
             ->get()
             ->map(function ($stock) {
                 return [
                     'item' => $stock->item,
+                    'size' => $stock->size,
+                    'quantity' => $stock->quantity,
                 ];
             })->values()->toArray();
         if (empty($stocks)) {
             $stocks = [];
         }
 
-        // Initialize $transactionsData as an empty array
-        $transactionsData = [];
-        try {
-            $transactionsData = Transactions::whereHas('voucher', function ($query) {
-                $query->where('voucher_type', 'PB');
-            })
-                ->where('description', 'NOT LIKE', 'HPP %')
-                ->get()
-                ->map(function ($transaction) {
-                    return [
-                        'description' => $transaction->description,
-                        'quantity' => $transaction->quantity,
-                        'nominal' => $transaction->nominal,
-                    ];
-                })->values()->toArray();
-        } catch (\Exception $e) {
-            // Log the query error for debugging
-            Log::error('Error fetching transactions data', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-            ]);
-        }
+        // Fetch recipes with transferStocks relationship
+        $recipes = Recipes::with(['transferStocks' => function ($query) {
+            $query->select('transfer_stocks.id', 'transfer_stocks.item', 'transfer_stocks.size')
+                ->withPivot('quantity', 'item', 'size');
+        }])
+            ->select('id', 'product_name', 'size', 'nominal')
+            ->get()
+            ->map(function ($recipe) {
+                return [
+                    'id' => $recipe->id,
+                    'product_name' => $recipe->product_name,
+                    'size' => $recipe->size,
+                    'nominal' => $recipe->nominal,
+                    'transfer_stocks' => $recipe->transferStocks->map(function ($stock) use ($recipe) {
+                        return [
+                            'item' => $stock->pivot->item,
+                            'size' => $stock->pivot->size,
+                            'quantity' => $stock->pivot->quantity,
+                            'nominal' => $recipe->nominal ?? 0, // Use recipe nominal or derive from elsewhere
+                        ];
+                    })->toArray(),
+                ];
+            })->toArray();
 
-        $recipes = Recipes::select('id', 'product_name', 'size', 'nominal')->get()->toArray();
+        // Prepare transactionsData based on voucher type
+        $transactionsData = [];
+        if ($voucher->voucher_type === 'PK' && $voucher->recipe_id) {
+            $selectedRecipe = Recipes::find($voucher->recipe_id);
+            if ($selectedRecipe) {
+                $transactionsData = [
+                    [
+                        'description' => $selectedRecipe->product_name,
+                        'size' => $selectedRecipe->size,
+                        'quantity' => 1,
+                        'nominal' => $selectedRecipe->nominal ?? 0,
+                        'total' => ($selectedRecipe->nominal ?? 0),
+                    ]
+                ];
+            }
+        } else {
+            $transactionsData = $voucher->transactions->map(function ($transaction) {
+                return [
+                    'description' => $transaction->description,
+                    'size' => $transaction->size,
+                    'quantity' => $transaction->quantity,
+                    'nominal' => $transaction->nominal ?? 0,
+                    'total' => ($transaction->quantity * ($transaction->nominal ?? 0)),
+                ];
+            })->toArray();
+        }
 
         $headingText = $this->getVoucherHeading($voucher->voucher_type);
 
@@ -1076,10 +1099,10 @@ class VoucherService
                             throw new \Exception("Transaksi HPP untuk item {$stockItem} tidak memiliki transaksi stok yang sesuai.");
                         }
                         $stockIndex = array_search($stockItem, array_column($transactionItems, 'description'));
-                        if ($stockIndex !== false && $transactionItems[$stockIndex]['quantity'] != $item['quantity']) {
-                            throw new \Exception("Kuantitas HPP untuk item {$stockItem} tidak sesuai dengan kuantitas stok.");
-                        }
-                        if ($transactionItems[$stockIndex]['size'] != $item['size']) {
+                        // if ($stockIndex !== false && $transactionItems[$stockIndex]['quantity'] != $item['quantity']) {
+                        //     throw new \Exception("Kuantitas HPP untuk item {$stockItem} tidak sesuai dengan kuantitas stok.");
+                        // }
+                        // if ($transactionItems[$stockIndex]['size'] != $item['size']) {
                             throw new \Exception("Ukuran HPP untuk item {$stockItem} tidak sesuai dengan ukuran stok.");
                         }
                     }
@@ -1129,9 +1152,9 @@ class VoucherService
                     if (!$hppItem) {
                         throw new \Exception("Transaksi HPP untuk item {$item} dengan ukuran {$size} tidak ditemukan.");
                     }
-                    if ($hppItem['quantity'] != $quantity) {
-                        throw new \Exception("Kuantitas HPP untuk item {$item} dengan ukuran {$size} tidak sesuai dengan kuantitas stok.");
-                    }
+                    // if ($hppItem['quantity'] != $quantity) {
+                    //     throw new \Exception("Kuantitas HPP untuk item {$item} dengan ukuran {$size} tidak sesuai dengan kuantitas stok.");
+                    // }
 
                     // foreach ([$item, "HPP {$item}"] as $currentItem) {
                     //     $usedStock = UsedStock::where('item', $currentItem)->where('size', $size)->first();

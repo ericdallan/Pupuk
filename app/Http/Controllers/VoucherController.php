@@ -472,36 +472,19 @@ class VoucherController extends Controller
     {
         try {
             $data = $this->voucherService->prepareVoucherEditData($id);
-            $data['stocks'] = Stock::select(['item', 'size', 'quantity'])->get();
-            $data['transferStocks'] = TransferStock::select(['item', 'size', 'quantity'])->get();
-            $data['usedStocks'] = UsedStock::select(['item', 'size', 'quantity'])->get();
+            $data['stocks'] = Stock::select(['item', 'size', 'quantity'])->get()->toArray();
+            $data['transferStocks'] = TransferStock::select(['item', 'size', 'quantity'])->get()->toArray();
+            $data['usedStocks'] = UsedStock::select(['item', 'size', 'quantity'])->get()->toArray();
             $data['pjStocks'] = collect($data['usedStocks'])
                 ->map(function ($stock) {
-                    return ['item' => $stock->item, 'size' => $stock->size, 'quantity' => $stock->quantity, 'source' => 'used_stocks'];
+                    return ['item' => $stock['item'], 'size' => $stock['size'], 'quantity' => $stock['quantity'], 'source' => 'used_stocks'];
                 })
                 ->merge(
                     collect($data['transferStocks'])
                         ->map(function ($stock) {
-                            return ['item' => $stock->item, 'size' => $stock->size, 'quantity' => $stock->quantity, 'source' => 'transfer_stocks'];
+                            return ['item' => $stock['item'], 'size' => $stock['size'], 'quantity' => $stock['quantity'], 'source' => 'transfer_stocks'];
                         })
-                );
-
-            // Use transactionsData from prepareVoucherEditData, or fetch specific fields if needed
-            // If you need different fields, ensure the query uses the voucher relationship
-            if (empty($data['transactionsData'])) {
-                $data['transactionsData'] = Transactions::whereHas('voucher', function ($query) {
-                    $query->where('voucher_type', 'PB');
-                })
-                    ->select(['description', 'nominal', 'size'])
-                    ->get()
-                    ->map(function ($transaction) {
-                        return [
-                            'description' => $transaction->description,
-                            'nominal' => $transaction->nominal,
-                            'size' => $transaction->size,
-                        ];
-                    })->values()->toArray();
-            }
+                )->toArray();
 
             return view('voucher.voucher_edit', $data);
         } catch (\Exception $e) {

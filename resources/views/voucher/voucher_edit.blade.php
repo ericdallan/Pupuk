@@ -27,24 +27,25 @@
 
 <div>
     @if (session('success'))
-    <div id="success-message" class="alert alert-success" style="cursor: pointer;" onclick="this.remove();">
-        {{ session('success') }}
-    </div>
+        <div id="success-message" class="alert alert-success" style="cursor: pointer;" onclick="this.remove();">
+            {{ session('success') }}
+        </div>
     @endif
     @if ($errors->any())
-    <div id="error-message" class="alert alert-danger" style="cursor: pointer;" onclick="this.remove();">
-        <ul>
-            @foreach ($errors->all() as $error)
-            <li>{{ $error }}</li>
-            @endforeach
-        </ul>
-    </div>
+        <div id="error-message" class="alert alert-danger" style="cursor: pointer;" onclick="this.remove();">
+            <ul>
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
     @elseif (session('message'))
-    <div id="error-message" class="alert alert-danger" style="cursor: pointer;" onclick="this.remove();">
-        {{ session('message') }}
-    </div>
+        <div id="error-message" class="alert alert-danger" style="cursor: pointer;" onclick="this.remove();">
+            {{ session('message') }}
+        </div>
     @endif
-    <form id="voucherForm" method="POST" action="{{ route('voucher.update', $voucher->id) }}" enctype="multipart/form-data">
+    <form id="voucherForm" method="POST" action="{{ route('voucher.update', $voucher->id) }}"
+        enctype="multipart/form-data">
         @csrf
         @method('PUT')
         <div class="container mt-4">
@@ -54,7 +55,8 @@
             <div class="row mb-3">
                 <label for="voucherNumber" class="col-sm-3 col-form-label">Nomor Voucher:</label>
                 <div class="col-sm-9">
-                    <input type="text" class="form-control" id="voucherNumber" name="voucher_number" value="{{ $voucher->voucher_number }}" readonly>
+                    <input type="text" class="form-control" id="voucherNumber" name="voucher_number"
+                        value="{{ $voucher->voucher_number }}" readonly>
                 </div>
             </div>
             <!-- Company Name -->
@@ -62,10 +64,12 @@
                 <label for="companyName" class="col-sm-3 col-form-label">Nama Perusahaan:</label>
                 <div class="col-sm-9">
                     @if ($company)
-                    <input type="text" class="form-control" id="companyName" value="{{ $company->company_name }}" readonly>
+                        <input type="text" class="form-control" id="companyName" value="{{ $company->company_name }}"
+                            readonly>
                     @else
-                    <input type="text" class="form-control" id="companyName" value="Nama Perusahaan Kosong" readonly>
-                    <small class="text-danger">Nama Perusahaan Belum Ditemukan.</small>
+                        <input type="text" class="form-control" id="companyName" value="Nama Perusahaan Kosong"
+                            readonly>
+                        <small class="text-danger">Nama Perusahaan Belum Ditemukan.</small>
                     @endif
                 </div>
             </div>
@@ -74,11 +78,13 @@
                 <label for="useStock" class="col-sm-3 col-form-label">Transaksi Stok?</label>
                 <div class="col-sm-9">
                     <div class="form-check form-check-inline">
-                        <input class="form-check-input" type="radio" id="useStockYes" name="use_stock" value="yes" {{ in_array($voucher->voucher_type, ['PB', 'PJ', 'PH', 'PK']) ? 'checked' : '' }}>
+                        <input class="form-check-input" type="radio" id="useStockYes" name="use_stock" value="yes"
+                            {{ in_array($voucher->voucher_type, ['PB', 'PJ', 'PH', 'PK']) ? 'checked' : '' }}>
                         <label class="form-check-label" for="useStockYes">Ya</label>
                     </div>
                     <div class="form-check form-check-inline">
-                        <input class="form-check-input" type="radio" id="useStockNo" name="use_stock" value="no" {{ in_array($voucher->voucher_type, ['PG', 'PM', 'LN']) ? 'checked' : '' }}>
+                        <input class="form-check-input" type="radio" id="useStockNo" name="use_stock" value="no"
+                            {{ in_array($voucher->voucher_type, ['PG', 'PM', 'LN']) ? 'checked' : '' }}>
                         <label class="form-check-label" for="useStockNo">Tidak</label>
                     </div>
                 </div>
@@ -89,22 +95,29 @@
                 <div class="col-sm-3">
                     <select class="form-select" id="voucherType" name="voucher_type" required aria-required="true">
                         <option value="PJ" {{ $voucher->voucher_type == 'PJ' ? 'selected' : '' }}>Penjualan</option>
-                        <option value="PG" {{ $voucher->voucher_type == 'PG' ? 'selected' : '' }}>Pengeluaran</option>
-                        <option value="PM" {{ $voucher->voucher_type == 'PM' ? 'selected' : '' }}>Pemasukan</option>
-                        <option value="PB" {{ $voucher->voucher_type == 'PB' ? 'selected' : '' }}>Pembelian</option>
+                        <option value="PG" {{ $voucher->voucher_type == 'PG' ? 'selected' : '' }}>Pengeluaran
+                        </option>
+                        <option value="PM" {{ $voucher->voucher_type == 'PM' ? 'selected' : '' }}>Pemasukan
+                        </option>
+                        <option value="PB" {{ $voucher->voucher_type == 'PB' ? 'selected' : '' }}>Pembelian
+                        </option>
                         <option value="LN" {{ $voucher->voucher_type == 'LN' ? 'selected' : '' }}>Lainnya</option>
-                        <option value="PH" {{ $voucher->voucher_type == 'PH' ? 'selected' : '' }}>Pemindahan</option>
-                        <option value="PK" {{ $voucher->voucher_type == 'PK' ? 'selected' : '' }}>Pemakaian</option>
+                        <option value="PH" {{ $voucher->voucher_type == 'PH' ? 'selected' : '' }}>Pemindahan
+                        </option>
+                        <option value="PK" {{ $voucher->voucher_type == 'PK' ? 'selected' : '' }}>Pemakaian
+                        </option>
                     </select>
                     <div class="invalid-feedback">Tipe Voucher wajib dipilih.</div>
                 </div>
                 <label for="voucherDate" class="col-sm-2 col-form-label">Tanggal:</label>
                 <div class="col-sm-2">
-                    <input type="date" class="form-control" id="voucherDate" name="voucher_date" value="{{ $voucher->voucher_date->format('Y-m-d') }}" required aria-required="true">
+                    <input type="date" class="form-control" id="voucherDate" name="voucher_date"
+                        value="{{ $voucher->voucher_date->format('Y-m-d') }}" required aria-required="true">
                     <div class="invalid-feedback">Tanggal wajib diisi.</div>
                 </div>
                 <div class="col-sm-2">
-                    <input type="text" class="form-control" id="voucherDay" name="voucher_day" value="{{ $voucher->voucher_day }}" readonly>
+                    <input type="text" class="form-control" id="voucherDay" name="voucher_day"
+                        value="{{ $voucher->voucher_day }}" readonly>
                 </div>
             </div>
             <!-- Description -->
@@ -118,28 +131,32 @@
             <div class="row mb-3">
                 <label for="preparedBy" class="col-sm-3 col-form-label">Dibuat Oleh:</label>
                 <div class="col-sm-9">
-                    <input type="text" class="form-control" id="preparedBy" name="prepared_by" value="{{ $voucher->prepared_by }}" readonly>
+                    <input type="text" class="form-control" id="preparedBy" name="prepared_by"
+                        value="{{ $voucher->prepared_by }}" readonly>
                 </div>
             </div>
             <!-- Given To -->
             <div class="row mb-3">
                 <label for="givenTo" class="col-sm-3 col-form-label">Diberikan Kepada:</label>
                 <div class="col-sm-9">
-                    <input type="text" class="form-control" id="givenTo" name="given_to" value="{{ $voucher->given_to }}">
+                    <input type="text" class="form-control" id="givenTo" name="given_to"
+                        value="{{ $voucher->given_to }}">
                 </div>
             </div>
             <!-- Approved By -->
             <div class="row mb-3">
                 <label for="approvedBy" class="col-sm-3 col-form-label">Disetujui Oleh:</label>
                 <div class="col-sm-9">
-                    <input type="text" class="form-control" id="approvedBy" name="approved_by" value="{{ $voucher->approved_by }}" readonly>
+                    <input type="text" class="form-control" id="approvedBy" name="approved_by"
+                        value="{{ $voucher->approved_by }}" readonly>
                 </div>
             </div>
             <!-- Transaction -->
             <div class="row mb-3">
                 <label for="transaction" class="col-sm-3 col-form-label">Transaksi:</label>
                 <div class="col-sm-9">
-                    <input type="text" class="form-control" id="transaction" name="transaction" value="{{ $voucher->transaction }}">
+                    <input type="text" class="form-control" id="transaction" name="transaction"
+                        value="{{ $voucher->transaction }}">
                 </div>
             </div>
             <!-- Use Invoice -->
@@ -147,71 +164,91 @@
                 <label for="useInvoice" class="col-sm-3 col-form-label">Gunakan Invoice?</label>
                 <div class="col-sm-9">
                     <div class="form-check form-check-inline">
-                        <input class="form-check-input" type="radio" id="useInvoiceYes" name="use_invoice" value="yes" {{ $voucher->invoice || $voucher->use_invoice === 'yes' ? 'checked' : '' }} required aria-required="true">
+                        <input class="form-check-input" type="radio" id="useInvoiceYes" name="use_invoice"
+                            value="yes" {{ $voucher->invoice || $voucher->use_invoice === 'yes' ? 'checked' : '' }}
+                            required aria-required="true">
                         <label class="form-check-label" for="useInvoiceYes">Ya</label>
                     </div>
                     <div class="form-check form-check-inline">
-                        <input class="form-check-input" type="radio" id="useInvoiceNo" name="use_invoice" value="no" {{ !$voucher->invoice && $voucher->use_invoice !== 'yes' ? 'checked' : '' }} required aria-required="true">
+                        <input class="form-check-input" type="radio" id="useInvoiceNo" name="use_invoice"
+                            value="no"
+                            {{ !$voucher->invoice && $voucher->use_invoice !== 'yes' ? 'checked' : '' }} required
+                            aria-required="true">
                         <label class="form-check-label" for="useInvoiceNo">Tidak</label>
                     </div>
                     <div class="invalid-feedback">Pilih apakah menggunakan invoice.</div>
                 </div>
             </div>
             <!-- Use Existing Invoice -->
-            <div class="row mb-3" id="existingInvoiceContainer" style="display: {{ $voucher->invoice || $voucher->use_invoice === 'yes' ? 'block' : 'none' }};">
+            <div class="row mb-3" id="existingInvoiceContainer"
+                style="display: {{ $voucher->invoice || $voucher->use_invoice === 'yes' ? 'block' : 'none' }};">
                 <label class="col-sm-3 col-form-label">Gunakan Invoice yang Sudah Ada?</label>
                 <div class="col-sm-9">
                     <div class="form-check form-check-inline">
-                        <input class="form-check-input" type="radio" id="useExistingInvoiceYes" name="use_existing_invoice" value="yes" {{ $voucher->use_existing_invoice === 'yes' ? 'checked' : '' }}>
+                        <input class="form-check-input" type="radio" id="useExistingInvoiceYes"
+                            name="use_existing_invoice" value="yes"
+                            {{ $voucher->use_existing_invoice === 'yes' ? 'checked' : '' }}>
                         <label class="form-check-label" for="useExistingInvoiceYes">Ya</label>
                     </div>
                     <div class="form-check form-check-inline">
-                        <input class="form-check-input" type="radio" id="useExistingInvoiceNo" name="use_existing_invoice" value="no" {{ $voucher->use_existing_invoice !== 'yes' ? 'checked' : '' }}>
+                        <input class="form-check-input" type="radio" id="useExistingInvoiceNo"
+                            name="use_existing_invoice" value="no"
+                            {{ $voucher->use_existing_invoice !== 'yes' ? 'checked' : '' }}>
                         <label class="form-check-label" for="useExistingInvoiceNo">Tidak</label>
                     </div>
                 </div>
             </div>
             <!-- Invoice Number -->
-            <div class="row mb-3" id="invoiceFieldContainer" style="display: {{ $voucher->invoice || $voucher->use_invoice === 'yes' ? 'block' : 'none' }};">
+            <div class="row mb-3" id="invoiceFieldContainer"
+                style="display: {{ $voucher->invoice || $voucher->use_invoice === 'yes' ? 'block' : 'none' }};">
                 <label for="invoice" class="col-sm-3 col-form-label">Nomor Invoice:</label>
                 <div class="col-sm-9">
-                    <input type="text" class="form-control" id="invoice" name="invoice" value="{{ $voucher->invoice ?? '' }}">
+                    <input type="text" class="form-control" id="invoice" name="invoice"
+                        value="{{ $voucher->invoice ?? '' }}">
                     <div class="invalid-feedback">Nomor Invoice wajib diisi jika menggunakan invoice.</div>
                 </div>
             </div>
             <!-- Due Date -->
-            <div class="row mb-3" id="dueDateContainer" style="display: {{ $voucher->invoice || $voucher->use_invoice === 'yes' ? 'block' : 'none' }};">
+            <div class="row mb-3" id="dueDateContainer"
+                style="display: {{ $voucher->invoice || $voucher->use_invoice === 'yes' ? 'block' : 'none' }};">
                 <label for="due_date" class="col-sm-3 col-form-label">Tanggal Jatuh Tempo:</label>
                 <div class="col-sm-9">
-                    <input type="date" class="form-control" id="due_date" name="due_date" value="{{ $dueDate }}" {{ $voucher->use_existing_invoice === 'yes' ? 'disabled' : '' }}>
+                    <input type="date" class="form-control" id="due_date" name="due_date"
+                        value="{{ $dueDate }}" {{ $voucher->use_existing_invoice === 'yes' ? 'disabled' : '' }}>
                     <div class="invalid-feedback">Tanggal Jatuh Tempo wajib diisi untuk invoice baru.</div>
                 </div>
             </div>
             <!-- Store Name -->
-            <div class="row mb-3" id="storeFieldContainer" style="display: {{ $voucher->invoice || $voucher->use_invoice === 'yes' ? 'block' : 'none' }};">
+            <div class="row mb-3" id="storeFieldContainer"
+                style="display: {{ $voucher->invoice || $voucher->use_invoice === 'yes' ? 'block' : 'none' }};">
                 <label for="store" class="col-sm-3 col-form-label">Nama Toko:</label>
                 <div class="col-sm-9">
                     <select class="form-select" id="store" name="store">
                         <option value="">Pilih Nama Toko</option>
-                        @foreach($storeNames as $storeName)
-                        <option value="{{ $storeName }}" {{ $voucher->store == $storeName ? 'selected' : '' }}>{{ $storeName }}</option>
+                        @foreach ($storeNames as $storeName)
+                            <option value="{{ $storeName }}"
+                                {{ $voucher->store == $storeName ? 'selected' : '' }}>{{ $storeName }}</option>
                         @endforeach
                     </select>
                 </div>
             </div>
             <!-- Recipe Dropdown for PK -->
             @if ($voucher->voucher_type == 'PK')
-            <div class="row mb-3" id="recipeContainer" style="display: {{ in_array($voucher->voucher_type, ['PK']) && $voucher->use_stock === 'yes' ? 'block' : 'none' }};">
-                <label for="recipe" class="col-sm-3 col-form-label">Formula Produk:</label>
-                <div class="col-sm-9">
-                    <select class="form-select" id="recipe" name="recipe">
-                        <option value="">Pilih Formula Produk</option>
-                        @foreach($recipes as $recipe)
-                        <option value="{{ $recipe['id'] }}" {{ $voucher->recipe_id == $recipe['id'] ? 'selected' : '' }}>{{ $recipe['product_name'] }}</option>
-                        @endforeach
-                    </select>
+                <div class="row mb-3" id="recipeContainer"
+                    style="display: {{ $voucher->use_stock === 'yes' && $voucher->voucher_type === 'PK' ? 'block' : 'none' }};">
+                    <label for="recipe" class="col-sm-3 col-form-label">Formula Produk:</label>
+                    <div class="col-sm-9">
+                        <select class="form-select" id="recipe" name="recipe">
+                            <option value="">Pilih Formula Produk</option>
+                            @foreach ($recipes as $recipe)
+                                <option value="{{ $recipe['id'] }}"
+                                    {{ $voucher->recipe_id == $recipe['id'] ? 'selected' : '' }}>
+                                    {{ $recipe['product_name'] }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
                 </div>
-            </div>
             @endif
             <!-- Transaction Details Table -->
             <div class="mb-3">
@@ -233,125 +270,168 @@
                         </thead>
                         <tbody>
                             @if ($voucher->transactions->isNotEmpty())
-                            @foreach($voucher->transactions as $index => $transaction)
-                            <tr data-row-index="{{ $index }}" data-is-hpp-row="{{ str_starts_with($transaction->description, 'HPP ') ? 'true' : 'false' }}">
-                                <td>
-                                    @if (str_starts_with($transaction->description, 'HPP '))
-                                    <input type="text" class="form-control descriptionInput" name="transactions[{{ $index }}][description]" value="{{ $transaction->description }}" readonly>
-                                    @elseif (in_array($voucher->voucher_type, ['PJ', 'PH', 'PK']))
-                                    <select class="form-control descriptionInput" name="transactions[{{ $index }}][description]" data-initial-value="{{ $transaction->description }}">
-                                        <option value="">Pilih Nama Stock</option>
-                                        @foreach($stocks as $stock)
-                                        @if (!str_starts_with($stock['item'], 'HPP '))
-                                        <option value="{{ $stock['item'] }}" {{ $transaction->description == $stock['item'] ? 'selected' : '' }}>{{ $stock['item'] }}</option>
-                                        @endif
-                                        @endforeach
-                                    </select>
-                                    @elseif ($voucher->voucher_type == 'PB')
-                                    <div class="input-group">
-                                        <select class="form-control descriptionInput" name="transactions[{{ $index }}][description_select]" style="width: 50%;">
-                                            <option value="">Pilih Nama Stock</option>
-                                            @foreach($stocks as $stock)
-                                            @if (!str_starts_with($stock['item'], 'HPP '))
-                                            <option value="{{ $stock['item'] }}" {{ $transaction->description == $stock['item'] ? 'selected' : '' }}>{{ $stock['item'] }}</option>
+                                @foreach ($voucher->transactions as $index => $transaction)
+                                    <tr data-row-index="{{ $index }}"
+                                        data-is-hpp-row="{{ str_starts_with($transaction->description, 'HPP ') ? 'true' : 'false' }}">
+                                        <td>
+                                            @if (str_starts_with($transaction->description, 'HPP '))
+                                                <input type="text" class="form-control descriptionInput"
+                                                    name="transactions[{{ $index }}][description]"
+                                                    value="{{ $transaction->description }}" readonly>
+                                            @elseif (in_array($voucher->voucher_type, ['PJ', 'PH', 'PK']))
+                                                <select class="form-control descriptionInput"
+                                                    name="transactions[{{ $index }}][description]"
+                                                    data-initial-value="{{ $transaction->description }}">
+                                                    <option value="">Pilih Nama Stock</option>
+                                                    @foreach ($stocks as $stock)
+                                                        @if (!str_starts_with($stock['item'], 'HPP '))
+                                                            <option value="{{ $stock['item'] }}"
+                                                                {{ $transaction->description == $stock['item'] ? 'selected' : '' }}>
+                                                                {{ $stock['item'] }}</option>
+                                                        @endif
+                                                    @endforeach
+                                                </select>
+                                            @elseif ($voucher->voucher_type == 'PB')
+                                                <div class="input-group">
+                                                    <select class="form-control descriptionInput"
+                                                        name="transactions[{{ $index }}][description_select]"
+                                                        style="width: 50%;">
+                                                        <option value="">Pilih Nama Stock</option>
+                                                        @foreach ($stocks as $stock)
+                                                            @if (!str_starts_with($stock['item'], 'HPP '))
+                                                                <option value="{{ $stock['item'] }}"
+                                                                    {{ $transaction->description == $stock['item'] ? 'selected' : '' }}>
+                                                                    {{ $stock['item'] }}</option>
+                                                            @endif
+                                                        @endforeach
+                                                    </select>
+                                                    <input type="text" class="form-control descriptionInput"
+                                                        name="transactions[{{ $index }}][description]"
+                                                        style="width: 50%;" value="{{ $transaction->description }}">
+                                                </div>
+                                            @else
+                                                <input type="text" class="form-control descriptionInput"
+                                                    name="transactions[{{ $index }}][description]"
+                                                    value="{{ $transaction->description }}">
                                             @endif
-                                            @endforeach
-                                        </select>
-                                        <input type="text" class="form-control descriptionInput" name="transactions[{{ $index }}][description]" style="width: 50%;" value="{{ $transaction->description }}">
-                                    </div>
-                                    @else
-                                    <input type="text" class="form-control descriptionInput" name="transactions[{{ $index }}][description]" value="{{ $transaction->description }}">
-                                    @endif
-                                </td>
-                                <td>
-                                    @if (in_array($voucher->voucher_type, ['PJ', 'PB', 'PH', 'PK']) && !str_starts_with($transaction->description, 'HPP '))
-                                    <select class="form-control sizeInput" name="transactions[{{ $index }}][size]">
-                                        <option value="">Pilih Ukuran</option>
-                                        @foreach($stocks as $stock)
-                                        @if ($stock['item'] == $transaction->description)
-                                        <option value="{{ $stock['size'] }}" {{ $transaction->size == $stock['size'] ? 'selected' : '' }}>{{ $stock['size'] }}</option>
-                                        @endif
-                                        @endforeach
-                                    </select>
-                                    @else
-                                    <input type="text" class="form-control sizeInput" name="transactions[{{ $index }}][size]" value="{{ $transaction->size }}" {{ str_starts_with($transaction->description, 'HPP ') ? 'readonly' : '' }}>
-                                    @endif
-                                </td>
-                                <td>
-                                    <input type="number" min="1" class="form-control quantityInput" name="transactions[{{ $index }}][quantity]" value="{{ $transaction->quantity }}" {{ str_starts_with($transaction->description, 'HPP ') ? 'readonly' : '' }}>
-                                </td>
-                                <td>
-                                    <input type="number" min="0" class="form-control nominalInput" name="transactions[{{ $index }}][nominal]" value="{{ $transaction->nominal }}" {{ str_starts_with($transaction->description, 'HPP ') ? 'readonly' : '' }}>
-                                </td>
-                                <td>
-                                    <input type="number" class="form-control totalInput" name="transactions[{{ $index }}][total]" value="{{ $transaction->quantity * $transaction->nominal }}" readonly>
-                                </td>
-                                <td class="text-center">
-                                    <button type="button" class="btn btn-danger removeTransactionRowBtn" {{ str_starts_with($transaction->description, 'HPP ') ? 'disabled' : '' }}>Hapus</button>
-                                </td>
-                            </tr>
-                            @endforeach
+                                        </td>
+                                        <td>
+                                            @if (in_array($voucher->voucher_type, ['PJ', 'PB', 'PH', 'PK']) && !str_starts_with($transaction->description, 'HPP '))
+                                                <select class="form-control sizeInput"
+                                                    name="transactions[{{ $index }}][size]">
+                                                    <option value="">Pilih Ukuran</option>
+                                                    @foreach ($stocks as $stock)
+                                                        @if ($stock['item'] == $transaction->description)
+                                                            <option value="{{ $stock['size'] }}"
+                                                                {{ $transaction->size == $stock['size'] ? 'selected' : '' }}>
+                                                                {{ $stock['size'] }}</option>
+                                                        @endif
+                                                    @endforeach
+                                                </select>
+                                            @else
+                                                <input type="text" class="form-control sizeInput"
+                                                    name="transactions[{{ $index }}][size]"
+                                                    value="{{ $transaction->size }}"
+                                                    {{ str_starts_with($transaction->description, 'HPP ') ? 'readonly' : '' }}>
+                                            @endif
+                                        </td>
+                                        <td>
+                                            <input type="number" min="1" class="form-control quantityInput"
+                                                name="transactions[{{ $index }}][quantity]"
+                                                value="{{ $transaction->quantity }}"
+                                                {{ str_starts_with($transaction->description, 'HPP ') ? 'readonly' : '' }}>
+                                        </td>
+                                        <td>
+                                            <input type="number" min="0" class="form-control nominalInput"
+                                                name="transactions[{{ $index }}][nominal]"
+                                                value="{{ $transaction->nominal }}"
+                                                {{ str_starts_with($transaction->description, 'HPP ') ? 'readonly' : '' }}>
+                                        </td>
+                                        <td>
+                                            <input type="number" class="form-control totalInput"
+                                                name="transactions[{{ $index }}][total]"
+                                                value="{{ $transaction->quantity * $transaction->nominal }}" readonly>
+                                        </td>
+                                        <td class="text-center">
+                                            <button type="button" class="btn btn-danger removeTransactionRowBtn"
+                                                {{ str_starts_with($transaction->description, 'HPP ') ? 'disabled' : '' }}>Hapus</button>
+                                        </td>
+                                    </tr>
+                                @endforeach
                             @else
-                            <tr data-row-index="0">
-                                <td>
-                                    @if (in_array($voucher->voucher_type, ['PJ', 'PH', 'PK']))
-                                    <select class="form-control descriptionInput" name="transactions[0][description]">
-                                        <option value="">Pilih Nama Stock</option>
-                                        @foreach($stocks as $stock)
-                                        @if (!str_starts_with($stock['item'], 'HPP '))
-                                        <option value="{{ $stock['item'] }}">{{ $stock['item'] }}</option>
+                                <tr data-row-index="0">
+                                    <td>
+                                        @if (in_array($voucher->voucher_type, ['PJ', 'PH', 'PK']))
+                                            <select class="form-control descriptionInput"
+                                                name="transactions[0][description]">
+                                                <option value="">Pilih Nama Stock</option>
+                                                @foreach ($stocks as $stock)
+                                                    @if (!str_starts_with($stock['item'], 'HPP '))
+                                                        <option value="{{ $stock['item'] }}">{{ $stock['item'] }}
+                                                        </option>
+                                                    @endif
+                                                @endforeach
+                                            </select>
+                                        @elseif ($voucher->voucher_type == 'PB')
+                                            <div class="input-group">
+                                                <select class="form-control descriptionInput"
+                                                    name="transactions[0][description_select]" style="width: 50%;">
+                                                    <option value="">Pilih Nama Stock</option>
+                                                    @foreach ($stocks as $stock)
+                                                        @if (!str_starts_with($stock['item'], 'HPP '))
+                                                            <option value="{{ $stock['item'] }}">{{ $stock['item'] }}
+                                                            </option>
+                                                        @endif
+                                                    @endforeach
+                                                </select>
+                                                <input type="text" class="form-control descriptionInput"
+                                                    name="transactions[0][description]" style="width: 50%;">
+                                            </div>
+                                        @else
+                                            <input type="text" class="form-control descriptionInput"
+                                                name="transactions[0][description]">
                                         @endif
-                                        @endforeach
-                                    </select>
-                                    @elseif ($voucher->voucher_type == 'PB')
-                                    <div class="input-group">
-                                        <select class="form-control descriptionInput" name="transactions[0][description_select]" style="width: 50%;">
-                                            <option value="">Pilih Nama Stock</option>
-                                            @foreach($stocks as $stock)
-                                            @if (!str_starts_with($stock['item'], 'HPP '))
-                                            <option value="{{ $stock['item'] }}">{{ $stock['item'] }}</option>
-                                            @endif
-                                            @endforeach
-                                        </select>
-                                        <input type="text" class="form-control descriptionInput" name="transactions[0][description]" style="width: 50%;">
-                                    </div>
-                                    @else
-                                    <input type="text" class="form-control descriptionInput" name="transactions[0][description]">
-                                    @endif
-                                </td>
-                                <td>
-                                    @if (in_array($voucher->voucher_type, ['PJ', 'PB', 'PH', 'PK']))
-                                    <select class="form-control sizeInput" name="transactions[0][size]">
-                                        <option value="">Pilih Ukuran</option>
-                                    </select>
-                                    @else
-                                    <input type="text" class="form-control sizeInput" name="transactions[0][size]">
-                                    @endif
-                                </td>
-                                <td>
-                                    <input type="number" min="1" class="form-control quantityInput" name="transactions[0][quantity]" value="1">
-                                </td>
-                                <td>
-                                    <input type="number" min="0" class="form-control nominalInput" name="transactions[0][nominal]">
-                                </td>
-                                <td>
-                                    <input type="number" class="form-control totalInput" name="transactions[0][total]" value="0" readonly>
-                                </td>
-                                <td class="text-center"></td>
-                            </tr>
+                                    </td>
+                                    <td>
+                                        @if (in_array($voucher->voucher_type, ['PJ', 'PB', 'PH', 'PK']))
+                                            <select class="form-control sizeInput" name="transactions[0][size]">
+                                                <option value="">Pilih Ukuran</option>
+                                            </select>
+                                        @else
+                                            <input type="text" class="form-control sizeInput"
+                                                name="transactions[0][size]">
+                                        @endif
+                                    </td>
+                                    <td>
+                                        <input type="number" min="1" class="form-control quantityInput"
+                                            name="transactions[0][quantity]" value="1">
+                                    </td>
+                                    <td>
+                                        <input type="number" min="0" class="form-control nominalInput"
+                                            name="transactions[0][nominal]">
+                                    </td>
+                                    <td>
+                                        <input type="number" class="form-control totalInput"
+                                            name="transactions[0][total]" value="0" readonly>
+                                    </td>
+                                    <td class="text-center"></td>
+                                </tr>
                             @endif
                         </tbody>
                         <tfoot>
                             <tr>
                                 <td colspan="4" class="text-end"><strong>Total Nominal:</strong></td>
                                 <td>
-                                    <input type="text" class="form-control" id="totalNominal" name="total_nominal" value="{{ number_format($voucher->total_nominal, 2, ',', '.') }}" readonly>
+                                    <input type="text" class="form-control" id="totalNominal"
+                                        name="total_nominal"
+                                        value="{{ number_format($voucher->total_nominal, 2, ',', '.') }}" readonly>
                                 </td>
                                 <td></td>
                             </tr>
                         </tfoot>
                     </table>
-                    <button type="button" id="addTransactionRowBtn" class="btn btn-primary">Tambah Transaksi</button>
+                    <button type="button" id="addTransactionRowBtn" class="btn btn-primary">Tambah
+                        Transaksi</button>
                 </div>
             </div>
             <!-- Voucher Details Table -->
@@ -371,34 +451,47 @@
                         </tr>
                     </thead>
                     <tbody id="voucherDetailsTableBody">
-                        @foreach($voucher->voucherDetails as $index => $detail)
-                        <tr>
-                            <td>
-                                <input type="text" class="form-control accountCodeInput" name="voucher_details[{{ $index }}][account_code]" list="dynamicAccountCodes" value="{{ $detail->account_code }}" placeholder="Ketik atau pilih kode akun" required aria-required="true">
-                                <datalist id="dynamicAccountCodes">
-                                    <option value="">Pilih Kode Akun</option>
-                                    @foreach($accounts as $account)
-                                    <option value="{{ $account->account_code }}">{{ $account->account_code }} - {{ $account->account_name }}</option>
-                                    @endforeach
-                                    @foreach($subsidiariesData as $subsidiary)
-                                    <option value="{{ $subsidiary['subsidiary_code'] }}">{{ $subsidiary['subsidiary_code'] }} - {{ $subsidiary['account_name'] }}</option>
-                                    @endforeach
-                                </datalist>
-                                <div class="invalid-feedback">Kode Akun wajib diisi.</div>
-                            </td>
-                            <td>
-                                <input type="text" class="form-control accountName" name="voucher_details[{{ $index }}][account_name]" value="{{ $detail->account_name }}" readonly>
-                            </td>
-                            <td>
-                                <input type="number" min="0" class="form-control debitInput" name="voucher_details[{{ $index }}][debit]" value="{{ $detail->debit > 0 ? $detail->debit : '' }}">
-                            </td>
-                            <td>
-                                <input type="number" min="0" class="form-control creditInput" name="voucher_details[{{ $index }}][credit]" value="{{ $detail->credit > 0 ? $detail->credit : '' }}">
-                            </td>
-                            <td class="text-center">
-                                <button type="button" class="btn btn-danger removeVoucherDetailRowBtn">Hapus</button>
-                            </td>
-                        </tr>
+                        @foreach ($voucher->voucherDetails as $index => $detail)
+                            <tr>
+                                <td>
+                                    <input type="text" class="form-control accountCodeInput"
+                                        name="voucher_details[{{ $index }}][account_code]"
+                                        list="dynamicAccountCodes" value="{{ $detail->account_code }}"
+                                        placeholder="Ketik atau pilih kode akun" required aria-required="true">
+                                    <datalist id="dynamicAccountCodes">
+                                        <option value="">Pilih Kode Akun</option>
+                                        @foreach ($accounts as $account)
+                                            <option value="{{ $account->account_code }}">{{ $account->account_code }}
+                                                - {{ $account->account_name }}</option>
+                                        @endforeach
+                                        @foreach ($subsidiariesData as $subsidiary)
+                                            <option value="{{ $subsidiary['subsidiary_code'] }}">
+                                                {{ $subsidiary['subsidiary_code'] }} -
+                                                {{ $subsidiary['account_name'] }}</option>
+                                        @endforeach
+                                    </datalist>
+                                    <div class="invalid-feedback">Kode Akun wajib diisi.</div>
+                                </td>
+                                <td>
+                                    <input type="text" class="form-control accountName"
+                                        name="voucher_details[{{ $index }}][account_name]"
+                                        value="{{ $detail->account_name }}" readonly>
+                                </td>
+                                <td>
+                                    <input type="number" min="0" class="form-control debitInput"
+                                        name="voucher_details[{{ $index }}][debit]"
+                                        value="{{ $detail->debit > 0 ? $detail->debit : '' }}">
+                                </td>
+                                <td>
+                                    <input type="number" min="0" class="form-control creditInput"
+                                        name="voucher_details[{{ $index }}][credit]"
+                                        value="{{ $detail->credit > 0 ? $detail->credit : '' }}">
+                                </td>
+                                <td class="text-center">
+                                    <button type="button"
+                                        class="btn btn-danger removeVoucherDetailRowBtn">Hapus</button>
+                                </td>
+                            </tr>
                         @endforeach
                     </tbody>
                 </table>
@@ -408,20 +501,25 @@
             <div class="row mb-3">
                 <label for="totalDebit" class="col-sm-3 col-form-label">Total Debit:</label>
                 <div class="col-sm-3">
-                    <input type="text" class="form-control" id="totalDebit" name="total_debit" value="{{ number_format($voucher->total_debit, 2, ',', '.') }}" readonly>
-                    <input type="hidden" id="totalDebitRaw" name="total_debit_raw" value="{{ $voucher->total_debit }}">
+                    <input type="text" class="form-control" id="totalDebit" name="total_debit"
+                        value="{{ number_format($voucher->total_debit, 2, ',', '.') }}" readonly>
+                    <input type="hidden" id="totalDebitRaw" name="total_debit_raw"
+                        value="{{ $voucher->total_debit }}">
                 </div>
                 <label for="totalCredit" class="col-sm-3 col-form-label">Total Kredit:</label>
                 <div class="col-sm-3">
-                    <input type="text" class="form-control" id="totalCredit" name="total_credit" value="{{ number_format($voucher->total_credit, 2, ',', '.') }}" readonly>
-                    <input type="hidden" id="totalCreditRaw" name="total_credit_raw" value="{{ $voucher->total_credit }}">
+                    <input type="text" class="form-control" id="totalCredit" name="total_credit"
+                        value="{{ number_format($voucher->total_credit, 2, ',', '.') }}" readonly>
+                    <input type="hidden" id="totalCreditRaw" name="total_credit_raw"
+                        value="{{ $voucher->total_credit }}">
                 </div>
             </div>
             <!-- Validation Message -->
             <div class="row mb-3">
                 <label for="validation" class="col-sm-3 col-form-label">Pesan:</label>
                 <div class="col-sm-9">
-                    <input type="text" class="form-control" id="validation" readonly value="Silakan isi formulir.">
+                    <input type="text" class="form-control" id="validation" readonly
+                        value="Silakan isi formulir.">
                 </div>
             </div>
             <div class="text-center">
@@ -468,8 +566,9 @@
             const usedStocks = @json($usedStocks);
             const transactionsData = @json($transactionsData);
             const recipes = @json($recipes);
-            const currentVoucherType = @json($voucher -> voucher_type);
-            const hasInvoice = @json($voucher -> invoice ? true : false);
+            const currentVoucherType = @json($voucher->voucher_type);
+            const hasInvoice = @json($voucher->invoice ? true : false);
+            const voucherRecipeId = @json($voucher->recipe_id);
 
             // --- Voucher Types ---
             const voucherTypes = {
@@ -522,7 +621,8 @@
             function updateVoucherTypeOptions() {
                 const useStock = useStockYes.checked ? 'yes' : 'no';
                 voucherTypeSelect.innerHTML = '';
-                const validOptions = voucherTypeOptions.filter(option => useStock === 'yes' ? option.stock : !option.stock);
+                const validOptions = voucherTypeOptions.filter(option => useStock === 'yes' ? option.stock : !option
+                    .stock);
                 validOptions.forEach(option => {
                     const opt = document.createElement('option');
                     opt.value = option.value;
@@ -580,8 +680,8 @@
                 recipes.forEach(recipe => {
                     const option = document.createElement('option');
                     option.value = recipe.id;
-                    option.textContent = recipe.name;
-                    if (recipe.id === @json($voucher -> recipe_id)) option.selected = true;
+                    option.textContent = recipe.product_name;
+                    if (recipe.id == voucherRecipeId) option.selected = true;
                     select.appendChild(option);
                 });
                 selectDiv.appendChild(select);
@@ -599,26 +699,62 @@
                 if (selectedRecipeId) {
                     populateTransactionTableFromRecipe(selectedRecipeId);
                     addTransactionRowBtn.disabled = true;
-                    transactionTableBody.querySelectorAll('.removeTransactionRowBtn').forEach(btn => btn.disabled = true);
+                    transactionTableBody.querySelectorAll('.removeTransactionRowBtn').forEach(btn => btn.disabled =
+                        true);
                 } else {
-                    refreshTransactionTable();
+                    populateTransactionTableFromVoucher();
                     addTransactionRowBtn.disabled = false;
-                    transactionTableBody.querySelectorAll('.removeTransactionRowBtn').forEach(btn => btn.disabled = false);
+                    transactionTableBody.querySelectorAll('.removeTransactionRowBtn').forEach(btn => btn.disabled =
+                        false);
                 }
+                updateAllCalculationsAndValidations();
+            }
+
+            function populateTransactionTableFromVoucher() {
+                transactionTableBody.innerHTML = '';
+                transactionsData.forEach((item, index) => {
+                    const row = generateTransactionTableRow(index, {
+                        description: item.description,
+                        size: item.size,
+                        quantity: item.quantity,
+                        nominal: item.nominal || 0,
+                        total: (item.quantity * (item.nominal || 0)).toFixed(2),
+                        isHppRow: item.description.startsWith('HPP ')
+                    });
+                    transactionTableBody.appendChild(row);
+                });
+                if (transactionTableBody.querySelectorAll('tr').length === 0) {
+                    const newRow = generateTransactionTableRow(0);
+                    transactionTableBody.appendChild(newRow);
+                    if (useStockYes.checked && ['PJ', 'PB', 'PH', 'PK'].includes(voucherTypeSelect.value)) {
+                        updateSizeDropdown(newRow, '');
+                    }
+                }
+                attachTransactionRemoveButtonListeners();
+                attachTransactionInputListeners();
                 updateAllCalculationsAndValidations();
             }
 
             function populateTransactionTableFromRecipe(recipeId) {
                 const recipe = recipes.find(r => r.id == recipeId);
-                if (!recipe || !recipe.items) return;
+                if (!recipe || !recipe.transfer_stocks) {
+                    console.warn('Recipe or transfer stocks not found for ID:', recipeId);
+                    validationInput.value = 'Formula produk tidak memiliki data stok transfer.';
+                    return;
+                }
+                if (!recipe.transfer_stocks.length) {
+                    console.warn('No transfer stocks for recipe ID:', recipeId);
+                    validationInput.value = 'Formula produk tidak memiliki stok transfer terkait.';
+                    return;
+                }
                 transactionTableBody.innerHTML = '';
-                recipe.items.forEach((item, index) => {
+                recipe.transfer_stocks.forEach((stock, index) => {
                     const row = generateTransactionTableRow(index, {
-                        description: item.item,
-                        size: item.size,
-                        quantity: item.quantity,
-                        nominal: item.nominal || 0,
-                        total: (item.quantity * (item.nominal || 0)).toFixed(2),
+                        description: stock.item,
+                        size: stock.size,
+                        quantity: stock.quantity,
+                        nominal: stock.nominal || 0,
+                        total: (stock.quantity * (stock.nominal || 0)).toFixed(2),
                         isHppRow: false
                     });
                     transactionTableBody.appendChild(row);
@@ -694,7 +830,8 @@
             // --- HPP Logic ---
             function calculateAverageHpp(item, size) {
                 if (!transactionsData || !Array.isArray(transactionsData)) return 0;
-                const matchingTransactions = transactionsData.filter(t => t.description === item && t.size === size && !t.description.startsWith('HPP '));
+                const matchingTransactions = transactionsData.filter(t => t.description === item && t.size ===
+                    size && !t.description.startsWith('HPP '));
                 if (matchingTransactions.length === 0) return 0;
                 const totalNominal = matchingTransactions.reduce((sum, t) => sum + (parseFloat(t.nominal) || 0), 0);
                 return matchingTransactions.length > 0 ? totalNominal / matchingTransactions.length : 0;
@@ -865,7 +1002,8 @@
                 const currentRow = transactionTableBody.querySelector(`tr[data-row-index="${currentIndex}"]`);
                 let nextRow = currentRow.nextSibling;
                 while (nextRow) {
-                    if (nextRow.dataset.isHppRow === 'true' && nextRow.querySelector('.descriptionInput')?.value === `HPP ${item}`) {
+                    if (nextRow.dataset.isHppRow === 'true' && nextRow.querySelector('.descriptionInput')?.value ===
+                        `HPP ${item}`) {
                         const descriptionInput = nextRow.querySelector('.descriptionInput');
                         descriptionInput.value = `HPP ${item}`;
                         const sizeInput = nextRow.querySelector('.sizeInput');
@@ -897,7 +1035,8 @@
                 }
                 const availableQuantity = parseFloat(stock.quantity) || 0;
                 if (quantity > availableQuantity) {
-                    validationInput.value = `Kuantitas untuk item "${item}" dengan ukuran "${size}" melebihi stok tersedia (${availableQuantity}).`;
+                    validationInput.value =
+                        `Kuantitas untuk item "${item}" dengan ukuran "${size}" melebihi stok tersedia (${availableQuantity}).`;
                     return false;
                 }
                 return true;
@@ -939,7 +1078,8 @@
                 } else if (voucherType === 'PB' && useStock === 'yes') {
                     const inputGroup = document.createElement('div');
                     inputGroup.className = 'input-group';
-                    const select = createStockDropdown(index, transactionData?.description_select || transactionData?.description);
+                    const select = createStockDropdown(index, transactionData?.description_select || transactionData
+                        ?.description);
                     select.name = `transactions[${index}][description_select]`;
                     select.style.width = '50%';
                     select.addEventListener('change', (e) => {
@@ -1000,7 +1140,8 @@
                     const row = quantityInput.closest('tr');
                     updateRowTotal(row);
                     if (voucherType === 'PJ' && !isHppRow) {
-                        const item = row.querySelector('.descriptionInput:not([type="text"])')?.value || row.querySelector('.descriptionInput[type="text"]')?.value || '';
+                        const item = row.querySelector('.descriptionInput:not([type="text"])')?.value || row
+                            .querySelector('.descriptionInput[type="text"]')?.value || '';
                         const size = row.querySelector('.sizeInput')?.value || '';
                         updateHppRow(index, item, size, parseFloat(quantityInput.value) || 1);
                     }
@@ -1043,7 +1184,8 @@
                 deleteButton.type = 'button';
                 deleteButton.className = 'btn btn-danger removeTransactionRowBtn';
                 deleteButton.textContent = 'Hapus';
-                deleteButton.disabled = isHppRow || (useStock === 'yes' && voucherType === 'PK' && document.getElementById('recipe')?.value);
+                deleteButton.disabled = isHppRow || (useStock === 'yes' && voucherType === 'PK' && document
+                    .getElementById('recipe')?.value);
                 actionCell.appendChild(deleteButton);
                 row.appendChild(actionCell);
 
@@ -1054,7 +1196,8 @@
                 transactionTableBody.querySelectorAll('tr').forEach((row, index) => {
                     row.dataset.rowIndex = index;
                     row.querySelectorAll('[name*="transactions["]').forEach(element => {
-                        element.name = element.name.replace(/transactions\[\d+\]/, `transactions[${index}]`);
+                        element.name = element.name.replace(/transactions\[\d+\]/,
+                            `transactions[${index}]`);
                     });
                 });
                 attachTransactionRemoveButtonListeners();
@@ -1080,10 +1223,12 @@
                 const voucherType = voucherTypeSelect.value;
 
                 if (voucherType === 'PJ' && !isHppRow) {
-                    const description = row.querySelector('.descriptionInput:not([type="text"])')?.value || row.querySelector('.descriptionInput[type="text"]')?.value || '';
+                    const description = row.querySelector('.descriptionInput:not([type="text"])')?.value || row
+                        .querySelector('.descriptionInput[type="text"]')?.value || '';
                     let nextRow = row.nextSibling;
                     while (nextRow) {
-                        if (nextRow.dataset.isHppRow === 'true' && nextRow.querySelector('.descriptionInput')?.value === `HPP ${description}`) {
+                        if (nextRow.dataset.isHppRow === 'true' && nextRow.querySelector('.descriptionInput')
+                            ?.value === `HPP ${description}`) {
                             nextRow.remove();
                             break;
                         }
@@ -1097,7 +1242,8 @@
             }
 
             function attachTransactionInputListeners() {
-                transactionTableBody.querySelectorAll('.quantityInput, .nominalInput, .descriptionInput, .sizeInput').forEach(input => {
+                transactionTableBody.querySelectorAll(
+                    '.quantityInput, .nominalInput, .descriptionInput, .sizeInput').forEach(input => {
                     input.removeEventListener('input', handleTransactionInput);
                     input.addEventListener('input', handleTransactionInput);
                 });
@@ -1110,7 +1256,8 @@
                             const item = e.target.value;
                             updateSizeDropdown(row, item);
                             if (voucherTypeSelect.value === 'PJ' && item) {
-                                const quantity = parseFloat(row.querySelector('.quantityInput')?.value) || 1;
+                                const quantity = parseFloat(row.querySelector('.quantityInput')
+                                    ?.value) || 1;
                                 const size = row.querySelector('.sizeInput')?.value || '';
                                 updateHppRow(index, item, size, quantity);
                             }
@@ -1125,7 +1272,8 @@
                 updateRowTotal(row);
                 const voucherType = voucherTypeSelect.value;
                 if (voucherType === 'PJ' && row.dataset.isHppRow !== 'true') {
-                    const item = row.querySelector('.descriptionInput:not([type="text"])')?.value || row.querySelector('.descriptionInput[type="text"]')?.value || '';
+                    const item = row.querySelector('.descriptionInput:not([type="text"])')?.value || row
+                        .querySelector('.descriptionInput[type="text"]')?.value || '';
                     const size = row.querySelector('.sizeInput')?.value || '';
                     const quantity = parseFloat(row.querySelector('.quantityInput')?.value) || 1;
                     if (item && size) {
@@ -1146,7 +1294,8 @@
                     const totalInput = row.querySelector('.totalInput');
                     return {
                         description: descriptionInput?.value || descriptionSelect?.value || '',
-                        description_select: row.querySelector('[name$="[description_select]"]')?.value || '',
+                        description_select: row.querySelector('[name$="[description_select]"]')?.value ||
+                            '',
                         size: sizeInput?.value || '',
                         quantity: quantityInput?.value || '1',
                         nominal: nominalInput?.value || '0',
@@ -1166,7 +1315,8 @@
                     transactionsData.forEach((data, index) => {
                         const newRow = generateTransactionTableRow(index, data);
                         transactionTableBody.appendChild(newRow);
-                        if (useStock === 'yes' && ['PJ', 'PB', 'PH', 'PK'].includes(voucherType) && !data.isHppRow) {
+                        if (useStock === 'yes' && ['PJ', 'PB', 'PH', 'PK'].includes(voucherType) && !data
+                            .isHppRow) {
                             updateSizeDropdown(newRow, data.description || data.description_select);
                         }
                     });
@@ -1180,9 +1330,12 @@
                     if (voucherType === 'PJ') {
                         transactionTableBody.querySelectorAll('tr').forEach((row, index) => {
                             if (row.dataset.isHppRow !== 'true') {
-                                const item = row.querySelector('.descriptionInput:not([type="text"])')?.value || row.querySelector('.descriptionInput[type="text"]')?.value || '';
+                                const item = row.querySelector('.descriptionInput:not([type="text"])')
+                                    ?.value || row.querySelector('.descriptionInput[type="text"]')?.value ||
+                                    '';
                                 const size = row.querySelector('.sizeInput')?.value || '';
-                                const quantity = parseFloat(row.querySelector('.quantityInput')?.value) || 1;
+                                const quantity = parseFloat(row.querySelector('.quantityInput')?.value) ||
+                                    1;
                                 if (item && size) {
                                     updateHppRow(index, item, size, quantity);
                                 }
@@ -1254,7 +1407,8 @@
                 voucherDetailsTableBody.querySelectorAll('tr').forEach((row, index) => {
                     row.dataset.rowIndex = index;
                     row.querySelectorAll('[name*="voucher_details["]').forEach(input => {
-                        input.name = input.name.replace(/voucher_details\[\d+\]/, `voucher_details[${index}]`);
+                        input.name = input.name.replace(/voucher_details\[\d+\]/,
+                            `voucher_details[${index}]`);
                     });
                 });
                 attachVoucherDetailRemoveButtonListeners();
@@ -1330,7 +1484,7 @@
                     const option = document.createElement('option');
                     option.value = store;
                     option.textContent = store;
-                    if (store === @json($voucher -> store)) option.selected = true;
+                    if (store === @json($voucher->store)) option.selected = true;
                     select.appendChild(option);
                 });
                 return select;
@@ -1347,7 +1501,7 @@
                         const option = document.createElement('option');
                         option.value = invoice;
                         option.textContent = invoice;
-                        if (invoice === @json($voucher -> invoice)) option.selected = true;
+                        if (invoice === @json($voucher->invoice)) option.selected = true;
                         select.appendChild(option);
                     }
                 });
@@ -1360,7 +1514,7 @@
                 input.className = 'form-control';
                 input.id = 'invoice';
                 input.name = 'invoice';
-                input.value = @json($voucher -> invoice ?? '');
+                input.value = @json($voucher->invoice ?? '');
                 return input;
             }
 
@@ -1374,7 +1528,8 @@
                 invoiceLabel.textContent = 'Nomor Invoice:';
                 const invoiceInputDiv = document.createElement('div');
                 invoiceInputDiv.className = 'col-sm-9';
-                const invoiceInput = useInvoice === 'yes' && useExistingInvoice === 'yes' ? createInvoiceDropdown() : createInvoiceInput();
+                const invoiceInput = useInvoice === 'yes' && useExistingInvoice === 'yes' ?
+                    createInvoiceDropdown() : createInvoiceInput();
                 invoiceInputDiv.appendChild(invoiceInput);
                 const invalidFeedback = document.createElement('div');
                 invalidFeedback.className = 'invalid-feedback';
@@ -1402,7 +1557,8 @@
                 dueDateInput.id = 'due_date';
                 dueDateInput.name = 'due_date';
                 dueDateInput.disabled = useInvoice !== 'yes' || useExistingInvoice === 'yes';
-                dueDateInput.value = useInvoice === 'yes' && @json($dueDate) ? @json($dueDate) : '';
+                dueDateInput.value = useInvoice === 'yes' && @json($dueDate) ?
+                    @json($dueDate) : '';
                 dueDateInputDiv.appendChild(dueDateInput);
                 const invalidFeedback = document.createElement('div');
                 invalidFeedback.className = 'invalid-feedback';
@@ -1445,7 +1601,8 @@
             // --- Account Code Datalist ---
             function isSubsidiaryCodeUsed() {
                 const accountCodeInputs = voucherDetailsTableBody.querySelectorAll('.accountCodeInput');
-                return Array.from(accountCodeInputs).some(input => subsidiaries.some(s => s.subsidiary_code === input.value.trim()));
+                return Array.from(accountCodeInputs).some(input => subsidiaries.some(s => s.subsidiary_code ===
+                    input.value.trim()));
             }
 
             function updateAccountCodeDatalist(isNewRow = false) {
@@ -1456,14 +1613,17 @@
                     datalist.innerHTML = '<option value="">Pilih Kode Akun</option>';
                     if (useInvoice === 'yes' && !subsidiaryUsed && !isNewRow) {
                         subsidiaries.forEach(subsidiary => {
-                            datalist.innerHTML += `<option value="${subsidiary.subsidiary_code}">${subsidiary.subsidiary_code} - ${subsidiary.account_name}</option>`;
+                            datalist.innerHTML +=
+                                `<option value="${subsidiary.subsidiary_code}">${subsidiary.subsidiary_code} - ${subsidiary.account_name}</option>`;
                         });
                     } else {
                         accounts.forEach(account => {
-                            datalist.innerHTML += `<option value="${account.account_code}">${account.account_code} - ${account.account_name}</option>`;
+                            datalist.innerHTML +=
+                                `<option value="${account.account_code}">${account.account_code} - ${account.account_name}</option>`;
                         });
                         subsidiaries.forEach(subsidiary => {
-                            datalist.innerHTML += `<option value="${subsidiary.subsidiary_code}">${subsidiary.subsidiary_code} - ${subsidiary.account_name}</option>`;
+                            datalist.innerHTML +=
+                                `<option value="${subsidiary.subsidiary_code}">${subsidiary.subsidiary_code} - ${subsidiary.account_name}</option>`;
                         });
                     }
                 });
@@ -1539,7 +1699,8 @@
                     totalCreditRaw
                 } = calculateTotalsAndValidate();
                 if (totalNominalRaw !== totalDebitRaw || totalNominalRaw !== totalCreditRaw) {
-                    validationInput.value = "Total Nominal pada Rincian Transaksi harus sama dengan Total Debit dan Total Kredit pada Rincian Voucher.";
+                    validationInput.value =
+                        "Total Nominal pada Rincian Transaksi harus sama dengan Total Debit dan Total Kredit pada Rincian Voucher.";
                     saveVoucherBtn.disabled = true;
                     return false;
                 } else if (totalDebitRaw !== totalCreditRaw) {
@@ -1608,7 +1769,8 @@
                             if (isHpp && description) {
                                 const stockItem = description.replace(/^HPP /, '');
                                 if (!stockDescriptions.has(`${stockItem}|${size}`)) {
-                                    validationInput.value = `Baris HPP untuk "${stockItem}" dengan ukuran "${size}" tidak memiliki transaksi stok yang sesuai.`;
+                                    validationInput.value =
+                                        `Baris HPP untuk "${stockItem}" dengan ukuran "${size}" tidak memiliki transaksi stok yang sesuai.`;
                                     isValid = false;
                                 }
                             }
@@ -1731,7 +1893,8 @@
             });
 
             addVoucherDetailRowBtn.addEventListener('click', () => {
-                const newRow = generateVoucherDetailTableRow(voucherDetailsTableBody.querySelectorAll('tr').length);
+                const newRow = generateVoucherDetailTableRow(voucherDetailsTableBody.querySelectorAll('tr')
+                    .length);
                 voucherDetailsTableBody.appendChild(newRow);
                 updateVoucherDetailRowIndices();
                 updateAccountCodeDatalist(true);
@@ -1758,22 +1921,55 @@
             function initializeHppRows() {
                 const voucherType = voucherTypeSelect.value;
                 if (voucherType !== 'PJ') return;
-                const existingTransactions = @json($voucher -> transactions);
+                const existingTransactions = @json($voucher->transactions);
                 transactionTableBody.querySelectorAll('tr').forEach(row => {
                     if (row.dataset.isHppRow !== 'true') {
                         const index = parseInt(row.dataset.rowIndex);
                         const description = row.querySelector('.descriptionInput')?.value || '';
                         const size = row.querySelector('.sizeInput')?.value || '';
                         const quantity = parseFloat(row.querySelector('.quantityInput')?.value) || 1;
-                        const transaction = existingTransactions.find(t => t.description === `HPP ${description}` && t.size === size);
+                        const transaction = existingTransactions.find(t => t.description ===
+                            `HPP ${description}` && t.size === size);
                         if (transaction) {
-                            addHppRowDirectly(index, description, size, transaction.quantity, transaction.nominal);
+                            addHppRowDirectly(index, description, size, transaction.quantity, transaction
+                                .nominal);
                         }
                     }
                 });
             }
 
+            function initializePage() {
+                updateVoucherTypeOptions();
+                if (recipeContainer) createRecipeDropdown();
+                updateInvoiceAndStoreFields();
+                updateAccountCodeDatalist();
+                // Initialize recipe and transactions for PK vouchers
+                if (currentVoucherType === 'PK' && useStockYes.checked && voucherRecipeId) {
+                    const recipeSelect = document.getElementById('recipe');
+                    if (recipeSelect) {
+                        recipeSelect.value = voucherRecipeId;
+                        handleRecipeChange(); // Populate transactions based on selected recipe
+                    }
+                } else {
+                    refreshTransactionTable();
+                }
+                initializeHppRows();
+                updateAllCalculationsAndValidations();
+                updateVoucherDay();
+
+                const voucherDateInput = document.getElementById('voucherDate');
+                if (voucherDateInput && !voucherDateInput.value) {
+                    const today = new Date();
+                    const year = today.getFullYear();
+                    const month = String(today.getMonth() + 1).padStart(2, '0');
+                    const day = String(today.getDate()).padStart(2, '0');
+                    voucherDateInput.value = `${year}-${month}-${day}`;
+                    updateVoucherDay();
+                }
+            }
+
             // --- Initialization ---
+            initializePage();
             updateVoucherTypeOptions();
             if (recipeContainer) createRecipeDropdown();
             updateInvoiceAndStoreFields();
