@@ -29,4 +29,14 @@ class Transactions extends Model
     {
         return $this->hasOne(Stock::class, 'item', 'description');
     }
+
+    public function transferStock()
+    {
+        return $this->hasOne(TransferStock::class, 'item', 'description');
+    }
+
+    public function usedStock()
+    {
+        return $this->hasOne(UsedStock::class, 'item', 'description');
+    }
 }

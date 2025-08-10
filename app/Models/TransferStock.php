@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use App\Models\Transactions;
+use App\Models\RecipesTransfer;
 
 class TransferStock extends Model
 {
@@ -19,7 +21,7 @@ class TransferStock extends Model
 
     public function transactions()
     {
-        return $this->hasMany(Transaction::class);
+        return $this->hasMany(Transactions::class, 'item', 'description');
     }
 
     public function recipes()
@@ -31,6 +33,6 @@ class TransferStock extends Model
 
     public function recipeTransfers()
     {
-        return $this->hasMany(RecipeTransfer::class, 'transfer_stock_id');
+        return $this->hasMany(RecipesTransfer::class, 'transfer_stock_id');
     }
 }

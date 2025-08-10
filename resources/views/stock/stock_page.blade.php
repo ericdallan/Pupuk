@@ -357,16 +357,22 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @php $recipeCount = 1; @endphp
-                                    @if (isset($recipes) && !empty($recipes))
+                                    @php
+                                        $recipeCount = 1;
+                                    @endphp
+
+                                    @if (!empty($recipes))
                                         @foreach ($recipes as $recipe)
                                             <tr>
                                                 <td>{{ $recipeCount++ }}</td>
                                                 <td>{{ htmlspecialchars($recipe->product_name ?? 'Unknown Product') }}</td>
                                                 <td>{{ htmlspecialchars($recipe->size ?? 'Unknown Size') }}</td>
-                                                <td>{{ number_format($recipe->nominal ?? 0, 2, ',', '.') }}</td>
                                                 <td>
-                                                    @if (isset($recipe->transferStocks) && !empty($recipe->transferStocks))
+                                                    {{ number_format($recipe->transferStocks->sum('nominal') ?? 0, 2, ',', '.') }}
+                                                </td>
+                                                </td>
+                                                <td>
+                                                    @if (!empty($recipe->transferStocks))
                                                         <table class="table table-sm table-bordered mt-2">
                                                             <thead>
                                                                 <tr>

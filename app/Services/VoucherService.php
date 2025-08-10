@@ -92,8 +92,14 @@ class VoucherService
             });
 
         $vouchers->getCollection()->transform(function ($voucher) use ($openingStockTransactions) {
-            $hasStock = $voucher->transactions()->whereHas('stock', function ($query) {
-                $query->whereColumn('transactions.description', 'stocks.item');
+            $hasStock = $voucher->transactions()->where(function ($query) {
+                $query->whereHas('stock', function ($subQuery) {
+                    $subQuery->whereColumn('transactions.description', 'stocks.item');
+                })->orWhereHas('transferStock', function ($subQuery) {
+                    $subQuery->whereColumn('transactions.description', 'transfer_stocks.item');
+                })->orWhereHas('usedStock', function ($subQuery) {
+                    $subQuery->whereColumn('transactions.description', 'used_stocks.item');
+                });
             })->exists();
             $voucher->has_stock = $hasStock;
 

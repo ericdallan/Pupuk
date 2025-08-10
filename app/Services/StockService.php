@@ -70,12 +70,13 @@ class StockService
                 'recipes.id',
                 'recipes.product_name',
                 'recipes.size',
-                'recipes.nominal',
+                DB::raw('COALESCE(SUM(recipe_transfer_stock.nominal), 0) as nominal'),
                 'transfer_stocks.item',
-                'transfer_stocks.size',
+                'transfer_stocks.size as transfer_stock_size',
                 'recipe_transfer_stock.quantity',
-                'recipe_transfer_stock.nominal'
+                'recipe_transfer_stock.nominal as transfer_stock_nominal'
             )
+            ->groupBy('recipes.id', 'recipes.product_name', 'recipes.size', 'transfer_stocks.item', 'transfer_stocks.size', 'recipe_transfer_stock.quantity', 'recipe_transfer_stock.nominal')
             ->get()
             ->groupBy('id')
             ->map(function ($group) {
@@ -83,14 +84,22 @@ class StockService
                 $recipe->transferStocks = $group->map(function ($item) {
                     return (object) [
                         'item' => $item->item,
-                        'size' => $item->size,
+                        'size' => $item->transfer_stock_size,
                         'quantity' => $item->quantity,
-                        'nominal' => $item->nominal,
+                        'nominal' => $item->transfer_stock_nominal,
                     ];
-                })->unique()->values();
+                })->values(); // Removed unique() to preserve all transfer stocks
                 return $recipe;
             })->values();
 
+        return [
+            'stockData' => $stockMap,
+            'transferStockData' => $transferStockMap,
+            'usedStockData' => $usedStockMap,
+            'recipes' => $recipes,
+            'startDate' => $startDate,
+            'endDate' => $endDate,
+        ];
         return [
             'stockData' => $stockMap,
             'transferStockData' => $transferStockMap,
