@@ -353,7 +353,7 @@ class StockService
                     ->join('vouchers as v', 't.voucher_id', '=', 'v.id')
                     ->where('t.description', $item)
                     ->where('t.size', $size)
-                    ->where('v.voucher_type', 'PB')
+                    ->where('v.voucher_type', 'PH')
                     ->where('t.description', 'NOT LIKE', 'HPP %')
                     ->avg('t.nominal') ?? null;
                 $nominal = $pbHpp ?: ($openingBalances->get($stockKey, (object) ['opening_hpp' => 0])->opening_hpp ?: 0);
