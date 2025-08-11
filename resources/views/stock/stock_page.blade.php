@@ -500,6 +500,14 @@
                                                                                 Pemakaian
                                                                             @break
 
+                                                                            @case('PYK')
+                                                                                Penyesuaian Berkurang
+                                                                            @break
+
+                                                                            @case('PYB')
+                                                                                Penyesuaian Bertambah
+                                                                            @break
+
                                                                             @default
                                                                                 {{ htmlspecialchars($transaction->voucher_type ?? 'Unknown') }}
                                                                         @endswitch

@@ -39,17 +39,37 @@
                             @endif
                         </div>
                         <div class="row mb-3">
-                            <label for="useStock" class="col-sm-3 col-form-label">Transaksi Stok?</label>
+                            <label for="useStock" class="col-sm-3 col-form-label">Kategori Stok?</label>
                             <div class="col-sm-9">
                                 <div class="form-check form-check-inline">
                                     <input class="form-check-input" type="radio" id="useStockYes" name="use_stock"
                                         value="yes">
-                                    <label class="form-check-label" for="useStockYes">Ya</label>
+                                    <label class="form-check-label" for="useStockYes">Stok</label>
                                 </div>
                                 <div class="form-check form-check-inline">
                                     <input class="form-check-input" type="radio" id="useStockNo" name="use_stock"
                                         value="no">
-                                    <label class="form-check-label" for="useStockNo">Tidak</label>
+                                    <label class="form-check-label" for="useStockNo">Non-Stok</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" id="adjustment" name="use_stock"
+                                        value="adjustment">
+                                    <label class="form-check-label" for="adjustment">Penyesuaian</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mb-3" id="affectStockContainer">
+                            <label class="col-sm-3 col-form-label">Apakah Memengaruhi Stok?</label>
+                            <div class="col-sm-9">
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" id="affectStockYes"
+                                        name="affect_stock" value="yes" disabled>
+                                    <label class="form-check-label" for="affectStockYes">Ya</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" id="affectStockNo"
+                                        name="affect_stock" value="no" disabled>
+                                    <label class="form-check-label" for="affectStockNo">Tidak</label>
                                 </div>
                             </div>
                         </div>
@@ -65,6 +85,9 @@
                                     <option value="LN">Lainnya</option>
                                     <option value="PH">Pemindahan</option>
                                     <option value="PK">Pemakaian</option>
+                                    <option value="PYB">Penyesuaian Bertambah</option>
+                                    <option value="PYK">Penyesuaian Berkurang</option>
+                                    <option value="PYL">Penyesuaian Lainnya</option>
                                 </select>
                             </div>
                             <label for="voucherDate" class="col-sm-2 col-form-label">Tanggal:</label>
@@ -72,7 +95,8 @@
                                 <input type="date" class="form-control" id="voucherDate" name="voucher_date">
                             </div>
                             <div class="col-sm-2">
-                                <input type="text" class="form-control" id="voucherDay" name="voucher_day" readonly>
+                                <input type="text" class="form-control" id="voucherDay" name="voucher_day"
+                                    readonly>
                             </div>
                         </div>
                         <div class="row mb-3">
@@ -326,6 +350,10 @@
         const useExistingInvoiceNo = document.getElementById('useExistingInvoiceNo');
         const useStockYes = document.getElementById('useStockYes');
         const useStockNo = document.getElementById('useStockNo');
+        const useStockAdjustment = document.getElementById('adjustment');
+        const affectStockContainer = document.getElementById('affectStockContainer');
+        const affectStockYes = document.getElementById('affectStockYes');
+        const affectStockNo = document.getElementById('affectStockNo');
         const recipeInputContainer = document.getElementById('recipeFieldContainer');
         const recipeInput = document.getElementById('recipe');
         const existingInvoices = @json($existingInvoices);
@@ -374,21 +402,111 @@
                 text: 'Pemakaian',
                 description: 'Voucher Pemakaian - Dokumen untuk mencatat pemakaian barang dalam operasional perusahaan.'
             },
+            PYB: {
+                value: 'PYB',
+                text: 'Penyesuaian Bertambah',
+                description: 'Voucher Penyesuaian Bertambah - Dokumen untuk mencatat penambahan stok akibat penyesuaian.'
+            },
+            PYK: {
+                value: 'PYK',
+                text: 'Penyesuaian Berkurang',
+                description: 'Voucher Penyesuaian Berkurang - Dokumen untuk mencatat pengurangan stok akibat penyesuaian.'
+            },
+            PYL: {
+                value: 'PK',
+                text: 'Penyesuaian Lainnya',
+                description: 'Voucher Penyesuaian Lainnya - Dokumen untuk mencatat penyesuaian yang tidak memengaruhi stok.'
+            },
         };
 
         function toggleSizeInputState() {
             const useStock = document.querySelector('input[name="use_stock"]:checked')?.value || 'no';
+            const affectStock = document.querySelector('input[name="affect_stock"]:checked')?.value || 'no';
+            const isSizeEnabled = (useStock === 'yes') || (useStock === 'adjustment' && affectStock === 'yes');
             const sizeInputs = transactionTableBody.querySelectorAll('.sizeInput');
             sizeInputs.forEach(input => {
                 if (input.tagName.toLowerCase() === 'select') {
-                    input.disabled = useStock !== 'yes';
-                    if (useStock !== 'yes') input.value = '';
+                    input.disabled = !isSizeEnabled;
+                    if (!isSizeEnabled) input.value = '';
                 } else if (input.tagName.toLowerCase() === 'input') {
-                    input.disabled = useStock !== 'yes';
-                    if (useStock !== 'yes') input.value = '';
+                    input.disabled = !isSizeEnabled;
+                    if (!isSizeEnabled) input.value = '';
                 }
             });
         }
+
+        affectStockYes.addEventListener('change', () => {
+            updateVoucherTypeOptionsForAdjustment();
+            toggleSizeInputState();
+            refreshTransactionTable();
+        });
+        affectStockNo.addEventListener('change', () => {
+            updateVoucherTypeOptionsForAdjustment();
+            toggleSizeInputState();
+            refreshTransactionTable();
+        });
+
+        function updateAffectStockContainer() {
+            const useStock = document.querySelector('input[name="use_stock"]:checked')?.value || 'no';
+            if (useStock === 'adjustment') {
+                affectStockContainer.style.display = 'flex';
+                affectStockYes.disabled = false;
+                affectStockNo.disabled = false;
+            } else {
+                affectStockContainer.style.display = 'none';
+                affectStockYes.disabled = true;
+                affectStockNo.disabled = true;
+                affectStockYes.checked = false;
+                affectStockNo.checked = false;
+                updateVoucherTypeOptions()
+            }
+            updateVoucherTypeOptionsForAdjustment();
+        }
+
+        function updateVoucherTypeOptionsForAdjustment() {
+            const useStock = document.querySelector('input[name="use_stock"]:checked')?.value || 'no';
+            const affectStock = document.querySelector('input[name="affect_stock"]:checked')?.value || 'no';
+            const currentValue = voucherTypeSelect.value;
+            voucherTypeSelect.innerHTML = '';
+
+            const defaultOption = document.createElement('option');
+            defaultOption.value = '';
+            defaultOption.textContent = 'Pilih Tipe Voucher';
+            voucherTypeSelect.appendChild(defaultOption);
+
+            if (useStock === 'adjustment') {
+                if (affectStock === 'yes') {
+                    [
+                        voucherTypes.PYB,
+                        voucherTypes.PYK
+                    ].forEach(type => {
+                        const option = document.createElement('option');
+                        option.value = type.value;
+                        option.textContent = type.text;
+                        voucherTypeSelect.appendChild(option);
+                    });
+                } else if (affectStock === 'no') {
+                    const option = document.createElement('option');
+                    option.value = voucherTypes.PYL.value;
+                    option.textContent = voucherTypes.PYL.text;
+                    voucherTypeSelect.appendChild(option);
+                }
+            } else {
+                // Jika bukan adjustment, panggil updateVoucherTypeOptions dari kode asli
+                updateVoucherTypeOptions();
+            }
+
+            // Kembalikan nilai sebelumnya jika masih valid
+            voucherTypeSelect.value = currentValue && voucherTypeSelect.querySelector(
+                `option[value="${currentValue}"]`) ? currentValue : '';
+            deskripsiVoucherTextarea.value = voucherTypes[voucherTypeSelect.value]?.description || '';
+        }
+
+        useStockAdjustment.addEventListener('change', updateAffectStockContainer);
+        useStockYes.addEventListener('change', updateAffectStockContainer);
+        useStockNo.addEventListener('change', updateAffectStockContainer);
+        affectStockYes.addEventListener('change', updateVoucherTypeOptionsForAdjustment);
+        affectStockNo.addEventListener('change', updateVoucherTypeOptionsForAdjustment);
 
         function createRecipeDropdown() {
             const select = document.createElement('select');
@@ -560,7 +678,7 @@
                     option.textContent = type.text;
                     voucherTypeSelect.appendChild(option);
                 });
-            } else {
+            } else if (useStock === 'no') {
                 [voucherTypes.PG, voucherTypes.PM, voucherTypes.LN].forEach(type => {
                     const option = document.createElement('option');
                     option.value = type.value;
@@ -579,12 +697,14 @@
 
         useStockYes.addEventListener('change', () => {
             updateVoucherTypeOptions();
+            updateAffectStockContainer();
             refreshTransactionTable();
             toggleSizeInputState();
             updateRecipeField();
         });
         useStockNo.addEventListener('change', () => {
             updateVoucherTypeOptions();
+            updateAffectStockContainer();
             refreshTransactionTable();
             toggleSizeInputState();
             updateRecipeField();
@@ -984,7 +1104,9 @@
 
             let stockData = [];
             if (voucherType === 'PJ') {
-                stockData = [...usedStocks, ...stocks];
+                stockData = [...(usedStocks || []), ...(stocks || [])];
+            } else if (voucherType === 'PYB' || voucherType === 'PYK') {
+                stockData = [...(usedStocks || []), ...(stocks || []), ...(transferStocks || [])];
             } else if (voucherType === 'PH') {
                 stockData = stocks;
             } else if (voucherType === 'PK') {
@@ -998,60 +1120,112 @@
                     .map(stock => ({
                         size: stock.size,
                         quantity: stock.quantity,
-                        source: stock.source || (usedStocks.includes(stock) ? 'used_stocks' :
-                            'stocks')
+                        source: stock.source || (usedStocks.includes(stock) ? 'used_stocks' : (stocks
+                            .includes(stock) ? 'stocks' : 'transfer_stocks'))
                     }))
                     .filter(item => item.size !== null && item.size !== undefined);
 
-                if (voucherType === 'PJ' && sizesWithQuantity.length > 0) {
-                    const usedStockSizes = sizesWithQuantity.filter(item => item.source === 'used_stocks');
-                    const StockSizes = sizesWithQuantity.filter(item => item.source ===
-                        'stocks');
+                if (sizesWithQuantity.length > 0) {
+                    let usedStockSizes = [];
+                    let stockSizes = [];
+                    let transferStockSizes = [];
 
-                    if (usedStockSizes.length > 0) {
-                        const separator = document.createElement('option');
-                        separator.value = '';
-                        separator.textContent = '---- Used Stocks ----';
-                        separator.disabled = true;
-                        select.appendChild(separator);
+                    if (voucherType === 'PJ') {
+                        stockSizes = sizesWithQuantity.filter(item => item.source === 'stocks');
+                        usedStockSizes = sizesWithQuantity.filter(item => item.source === 'used_stocks');
 
-                        usedStockSizes.forEach(item => {
+                        if (stockSizes.length > 0) {
+                            const separator = document.createElement('option');
+                            separator.value = '';
+                            separator.textContent = '---- Bahan Baku ----';
+                            separator.disabled = true;
+                            select.appendChild(separator);
+
+                            stockSizes.forEach(item => {
+                                const option = document.createElement('option');
+                                option.value = item.size;
+                                option.textContent = `${item.size} (Stok: ${item.quantity})`;
+                                option.dataset.source = 'stocks';
+                                select.appendChild(option);
+                            });
+                        }
+
+                        if (usedStockSizes.length > 0) {
+                            const separator = document.createElement('option');
+                            separator.value = '';
+                            separator.textContent = '---- Barang Jadi ----';
+                            separator.disabled = true;
+                            select.appendChild(separator);
+
+                            usedStockSizes.forEach(item => {
+                                const option = document.createElement('option');
+                                option.value = item.size;
+                                option.textContent = `${item.size} (Stok: ${item.quantity})`;
+                                option.dataset.source = 'used_stocks';
+                                select.appendChild(option);
+                            });
+                        }
+                    } else if (voucherType === 'PYB' || voucherType === 'PYK') {
+                        stockSizes = sizesWithQuantity.filter(item => item.source === 'stocks');
+                        transferStockSizes = sizesWithQuantity.filter(item => item.source ===
+                            'transfer_stocks');
+                        usedStockSizes = sizesWithQuantity.filter(item => item.source === 'used_stocks');
+
+                        if (stockSizes.length > 0) {
+                            const separator = document.createElement('option');
+                            separator.value = '';
+                            separator.textContent = '---- Bahan Baku ----';
+                            separator.disabled = true;
+                            select.appendChild(separator);
+
+                            stockSizes.forEach(item => {
+                                const option = document.createElement('option');
+                                option.value = item.size;
+                                option.textContent = `${item.size} (Stok: ${item.quantity})`;
+                                option.dataset.source = 'stocks';
+                                select.appendChild(option);
+                            });
+                        }
+
+                        if (transferStockSizes.length > 0) {
+                            const separator = document.createElement('option');
+                            separator.value = '';
+                            separator.textContent = '---- Barang Pemindahan ----';
+                            separator.disabled = true;
+                            select.appendChild(separator);
+
+                            transferStockSizes.forEach(item => {
+                                const option = document.createElement('option');
+                                option.value = item.size;
+                                option.textContent = `${item.size} (Stok: ${item.quantity})`;
+                                option.dataset.source = 'transfer_stocks';
+                                select.appendChild(option);
+                            });
+                        }
+
+                        if (usedStockSizes.length > 0) {
+                            const separator = document.createElement('option');
+                            separator.value = '';
+                            separator.textContent = '---- Barang Jadi ----';
+                            separator.disabled = true;
+                            select.appendChild(separator);
+
+                            usedStockSizes.forEach(item => {
+                                const option = document.createElement('option');
+                                option.value = item.size;
+                                option.textContent = `${item.size} (Stok: ${item.quantity})`;
+                                option.dataset.source = 'used_stocks';
+                                select.appendChild(option);
+                            });
+                        }
+                    } else {
+                        sizesWithQuantity.forEach(item => {
                             const option = document.createElement('option');
                             option.value = item.size;
                             option.textContent = `${item.size} (Stok: ${item.quantity})`;
-                            option.dataset.source = 'used_stocks';
                             select.appendChild(option);
                         });
                     }
-
-                    if (StockSizes.length > 0) {
-                        const separator = document.createElement('option');
-                        separator.value = '';
-                        separator.textContent = '---- Stocks ----';
-                        separator.disabled = true;
-                        select.appendChild(separator);
-
-                        StockSizes.forEach(item => {
-                            const option = document.createElement('option');
-                            option.value = item.size;
-                            option.textContent = `${item.size} (Stok: ${item.quantity})`;
-                            option.dataset.source = 'stocks';
-                            select.appendChild(option);
-                        });
-                    }
-
-                    // Set default to the first available size
-                    const firstSize = sizesWithQuantity.length > 0 ? sizesWithQuantity[0].size : '';
-                    if (firstSize) {
-                        select.value = firstSize;
-                    }
-                } else {
-                    sizesWithQuantity.forEach(item => {
-                        const option = document.createElement('option');
-                        option.value = item.size;
-                        option.textContent = `${item.size} (Stok: ${item.quantity})`;
-                        select.appendChild(option);
-                    });
 
                     // Set default to the first available size
                     const firstSize = sizesWithQuantity.length > 0 ? sizesWithQuantity[0].size : '';
@@ -1061,15 +1235,17 @@
                 }
             }
 
-            select.disabled = document.querySelector('input[name="use_stock"]:checked')?.value !== 'yes';
+            const useStock = document.querySelector('input[name="use_stock"]:checked')?.value || 'no';
+            const affectStock = document.querySelector('input[name="affect_stock"]:checked')?.value || 'no';
+            select.disabled = !(useStock === 'yes' || (useStock === 'adjustment' && affectStock === 'yes'));
+
             select.addEventListener('change', function(event) {
                 const row = select.closest('tr');
                 const rowIndex = parseInt(row.dataset.rowIndex);
                 const description = row.querySelector('.descriptionInput:not([type="text"])')?.value ||
                     row.querySelector('.descriptionInput[type="text"]')?.value || '';
                 const quantity = parseFloat(row.querySelector('.quantityInput')?.value) || 1;
-                // console.log(`Size changed: index=${rowIndex}, item=${description}, size=${this.value}`);
-                handleStockChange(rowIndex, event); // Trigger handleStockChange on size change
+                handleStockChange(rowIndex, event);
                 updateAllCalculationsAndValidations();
             });
 
@@ -1086,10 +1262,12 @@
             let currentSizeInput = sizeCell.querySelector('.sizeInput');
             const voucherType = voucherTypeSelect.value;
             const useStock = document.querySelector('input[name="use_stock"]:checked')?.value || 'no';
+            const affectStock = document.querySelector('input[name="affect_stock"]:checked')?.value || 'no';
+            const isStockEnabled = useStock === 'yes' || (useStock === 'adjustment' && affectStock === 'yes');
             let newSizeElement;
 
-            if (useStock === 'yes' && (voucherType === 'PB' || voucherType === 'PJ' || voucherType === 'PH' ||
-                    voucherType === 'PK')) {
+            if (isStockEnabled && (voucherType === 'PB' || voucherType === 'PJ' || voucherType === 'PH' ||
+                    voucherType === 'PK' || voucherType === 'PYB' || voucherType === 'PYK')) {
                 if (voucherType === 'PB') {
                     newSizeElement = createSizeInputWithDropdown(index, selectedItem);
                 } else {
@@ -1115,16 +1293,22 @@
             sizeCell.appendChild(newSizeElement);
 
             // Infer default size if previousValue is empty and stock data is available
-            if (!previousValue && voucherType === 'PJ' && selectedItem) {
-                const stockData = [...usedStocks, ...(stocks || [])];
+            if (!previousValue && selectedItem && (voucherType === 'PJ' || voucherType === 'PYB' ||
+                    voucherType === 'PYK')) {
+                let stockData = [];
+                if (voucherType === 'PJ') {
+                    stockData = [...(usedStocks || []), ...(stocks || [])];
+                } else if (voucherType === 'PYB' || voucherType === 'PYK') {
+                    stockData = [...(usedStocks || []), ...(stocks || []), ...(transferStocks || [])];
+                }
+
                 const sizes = stockData
-                    .filter(s => s.item === selectedItem && !s.item.startsWith('HPP'))
+                    .filter(s => s.item === selectedItem && s.size && !s.item.startsWith('HPP'))
                     .map(s => s.size);
-                const defaultSize = sizes.length > 0 ? sizes[0] : null; // Use first available size
+                const defaultSize = sizes.length > 0 ? sizes[0] : null;
                 if (defaultSize && newSizeElement.tagName === 'SELECT') {
                     newSizeElement.value = defaultSize;
-                    previousValue = defaultSize; // Update previousValue with inferred size
-                    // console.log(`Inferred default size for ${selectedItem}: ${defaultSize}`);
+                    previousValue = defaultSize;
                 }
             }
 
@@ -1157,7 +1341,7 @@
                 newSizeElement.dispatchEvent(sizeChangeEvent);
                 handleStockChange(index, {
                     target: newSizeElement
-                }); // Explicitly call handleStockChange
+                });
             }
 
             attachTransactionInputListeners();
@@ -1168,7 +1352,6 @@
             select.className = 'form-control descriptionInput';
             select.name = `transactions[${index}][description]`;
 
-            // Create default option
             const defaultOption = document.createElement('option');
             defaultOption.value = '';
             defaultOption.textContent = 'Pilih Item Stok';
@@ -1176,16 +1359,16 @@
             defaultOption.selected = true;
             select.appendChild(defaultOption);
 
-            // Initialize stock data based on voucher type
             let stockData = [];
             if (voucherType === 'PJ') {
                 stockData = [...(usedStocks || []), ...(stocks || [])];
+            } else if (voucherType === 'PYB' || voucherType === 'PYK') {
+                stockData = [...(usedStocks || []), ...(stocks || []), ...(transferStocks || [])];
             } else if (voucherType === 'PH' || voucherType === 'PB') {
                 stockData = stocks || [];
             } else if (voucherType === 'PK') {
                 stockData = transferStocks || [];
             } else {
-                // Handle invalid voucher type
                 const invalidOption = document.createElement('option');
                 invalidOption.value = '';
                 invalidOption.textContent = 'Jenis voucher tidak valid';
@@ -1195,11 +1378,10 @@
                 return select;
             }
 
-            // Populate items if stockData is valid
             if (stockData && Array.isArray(stockData) && stockData.length > 0) {
                 const uniqueItems = [...new Set(stockData.map(stock => stock.item))]
                     .filter(item => !item.toLowerCase().startsWith('hpp'))
-                    .sort(); // Sort items alphabetically
+                    .sort();
 
                 if (uniqueItems.length === 0) {
                     const noItemsOption = document.createElement('option');
@@ -1208,12 +1390,12 @@
                     noItemsOption.disabled = true;
                     select.appendChild(noItemsOption);
                 } else if (voucherType === 'PJ') {
-                    // Separate usedStocks and stocks for PJ voucher type
-                    const usedStockItems = uniqueItems.filter(item =>
-                        stockData.some(stock => stock.item === item && (usedStocks || []).includes(stock))
-                    );
+                    // Separate for PJ: stocks and usedStocks
                     const stockItems = uniqueItems.filter(item =>
                         stockData.some(stock => stock.item === item && (stocks || []).includes(stock))
+                    );
+                    const usedStockItems = uniqueItems.filter(item =>
+                        stockData.some(stock => stock.item === item && (usedStocks || []).includes(stock))
                     );
 
                     if (stockItems.length > 0) {
@@ -1247,9 +1429,68 @@
                             select.appendChild(option);
                         });
                     }
+                } else if (voucherType === 'PYB' || voucherType === 'PYK') {
+                    // Separate for PYB/PYK: stocks, transferStocks, usedStocks
+                    const stockItems = uniqueItems.filter(item =>
+                        stockData.some(stock => stock.item === item && (stocks || []).includes(stock))
+                    );
+                    const transferStockItems = uniqueItems.filter(item =>
+                        stockData.some(stock => stock.item === item && (transferStocks || []).includes(
+                            stock))
+                    );
+                    const usedStockItems = uniqueItems.filter(item =>
+                        stockData.some(stock => stock.item === item && (usedStocks || []).includes(stock))
+                    );
 
+                    if (stockItems.length > 0) {
+                        const separator = document.createElement('option');
+                        separator.value = '';
+                        separator.textContent = '-- Bahan Baku --';
+                        separator.disabled = true;
+                        select.appendChild(separator);
+
+                        stockItems.forEach(item => {
+                            const option = document.createElement('option');
+                            option.value = item;
+                            option.textContent = item;
+                            option.dataset.source = 'stocks';
+                            select.appendChild(option);
+                        });
+                    }
+
+                    if (transferStockItems.length > 0) {
+                        const separator = document.createElement('option');
+                        separator.value = '';
+                        separator.textContent = '-- Barang Pemindahan --';
+                        separator.disabled = true;
+                        select.appendChild(separator);
+
+                        transferStockItems.forEach(item => {
+                            const option = document.createElement('option');
+                            option.value = item;
+                            option.textContent = item;
+                            option.dataset.source = 'transfer_stocks';
+                            select.appendChild(option);
+                        });
+                    }
+
+                    if (usedStockItems.length > 0) {
+                        const separator = document.createElement('option');
+                        separator.value = '';
+                        separator.textContent = '-- Barang Jadi --';
+                        separator.disabled = true;
+                        select.appendChild(separator);
+
+                        usedStockItems.forEach(item => {
+                            const option = document.createElement('option');
+                            option.value = item;
+                            option.textContent = item;
+                            option.dataset.source = 'used_stocks';
+                            select.appendChild(option);
+                        });
+                    }
                 } else {
-                    // Non-PJ voucher types: list all items without separators
+                    // Non-PJ/PYB/PYK voucher types: list all items without separators
                     uniqueItems.forEach(item => {
                         const option = document.createElement('option');
                         option.value = item;
@@ -1260,7 +1501,6 @@
                     });
                 }
             } else {
-                // No valid stock data
                 const noDataOption = document.createElement('option');
                 noDataOption.value = '';
                 noDataOption.textContent = 'Tidak ada data stok';
@@ -1268,10 +1508,11 @@
                 select.appendChild(noDataOption);
             }
 
-            // Disable dropdown if use_stock is not 'yes'
-            select.disabled = document.querySelector('input[name="use_stock"]:checked')?.value !== 'yes';
+            const useStock = document.querySelector('input[name="use_stock"]:checked')?.value || 'no';
+            const affectStock = document.querySelector('input[name="affect_stock"]:checked')?.value || 'no';
+            const isStockEnabled = (useStock === 'yes') || (useStock === 'adjustment' && affectStock === 'yes');
+            select.disabled = !isStockEnabled;
 
-            // Add change event listener
             select.addEventListener('change', function(event) {
                 const selectedValue = this.value.trim();
                 if (selectedValue) {
@@ -1851,11 +2092,14 @@
             let descriptionElement;
             const voucherType = voucherTypeSelect.value;
             const useStock = document.querySelector('input[name="use_stock"]:checked')?.value || 'no';
+            const affectStock = document.querySelector('input[name="affect_stock"]:checked')?.value || 'no';
             const recipeSelected = document.querySelector('#recipe')?.value && voucherType === 'PK' &&
                 useStock === 'yes';
+            const isStockVoucher = useStock === 'yes' || (useStock === 'adjustment' && affectStock === 'yes' &&
+                (voucherType === 'PYB' || voucherType === 'PYK'));
 
-            if (useStock === 'yes' && (voucherType === 'PJ' || voucherType === 'PB' || voucherType === 'PH' ||
-                    voucherType === 'PK')) {
+            if (isStockVoucher && (voucherType === 'PJ' || voucherType === 'PB' || voucherType === 'PH' ||
+                    voucherType === 'PK' || voucherType === 'PYB' || voucherType === 'PYK')) {
                 if (voucherType === 'PB') {
                     descriptionElement = document.createElement('div');
                     descriptionElement.className = 'input-group';
@@ -1882,7 +2126,6 @@
                     descriptionElement.appendChild(select);
                     descriptionElement.appendChild(input);
                 } else if (voucherType === 'PK') {
-                    // Use input instead of select for PK
                     descriptionElement = document.createElement('input');
                     descriptionElement.type = 'text';
                     descriptionElement.className = 'form-control descriptionInput';
@@ -1901,9 +2144,9 @@
 
             const sizeCell = document.createElement('td');
             let sizeElement;
-            if (useStock === 'yes' && voucherType === 'PB') {
+            if (isStockVoucher && voucherType === 'PB') {
                 sizeElement = createSizeInputWithDropdown(index, descriptionElement.value);
-            } else if (useStock === 'yes' && voucherType === 'PK') {
+            } else if (isStockVoucher && voucherType === 'PK') {
                 sizeElement = document.createElement('input');
                 sizeElement.type = 'text';
                 sizeElement.className = 'form-control sizeInput';
@@ -1914,6 +2157,7 @@
             if (recipeSelected) {
                 sizeElement.readOnly = true;
             }
+            sizeElement.disabled = !isStockVoucher;
             sizeCell.appendChild(sizeElement);
             row.appendChild(sizeCell);
 
@@ -1940,7 +2184,7 @@
             nominalInput.className = 'form-control nominalInput';
             nominalInput.name = `transactions[${index}][nominal]`;
             if (recipeSelected) {
-                nominalInput.readonly = true;
+                nominalInput.readOnly = true;
             }
             nominalCell.appendChild(nominalInput);
             row.appendChild(nominalCell);

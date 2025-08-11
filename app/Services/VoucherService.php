@@ -209,7 +209,7 @@ class VoucherService
      * @return void
      * @throws \Exception
      */
-    private function updateStock(string $item, float $quantity, string $voucherType, ?string $size = null): void
+    public function updateStock(string $item, float $quantity, string $voucherType, ?string $size = null): void
     {
         if (str_starts_with($item, 'HPP ')) {
             return;
@@ -445,6 +445,57 @@ class VoucherService
     }
 
     /**
+     * Update adjustment stock across stock tables
+     *
+     * @param string $item
+     * @param ?string $size
+     * @param float $quantity
+     * @param bool $isIncrease
+     * @return void
+     * @throws \Exception
+     */
+    private function updateAdjustmentStock(string $item, ?string $size, float $quantity, bool $isIncrease = true): void
+    {
+        if (str_starts_with($item, 'HPP ')) {
+            return;
+        }
+
+        $modelPriorities = [UsedStock::class, TransferStock::class, Stock::class];
+
+        $updated = false;
+
+        foreach ($modelPriorities as $model) {
+            $stock = $model::where('item', $item)->where('size', $size)->first();
+            if ($stock) {
+                if ($isIncrease) {
+                    $stock->quantity += $quantity;
+                } else {
+                    if ($stock->quantity < $quantity) {
+                        throw new \Exception("Stok tidak mencukupi untuk item {$item} dengan ukuran {$size} di tabel " . (new \ReflectionClass($model))->getShortName() . ". Tersedia: {$stock->quantity}, Dibutuhkan: {$quantity}.");
+                    }
+                    $stock->quantity -= $quantity;
+                }
+                $stock->save();
+                $updated = true;
+                break;
+            }
+        }
+
+        if (!$updated && $isIncrease) {
+            // Create in Stock if not found
+            Stock::create([
+                'item' => $item,
+                'size' => $size,
+                'quantity' => $quantity,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        } elseif (!$updated) {
+            throw new \Exception("Stok untuk item {$item} dengan ukuran {$size} tidak ditemukan di tabel manapun.");
+        }
+    }
+
+    /**
      * Reverse stock across all stock tables
      *
      * @param string $item
@@ -459,6 +510,13 @@ class VoucherService
     {
         if (str_starts_with($item, 'HPP ')) {
             return; // Skip direct HPP items as they are not stored in transactions for PJ
+        }
+
+        if ($voucherType === 'PYB' || $voucherType === 'PYK') {
+            // For PYB reverse: subtract (isIncrease = false), for PYK reverse: add (isIncrease = true)
+            $isIncrease = ($voucherType === 'PYK');
+            $this->updateAdjustmentStock($item, $size, $quantity, $isIncrease);
+            return;
         }
 
         if ($voucherType === 'PB') {
@@ -517,12 +575,12 @@ class VoucherService
             $items = [$item, "HPP {$item}"];
             foreach ($items as $currentItem) {
                 $usedStock = UsedStock::where('item', $currentItem)->where('size', $size)->first();
-                $transferStock = TransferStock::where('item', $currentItem)->where('size', $size)->first();
+                $stocks = Stock::where('item', $currentItem)->where('size', $size)->first();
                 $remainingQuantity = $quantity;
-                if ($transferStock && $remainingQuantity > 0) {
-                    $add = min($transferStock->quantity + $quantity, $quantity);
-                    $transferStock->quantity += $add;
-                    $transferStock->save();
+                if ($stocks && $remainingQuantity > 0) {
+                    $add = min($stocks->quantity + $quantity, $quantity);
+                    $stocks->quantity += $add;
+                    $stocks->save();
                     $remainingQuantity -= $add;
                 }
                 if ($usedStock && $remainingQuantity > 0) {
@@ -734,6 +792,16 @@ class VoucherService
                         }
                     }
                 }
+            } elseif (in_array($request->voucher_type, ['PYB', 'PYK'])) {
+                foreach ($transactionsToCreate as $transaction) {
+                    if (!$transaction['is_hpp']) {
+                        $item = $transaction['description'];
+                        $quantity = $transaction['quantity'];
+                        $size = $transaction['size'] ?? null;
+                        $isIncrease = $request->voucher_type === 'PYB';
+                        $this->updateAdjustmentStock($item, $size, $quantity, $isIncrease);
+                    }
+                }
             }
 
             foreach ($voucherDetailsData as $detail) {
@@ -849,11 +917,7 @@ class VoucherService
      */
     public function prepareVoucherEditData(int $id): array
     {
-        $company = Company::select('company_name', 'director')->first();
-        if (!$company) {
-            throw new \Exception('Perusahaan tidak ditemukan.');
-        }
-
+        $company = Company::select('company_name', 'director')->firstOrFail();
         $voucher = Voucher::with(['voucherDetails', 'transactions'])->findOrFail($id);
 
         $accounts = ChartOfAccount::orderBy('account_code')->get();
@@ -1174,9 +1238,32 @@ class VoucherService
                     //     }
                     // }
                 }
+            } elseif (in_array($request->voucher_type, ['PYB', 'PYK'])) {
+                foreach ($transactionItems as $transaction) {
+                    $item = $transaction['description'];
+                    $quantity = $transaction['quantity'];
+                    $size = $transaction['size'] ?? null;
+                    $isIncrease = $request->voucher_type === 'PYB';
+
+                    // Validate for PYK
+                    if (!$isIncrease) {
+                        $found = false;
+                        $modelPriorities = [UsedStock::class, TransferStock::class, Stock::class];
+                        foreach ($modelPriorities as $model) {
+                            $stock = $model::where('item', $item)->where('size', $size)->first();
+                            if ($stock && $stock->quantity >= $quantity) {
+                                $found = true;
+                                break;
+                            }
+                        }
+                        if (!$found) {
+                            throw new \Exception("Stok tidak mencukupi untuk item {$item} dengan ukuran {$size} di tabel manapun untuk PYK.");
+                        }
+                    }
+                }
             }
 
-            if (in_array($voucher->voucher_type, ['PB', 'PH', 'PK', 'PJ'])) {
+            if (in_array($voucher->voucher_type, ['PB', 'PH', 'PK', 'PJ', 'PYB', 'PYK'])) {
                 foreach ($voucher->transactions as $transaction) {
                     if (!str_starts_with($transaction->description, 'HPP ')) {
                         $this->reverseStock(
@@ -1190,7 +1277,7 @@ class VoucherService
                 }
             }
 
-            if (in_array($request->voucher_type, ['PB', 'PH', 'PK', 'PJ'])) {
+            if (in_array($request->voucher_type, ['PB', 'PH', 'PK', 'PJ', 'PYB', 'PYK'])) {
                 if ($request->voucher_type === 'PK' && $recipeId) {
                     $quantity = floatval($transactionItems[0]['quantity']);
                     $this->updateUsedStock($transactionItems[0]['description'], $quantity, 'PK', $transactionItems[0]['size']);
@@ -1203,6 +1290,14 @@ class VoucherService
                         $size = $transaction['size'] ?? null;
                         $this->updateUsedStock($item, $quantity, 'PJ', $size);
                         $this->updateUsedStock("HPP {$item}", $quantity, 'PJ', $size);
+                    }
+                } elseif (in_array($request->voucher_type, ['PYB', 'PYK'])) {
+                    foreach ($transactionItems as $transaction) {
+                        $item = $transaction['description'];
+                        $quantity = $transaction['quantity'];
+                        $size = $transaction['size'] ?? null;
+                        $isIncrease = $request->voucher_type === 'PYB';
+                        $this->updateAdjustmentStock($item, $size, $quantity, $isIncrease);
                     }
                 } else {
                     foreach ($transactionItems as $transaction) {
@@ -1473,7 +1568,7 @@ class VoucherService
      */
     public function prepareVoucherDetailData(int $id): array
     {
-        $company = Company::select('company_name', 'director')->firstOrFail();
+        $company = Company::select('company_name', 'phone', 'director')->firstOrFail();
         $voucher = Voucher::findOrFail($id);
         $voucherDetails = VoucherDetails::where('voucher_id', $id)->get();
         $voucherTransactions = Transactions::where('voucher_id', $id)->get();
@@ -1512,7 +1607,7 @@ class VoucherService
             ->toArray();
 
         // Merge stocks and used_stocks, prioritizing stocks
-        $itemSizes = $stocks + $usedStocks; // Stocks takes precedence due to array union
+        $itemSizes = $stocks + $usedStocks; // Use stocks takes precedence due to array union
 
         // Map sizes to transactions
         $transaction = $transaction->map(function ($trans) use ($itemSizes) {
@@ -1549,6 +1644,12 @@ class VoucherService
                 return 'Pemindahan';
             case 'PK':
                 return 'Pemakaian';
+            case 'PYB':
+                return 'Penyesuaian Bertambah';
+            case 'PYK':
+                return 'Penyesuaian Berkurang';
+            case 'PYL':
+                return 'Penyesuaian Lainnya';
             case 'LN':
                 return 'Lainnya';
             default:

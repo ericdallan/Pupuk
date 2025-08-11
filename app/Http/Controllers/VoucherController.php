@@ -11,11 +11,11 @@ use Illuminate\Support\Facades\Validator;
 use App\Models\Stock;
 use App\Models\TransferStock;
 use App\Models\UsedStock;
-use App\Models\Transactions;
-use App\Models\Invoice;
-use App\Models\ChartOfAccount;
 use App\Models\Recipes;
 use App\Models\Subsidiary;
+use App\Models\ChartOfAccount;
+use App\Models\Invoice;
+use App\Models\Transactions;
 use Illuminate\Support\Arr;
 
 class VoucherController extends Controller
@@ -37,23 +37,21 @@ class VoucherController extends Controller
     {
         try {
             $data = $this->voucherService->prepareVoucherPageData($request);
-            $data['stocks'] = Stock::select(['item', 'size', 'quantity'])->get();
-            $data['transferStocks'] = TransferStock::select(['item', 'size', 'quantity'])->get();
-            $data['usedStocks'] = UsedStock::select(['item', 'size', 'quantity'])->get();
-            // Combine stocks for PJ vouchers
+            $data['stocks'] = Stock::select(['item', 'size', 'quantity'])->get()->toArray();
+            $data['transferStocks'] = TransferStock::select(['item', 'size', 'quantity'])->get()->toArray();
+            $data['usedStocks'] = UsedStock::select(['item', 'size', 'quantity'])->get()->toArray();
             $data['pjStocks'] = collect($data['usedStocks'])
                 ->map(function ($stock) {
-                    return ['item' => $stock->item, 'size' => $stock->size, 'quantity' => $stock->quantity, 'source' => 'used_stocks'];
+                    return ['item' => $stock['item'], 'size' => $stock['size'], 'quantity' => $stock['quantity'], 'source' => 'used_stocks'];
                 })
                 ->merge(
-                    collect($data['transferStocks'])
+                    collect($data['stocks'])
                         ->map(function ($stock) {
-                            return ['item' => $stock->item, 'size' => $stock->size, 'quantity' => $stock->quantity, 'source' => 'transfer_stocks'];
+                            return ['item' => $stock['item'], 'size' => $stock['size'], 'quantity' => $stock['quantity'], 'source' => 'stocks'];
                         })
-                );
-            // Use transactionsData from prepareVoucherPageData
-            $data['transactions'] = $data['transactionsData']; // Ensure transactions is passed
-            $data['recipes'] = Recipes::select(['id', 'product_name', 'size', 'nominal'])->get();
+                )->toArray();
+            $data['transactions'] = $data['transactionsData'];
+            $data['recipes'] = Recipes::select(['id', 'product_name', 'size', 'nominal'])->get()->toArray();
             return view('voucher.voucher_page', $data);
         } catch (\Exception $e) {
             Log::error('Voucher Page Error', [
@@ -61,9 +59,10 @@ class VoucherController extends Controller
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
-            return redirect()->back()->withErrors(['error' => 'Gagal memuat halaman voucher']);
+            return redirect()->back()->withErrors(['error' => 'Gagal memuat halaman voucher: ' . $e->getMessage()]);
         }
     }
+
     /**
      * Filter and normalize transactions data
      *
@@ -79,15 +78,12 @@ class VoucherController extends Controller
 
         return collect($transactions)
             ->filter(function ($transaction) {
-                // Skip transactions without description
                 if (!isset($transaction['description']) || empty($transaction['description'])) {
                     return false;
                 }
-                $description = $transaction['description'];
-                $isHpp = str_starts_with($description, 'HPP ');
-                $nominal = $transaction['nominal'] ?? $transaction['total'] ?? 0;
+                $isHpp = str_starts_with($transaction['description'], 'HPP ');
                 $hasQuantity = isset($transaction['quantity']) && floatval($transaction['quantity']) >= 0.01;
-                $hasNominal = floatval($nominal) >= 0;
+                $hasNominal = isset($transaction['nominal']) && floatval($transaction['nominal']) >= 0;
                 return $isHpp || ($hasQuantity && $hasNominal);
             })
             ->values()
@@ -110,6 +106,14 @@ class VoucherController extends Controller
             ->filter(function ($detail) {
                 return !empty($detail['account_code']);
             })
+            ->map(function ($detail) {
+                return [
+                    'account_code' => $detail['account_code'],
+                    'account_name' => $detail['account_name'] ?? null,
+                    'debit' => floatval($detail['debit'] ?? 0),
+                    'credit' => floatval($detail['credit'] ?? 0),
+                ];
+            })
             ->values()
             ->toArray();
     }
@@ -126,10 +130,10 @@ class VoucherController extends Controller
     protected function validateVoucherRequest(Request $request, array $transactions, array $voucherDetails, bool $isUpdate = false)
     {
         $rules = [
-            'voucher_type' => 'required|string|in:PJ,PG,PM,PB,LN,PH,PK',
+            'voucher_type' => 'required|string|in:PJ,PG,PM,PB,LN,PH,PK,PYB,PYK,PYL',
             'voucher_date' => 'required|date',
             'voucher_day' => 'nullable|string|max:50',
-            'prepared_by' => 'nullable|string|max:255',
+            'prepared_by' => 'required|string|max:255',
             'given_to' => 'nullable|string|max:255',
             'approved_by' => 'nullable|string|max:255',
             'transaction' => 'nullable|string|max:255',
@@ -148,18 +152,19 @@ class VoucherController extends Controller
                     }
                 },
             ],
-            'store' => 'nullable|string|max:255',
+            'store' => 'required_if:use_invoice,yes|string|max:255',
+            'due_date' => 'required_if:use_invoice,yes|date',
             'total_debit' => 'required|numeric|min:0',
             'total_credit' => 'required|numeric|min:0',
-            'transactions' => 'required_if:voucher_type,PB,PK,PH,PJ|array|min:1',
+            'transactions' => 'required_if:voucher_type,PB,PK,PH,PJ,PYB,PYK|array|min:1',
             'transactions.*.description' => 'required|string|max:255',
             'transactions.*.size' => [
-                'nullable', // Make size optional
+                'nullable',
                 'string',
                 'max:255',
                 function ($attribute, $value, $fail) use ($request) {
-                    if ($request->use_stock === 'yes' && in_array($request->voucher_type, ['PB', 'PJ', 'PH', 'PK']) && empty($value)) {
-                        $fail('Ukuran wajib diisi ketika menggunakan stok untuk tipe voucher PB, PJ, PH, atau PK.');
+                    if (in_array($request->voucher_type, ['PB', 'PJ', 'PH', 'PK']) && empty($value)) {
+                        $fail('Ukuran wajib diisi untuk tipe voucher PB, PJ, PH, atau PK.');
                     }
                 },
             ],
@@ -179,18 +184,39 @@ class VoucherController extends Controller
                     }
                 },
             ],
-            'voucher_details.*.account_name' => 'nullable|string|max:255',
+            'voucher_details.*.account_name' => 'required|string|max:255',
             'voucher_details.*.debit' => 'nullable|numeric|min:0',
             'voucher_details.*.credit' => 'nullable|numeric|min:0',
+            'recipe_id' => [
+                'nullable',
+                'integer',
+                function ($attribute, $value, $fail) use ($request) {
+                    if ($request->voucher_type === 'PK' && $request->use_stock === 'yes' && !$value) {
+                        $fail('ID resep wajib diisi untuk voucher tipe PK ketika menggunakan stok.');
+                    }
+                    if ($value && !Recipes::where('id', $value)->exists()) {
+                        $fail("Resep dengan ID {$value} tidak ditemukan.");
+                    }
+                },
+            ],
+            // 'use_stock' => [
+            //     'nullable',
+            //     'in:yes,no',
+            //     function ($attribute, $value, $fail) use ($request) {
+            //         if ($request->voucher_type === 'PK' && !in_array($value, ['yes', 'no'], true)) {
+            //             $fail('Parameter use_stock harus bernilai "yes" atau "no" untuk voucher tipe PK.');
+            //         }
+            //         if ($request->voucher_type !== 'PK' && !empty($value)) {
+            //             $fail('Parameter use_stock hanya berlaku untuk voucher tipe PK.');
+            //         }
+            //     },
+            // ],
         ];
 
         if ($isUpdate) {
             $rules['voucher_number'] = 'required|string|max:255';
-            $rules['prepared_by'] = 'required|string|max:255';
-            $rules['voucher_details.*.account_name'] = 'required|string|max:255';
         }
 
-        // Validate single subsidiary code if use_invoice is yes
         if ($request->use_invoice === 'yes') {
             $rules['voucher_details'] = [
                 'required',
@@ -201,7 +227,7 @@ class VoucherController extends Controller
                         ->filter(function ($code) {
                             return Subsidiary::where('subsidiary_code', $code)->exists();
                         });
-                    if ($subsidiaryCodes->count() > 1) {
+                    if ($subsidiaryCodes->count() !== 1) {
                         $fail('Hanya satu kode subsidiary yang boleh digunakan ketika menggunakan invoice.');
                     }
                 },
@@ -209,16 +235,21 @@ class VoucherController extends Controller
         }
 
         $messages = [
+            'voucher_type.required' => 'Tipe voucher wajib diisi.',
             'voucher_details.required' => 'Rincian Voucher minimal harus memiliki satu baris dengan Kode Akun.',
             'voucher_details.min' => 'Rincian Voucher minimal harus memiliki satu baris dengan Kode Akun.',
             'voucher_details.*.account_code.required' => 'Kode Akun wajib diisi pada setiap baris Rincian Voucher.',
             'invoice.required_if' => 'Nomor Invoice wajib diisi jika menggunakan invoice.',
-            'transactions.required_if' => 'Rincian Transaksi diperlukan untuk voucher tipe PB, PK, PH, atau PJ.',
+            'store.required_if' => 'Nama toko wajib diisi jika menggunakan invoice.',
+            'due_date.required_if' => 'Tanggal jatuh tempo wajib diisi jika menggunakan invoice.',
+            'transactions.required_if' => 'Rincian Transaksi diperlukan untuk voucher tipe PB, PK, PH, PJ, PYB, atau PYK.',
             'transactions.min' => 'Rincian Transaksi minimal harus memiliki satu baris.',
             'transactions.*.description.required' => 'Deskripsi wajib diisi untuk setiap transaksi.',
             'transactions.*.quantity.required' => 'Kuantitas wajib diisi dan harus lebih dari atau sama dengan 0.01.',
             'transactions.*.quantity.min' => 'Kuantitas minimal adalah 0.01.',
             'transactions.*.nominal.required' => 'Nominal wajib diisi untuk setiap transaksi.',
+            // 'recipe_id.required_if' => 'ID resep wajib diisi untuk voucher tipe PK.',
+            // 'use_stock.in' => 'Parameter use_stock harus bernilai "yes" atau "no".',
         ];
 
         return Validator::make(
@@ -241,7 +272,40 @@ class VoucherController extends Controller
      */
     protected function validateStockAndHpp(Request $request, array $transactions, $validator)
     {
-        if (!in_array($request->voucher_type, ['PH', 'PK', 'PJ'])) {
+        if (!in_array($request->voucher_type, ['PH', 'PK', 'PJ', 'PYK'])) {
+            return;
+        }
+
+        if ($request->voucher_type === 'PK' && $request->use_stock === 'yes') {
+            $recipeId = $request->recipe_id;
+            $recipe = Recipes::find($recipeId);
+            if (!$recipe) {
+                $validator->errors()->add('recipe_id', "Resep dengan ID {$recipeId} tidak ditemukan.");
+                return;
+            }
+            $quantity = floatval($transactions[0]['quantity'] ?? 1);
+            if ($quantity <= 0) {
+                $validator->errors()->add('transactions.0.quantity', 'Kuantitas untuk voucher PK harus lebih dari 0.');
+                return;
+            }
+            $recipeTransferStocks = \App\Models\RecipesTransfer::where('recipe_id', $recipeId)->get();
+            foreach ($recipeTransferStocks as $index => $recipeTransferStock) {
+                $transferStock = TransferStock::where('id', $recipeTransferStock->transfer_stock_id)
+                    ->where('item', $recipeTransferStock->item)
+                    ->where('size', $recipeTransferStock->size)
+                    ->first();
+                if (!$transferStock) {
+                    $validator->errors()->add(
+                        "recipe_transfer_stocks.{$index}",
+                        "Stok untuk item {$recipeTransferStock->item} (Ukuran: {$recipeTransferStock->size}) tidak ditemukan di tabel transfer_stocks."
+                    );
+                } elseif ($transferStock->quantity < $recipeTransferStock->quantity * $quantity) {
+                    $validator->errors()->add(
+                        "recipe_transfer_stocks.{$index}",
+                        "Stok untuk item {$recipeTransferStock->item} (Ukuran: {$recipeTransferStock->size}) tidak mencukupi. Tersedia: {$transferStock->quantity}, Dibutuhkan: " . ($recipeTransferStock->quantity * $quantity) . "."
+                    );
+                }
+            }
             return;
         }
 
@@ -289,48 +353,25 @@ class VoucherController extends Controller
                     if ($totalQuantity < $quantity) {
                         $validator->errors()->add(
                             $errorField,
-                            "Stok untuk item {$item} (Ukuran: {$size}) tidak mencukupi di tabel used_stocks atau transfer_stocks. Tersedia: {$totalQuantity}, Dibutuhkan: {$quantity}."
+                            "Stok untuk item {$item} (Ukuran: {$size}) tidak mencukupi di tabel used_stocks atau stocks. Tersedia: {$totalQuantity}, Dibutuhkan: {$quantity}."
                         );
                     }
-                }
-            }
-        }
-
-        if ($request->voucher_type === 'PJ') {
-            foreach ($nonHppItems as $item => $data) {
-                $hppItem = "HPP {$item}";
-                $hppFound = false;
-                $index = $data['index'];
-                $expectedQuantity = $data['quantity'];
-                $expectedSize = $data['size'];
-
-                foreach ($transactions as $tIndex => $transaction) {
-                    if ($transaction['description'] === $hppItem && $transaction['size'] === $expectedSize) {
-                        $hppFound = true;
-                        $hppQuantity = floatval($transaction['quantity']);
-                        $hppNominal = floatval($transaction['nominal']);
-                        if ($hppQuantity !== $expectedQuantity) {
-                            $validator->errors()->add(
-                                "transactions.{$tIndex}.quantity",
-                                "Kuantitas untuk HPP {$item} (Ukuran: {$expectedSize}) harus sama dengan kuantitas item utama ({$expectedQuantity})."
-                            );
+                } elseif ($request->voucher_type === 'PYK') {
+                    $found = false;
+                    $modelPriorities = [UsedStock::class, TransferStock::class, Stock::class];
+                    foreach ($modelPriorities as $model) {
+                        $stock = $model::where('item', $item)->where('size', $size)->first();
+                        if ($stock && $stock->quantity >= $quantity) {
+                            $found = true;
+                            break;
                         }
-                        $averageHpp = $this->calculateAverageHpp($item, $expectedSize); // Pass size
-                        if (abs($hppNominal - $averageHpp) > 0.01) {
-                            $validator->errors()->add(
-                                "transactions.{$tIndex}.nominal",
-                                "Nominal untuk HPP {$item} (Ukuran: {$expectedSize}) harus sesuai dengan rata-rata HPP ({$averageHpp}). Diterima: {$hppNominal}."
-                            );
-                        }
-                        break;
                     }
-                }
-
-                if (!$hppFound) {
-                    $validator->errors()->add(
-                        "transactions.{$index}.description",
-                        "Item {$item} (Ukuran: {$expectedSize}) membutuhkan baris HPP terkait (HPP {$item})."
-                    );
+                    if (!$found) {
+                        $validator->errors()->add(
+                            $errorField,
+                            "Stok untuk item {$item} (Ukuran: {$size}) tidak mencukupi di tabel manapun untuk PYK."
+                        );
+                    }
                 }
             }
         }
@@ -340,27 +381,21 @@ class VoucherController extends Controller
      * Calculate average HPP for an item based on PB transactions
      *
      * @param string $item
+     * @param string|null $size
      * @return float
      */
     protected function calculateAverageHpp($item, $size = null)
     {
         $baseItem = trim(str_replace('HPP ', '', $item));
-
-        // Join transactions with vouchers to filter by voucher_type
         $transactions = Transactions::join('vouchers', 'transactions.voucher_id', '=', 'vouchers.id')
-            ->whereIn('vouchers.voucher_type', ['PB', 'PK'])
+            ->where('vouchers.voucher_type', 'PB')
             ->where('transactions.description', $baseItem)
             ->when($size, function ($query, $size) {
                 return $query->where('transactions.size', $size);
             })
             ->pluck('transactions.nominal');
 
-        if ($transactions->isEmpty()) {
-            Log::warning("No PB or PK transactions found for item: {$baseItem}, size: {$size}");
-            return 0;
-        }
-
-        return round($transactions->average()) ?: 0;
+        return $transactions->isEmpty() ? 0 : round($transactions->average(), 2);
     }
 
     /**
@@ -387,9 +422,11 @@ class VoucherController extends Controller
         }
 
         try {
-            $voucherNumber = $this->voucherService->generateVoucherNumber($request->voucher_type);
+            $voucherNumber = $request->voucher_number === '[Auto Generate Number]'
+                ? $this->voucherService->generateVoucherNumber($request->voucher_type)
+                : $request->voucher_number;
             $this->voucherService->createVoucher($request, $voucherNumber);
-            return redirect()->back()->with('success', 'Voucher berhasil dibuat.');
+            return redirect()->route('voucher_page')->with('success', 'Voucher berhasil dibuat.');
         } catch (\Exception $e) {
             Log::error('Error creating voucher', [
                 'user_id' => auth()->id(),
@@ -428,7 +465,7 @@ class VoucherController extends Controller
 
         try {
             $this->voucherService->updateVoucher($request, $id);
-            return redirect()->back()->with('success', 'Voucher berhasil diperbarui.');
+            return redirect()->route('voucher_page')->with('success', 'Voucher berhasil diperbarui.');
         } catch (\Exception $e) {
             Log::error('Voucher update failed', [
                 'voucher_id' => $id,
@@ -480,12 +517,11 @@ class VoucherController extends Controller
                     return ['item' => $stock['item'], 'size' => $stock['size'], 'quantity' => $stock['quantity'], 'source' => 'used_stocks'];
                 })
                 ->merge(
-                    collect($data['transferStocks'])
+                    collect($data['stocks'])
                         ->map(function ($stock) {
-                            return ['item' => $stock['item'], 'size' => $stock['size'], 'quantity' => $stock['quantity'], 'source' => 'transfer_stocks'];
+                            return ['item' => $stock['item'], 'size' => $stock['size'], 'quantity' => $stock['quantity'], 'source' => 'stocks'];
                         })
                 )->toArray();
-
             return view('voucher.voucher_edit', $data);
         } catch (\Exception $e) {
             Log::error('Voucher Edit Error', [
@@ -494,7 +530,7 @@ class VoucherController extends Controller
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
-            return redirect()->back()->withErrors(['error' => 'Gagal memuat halaman edit voucher']);
+            return redirect()->back()->withErrors(['error' => 'Gagal memuat halaman edit voucher: ' . $e->getMessage()]);
         }
     }
 
@@ -516,7 +552,7 @@ class VoucherController extends Controller
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
-            return redirect()->back()->withErrors(['error' => 'Gagal menghapus voucher']);
+            return redirect()->back()->withErrors(['error' => 'Gagal menghapus voucher: ' . $e->getMessage()]);
         }
     }
 
@@ -538,7 +574,7 @@ class VoucherController extends Controller
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
-            return redirect()->back()->withErrors(['error' => 'Gagal memuat detail voucher']);
+            return redirect()->back()->withErrors(['error' => 'Gagal memuat detail voucher: ' . $e->getMessage()]);
         }
     }
 
@@ -569,7 +605,7 @@ class VoucherController extends Controller
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
-            return redirect()->back()->withErrors(['error' => 'Gagal membuat PDF']);
+            return redirect()->back()->withErrors(['error' => 'Gagal membuat PDF: ' . $e->getMessage()]);
         }
     }
 }
