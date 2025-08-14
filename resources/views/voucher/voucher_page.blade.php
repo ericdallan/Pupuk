@@ -85,13 +85,34 @@
                 <label for="voucher_type" class="form-label">Tipe Voucher:</label>
                 <select name="voucher_type" id="voucher_type" class="form-select">
                     <option value="">Semua</option>
-                    <option value="PJ" {{ request('voucher_type') == 'PJ' ? 'selected' : '' }}>Penjualan</option>
-                    <option value="PG" {{ request('voucher_type') == 'PG' ? 'selected' : '' }}>Pengeluaran</option>
-                    <option value="PM" {{ request('voucher_type') == 'PM' ? 'selected' : '' }}>Pemasukan</option>
-                    <option value="PB" {{ request('voucher_type') == 'PB' ? 'selected' : '' }}>Pembelian</option>
-                    <option value="PH" {{ request('voucher_type') == 'PH' ? 'selected' : '' }}>Pemindahan</option>
-                    <option value="PK" {{ request('voucher_type') == 'PK' ? 'selected' : '' }}>Pemakaian</option>
-                    <option value="LN" {{ request('voucher_type') == 'LN' ? 'selected' : '' }}>Lainnya</option>
+
+                    <optgroup label="Stok">
+                        <option value="PJ" {{ request('voucher_type') == 'PJ' ? 'selected' : '' }}>Penjualan
+                        </option>
+                        <option value="PB" {{ request('voucher_type') == 'PB' ? 'selected' : '' }}>Pembelian
+                        </option>
+                        <option value="PH" {{ request('voucher_type') == 'PH' ? 'selected' : '' }}>Pemindahan
+                        </option>
+                        <option value="PK" {{ request('voucher_type') == 'PK' ? 'selected' : '' }}>Pemakaian
+                        </option>
+                    </optgroup>
+
+                    <optgroup label="Keuangan">
+                        <option value="PG" {{ request('voucher_type') == 'PG' ? 'selected' : '' }}>Pengeluaran
+                        </option>
+                        <option value="PM" {{ request('voucher_type') == 'PM' ? 'selected' : '' }}>Pemasukan
+                        </option>
+                        <option value="LN" {{ request('voucher_type') == 'LN' ? 'selected' : '' }}>Lainnya</option>
+                    </optgroup>
+
+                    <optgroup label="Penyesuaian">
+                        <option value="PYB" {{ request('voucher_type') == 'PYB' ? 'selected' : '' }}>Penyesuaian
+                            Bertambah</option>
+                        <option value="PYK" {{ request('voucher_type') == 'PYK' ? 'selected' : '' }}>Penyesuaian
+                            Berkurang</option>
+                        <option value="PYL" {{ request('voucher_type') == 'PYL' ? 'selected' : '' }}>Penyesuaian
+                            Lainnya</option>
+                    </optgroup>
                 </select>
             </div>
             <div class="col-md-3">
@@ -174,6 +195,8 @@
                                     Penyesuaian Bertambah
                                 @elseif($voucher_item->voucher_type == 'PYK')
                                     Penyesuaian Berkurang
+                                @elseif($voucher_item->voucher_type == 'PYL')
+                                    Penyesuaian Lainnya
                                 @else
                                     {{ $voucher_item->voucher_type }}
                                 @endif
