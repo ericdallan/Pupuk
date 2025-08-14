@@ -152,7 +152,12 @@ class VoucherController extends Controller
                     }
                 },
             ],
-            'store' => 'required_if:use_invoice,yes|string|max:255',
+            'store' => [
+                'nullable',
+                'string',
+                'max:255',
+                'required_if:use_invoice,yes',
+            ],
             'due_date' => 'required_if:use_invoice,yes|date',
             'total_debit' => 'required|numeric|min:0',
             'total_credit' => 'required|numeric|min:0',

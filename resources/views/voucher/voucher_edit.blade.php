@@ -739,12 +739,10 @@
             function populateTransactionTableFromRecipe(recipeId) {
                 const recipe = recipes.find(r => r.id == recipeId);
                 if (!recipe || !recipe.transfer_stocks) {
-                    console.warn('Recipe or transfer stocks not found for ID:', recipeId);
                     validationInput.value = 'Formula produk tidak memiliki data stok transfer.';
                     return;
                 }
                 if (!recipe.transfer_stocks.length) {
-                    console.warn('No transfer stocks for recipe ID:', recipeId);
                     validationInput.value = 'Formula produk tidak memiliki stok transfer terkait.';
                     return;
                 }
@@ -768,10 +766,23 @@
             // --- Stock and Size Handling ---
             function getStockSource() {
                 const voucherType = voucherTypeSelect.value;
-                if (voucherType === 'PJ') return [...stocks, ...usedStocks]; // Combine stocks and usedStocks for PJ
-                if (voucherType === 'PH') return stocks; // Use stocks for PH
-                if (voucherType === 'PK') return usedStocks; // Use usedStocks for PK
-                return stocks; // Default to stocks for other types
+                if (voucherType === 'PJ') {
+                    const stockItems = [...new Set([...stocks, ...usedStocks].map(s => s.item + s.size))];
+                    const combinedStocks = [];
+                    stockItems.forEach(key => {
+                        const stock = stocks.find(s => (s.item + s.size) === key) || usedStocks.find(s => (s
+                            .item + s.size) === key);
+                        combinedStocks.push(stock);
+                    });
+                    return combinedStocks;
+                }
+                if (voucherType === 'PH') {
+                    return stocks;
+                }
+                if (voucherType === 'PK') {
+                    return usedStocks;
+                }
+                return stocks;
             }
 
             function getCorrespondingHppRow(parentRow, item) {
@@ -926,19 +937,12 @@
 
             // --- HPP Logic ---
             function calculateAverageHpp(item, size, currentCreatedAt) {
-                console.log('Calculating HPP for:', {
-                    item,
-                    size,
-                    currentCreatedAt
-                });
-                console.log('Available transactionsData:', transactionsData);
+
                 if (!transactionsData || !Array.isArray(transactionsData)) {
-                    console.warn('transactionsData is empty or not an array');
                     validationInput.value = 'Data transaksi historis kosong.';
                     return 0;
                 }
                 if (!currentCreatedAt) {
-                    console.warn('currentCreatedAt is undefined, using current time as fallback');
                     currentCreatedAt = new Date().toISOString();
                 }
                 const matchingTransactions = transactionsData.filter(t =>
@@ -948,20 +952,12 @@
                     t.created_at &&
                     new Date(t.created_at) < new Date(currentCreatedAt)
                 );
-                console.log('Matching transactions details:', matchingTransactions.map(t => ({
-                    description: t.description,
-                    size: t.size,
-                    nominal: t.nominal,
-                    created_at: t.created_at
-                })));
                 if (matchingTransactions.length === 0) {
-                    console.warn(`No matching transactions found for item: ${item}, size: ${size}`);
                     validationInput.value =
                         `Tidak ada transaksi sebelumnya untuk item "${item}" dengan ukuran "${size}".`;
                     return 0;
                 }
                 const totalNominal = matchingTransactions.reduce((sum, t) => sum + (parseFloat(t.nominal) || 0), 0);
-                console.log('Total nominal:', totalNominal, 'Count:', matchingTransactions.length);
                 const average = totalNominal / matchingTransactions.length;
                 return Math.round(average);
             }
@@ -975,13 +971,6 @@
                     row.querySelector('.descriptionInput')?.value === `HPP ${item}` &&
                     row.querySelector('.sizeInput')?.value === size
                 );
-
-                console.log('Adding HPP row for:', {
-                    currentIndex,
-                    item,
-                    size,
-                    quantity
-                });
 
                 if (existingHppRow) {
                     const quantityInput = existingHppRow.querySelector('.quantityInput');
@@ -1155,11 +1144,6 @@
 
             function updateHppRow(parentRow, item, size, quantity, currentCreatedAt) {
                 if (!item || !size || isUpdatingHpp) {
-                    console.log('Skipping HPP update: missing item/size or in progress', {
-                        item,
-                        size,
-                        isUpdatingHpp
-                    });
                     return;
                 }
                 item = item.trim();
@@ -1172,25 +1156,13 @@
                     const hppRow = getCorrespondingHppRow(parentRow, item);
 
                     if (hppRow) {
-                        // Update existing corresponding HPP row
-                        console.log('Found corresponding HPP row, updating...', {
-                            item,
-                            size,
-                            quantity,
-                            nominal: averageHpp
-                        });
+                        // Update existing corresponding HPP row=
                         hppRow.querySelector('.sizeInput').value = size;
                         hppRow.querySelector('.quantityInput').value = quantity;
                         hppRow.querySelector('.nominalInput').value = averageHpp.toFixed(2);
                         hppRow.querySelector('.totalInput').value = (quantity * averageHpp).toFixed(2);
                     } else {
                         // Create new HPP row after parent
-                        console.log('No corresponding HPP found, creating new...', {
-                            item,
-                            size,
-                            quantity,
-                            nominal: averageHpp
-                        });
                         const newIndex = transactionTableBody.querySelectorAll('tr').length;
                         const hppRow = document.createElement('tr');
                         hppRow.dataset.rowIndex = newIndex;
@@ -1270,7 +1242,9 @@
             // --- Stock Validation ---
             function validateStockQuantity(item, size, quantity) {
                 const voucherType = voucherTypeSelect.value;
-                if (!['PJ', 'PH', 'PK'].includes(voucherType)) return true;
+                if (!['PJ', 'PH', 'PK'].includes(voucherType)) {
+                    return true;
+                }
                 const stockSource = getStockSource();
                 const stock = stockSource.find(s => s.item === item && s.size === size);
                 if (!stock) {
@@ -1417,11 +1391,6 @@
                         const size = row.querySelector('.sizeInput')?.value || '';
                         const index = parseInt(row.dataset.rowIndex);
                         if (item && size) {
-                            console.log('Quantity changed, updating HPP row for:', {
-                                item,
-                                size,
-                                quantity: quantityInput.value
-                            });
                             updateHppRow(index, item, size, parseFloat(quantityInput.value) || 1,
                                 voucherCreatedAt);
                         }
@@ -1723,19 +1692,19 @@
                         if (account) accountNameInput.value = account.account_name;
                     }
                     updateAccountCodeDatalist();
-                    validateForm();
+                    updateAllCalculationsAndValidations(); // Trigger calculations on account code change
                 });
 
                 debitInput?.addEventListener('input', () => {
                     creditInput.value = debitInput.value ? '' : creditInput.value;
                     creditInput.disabled = !!debitInput.value;
-                    updateAllCalculationsAndValidations();
+                    updateAllCalculationsAndValidations(); // Trigger calculations on debit change
                 });
 
                 creditInput?.addEventListener('input', () => {
                     debitInput.value = creditInput.value ? '' : debitInput.value;
                     debitInput.disabled = !!creditInput.value;
-                    updateAllCalculationsAndValidations();
+                    updateAllCalculationsAndValidations(); // Trigger calculations on credit change
                 });
             }
 
@@ -1957,7 +1926,17 @@
                 });
                 // Update hidden inputs with raw numeric values for submission
                 totalDebitRawInput.value = totalDebit.toFixed(2);
-                totalCreditRawInput.value = totalDebit.toFixed(2);
+                totalCreditRawInput.value = totalCredit.toFixed(2);
+
+                // Add event listeners for real-time updates
+                const debounceUpdate = debounce(() => {
+                    validateTotals();
+                }, 20);
+
+                voucherDetailsTableBody.querySelectorAll('.debitInput, .creditInput').forEach(input => {
+                    input.addEventListener('input', debounceUpdate);
+                });
+
                 return {
                     totalDebitRaw: totalDebit,
                     totalCreditRaw: totalCredit
@@ -1974,16 +1953,26 @@
                     validationInput.value =
                         "Total Nominal pada Rincian Transaksi harus sama dengan Total Debit dan Total Kredit pada Rincian Voucher.";
                     saveVoucherBtn.disabled = true;
-                    return false;
                 } else if (totalDebitRaw !== totalCreditRaw) {
                     validationInput.value = "Total Debit harus sama dengan Total Kredit.";
                     saveVoucherBtn.disabled = true;
-                    return false;
                 } else {
                     validationInput.value = "Totalnya seimbang dan valid.";
                     saveVoucherBtn.disabled = false;
-                    return true;
                 }
+                return totalDebitRaw === totalCreditRaw && totalNominalRaw === totalDebitRaw;
+            }
+
+            function debounce(func, wait) {
+                let timeout;
+                return function executedFunction(...args) {
+                    const later = () => {
+                        clearTimeout(timeout);
+                        func(...args);
+                    };
+                    clearTimeout(timeout);
+                    timeout = setTimeout(later, wait);
+                };
             }
 
             function validateForm() {

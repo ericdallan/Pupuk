@@ -1149,13 +1149,13 @@ class VoucherService
                     'nominal' => floatval($recipe->nominal),
                     'is_hpp' => false,
                 ];
-                // $transactionItems[] = [
-                //     'description' => "HPP {$recipe->product_name}",
-                //     'size' => $recipe->size,
-                //     'quantity' => $quantity,
-                //     'nominal' => floatval($recipe->nominal),
-                //     'is_hpp' => true,
-                // ];
+                $transactionItems[] = [
+                    'description' => "HPP {$recipe->product_name}",
+                    'size' => $recipe->size,
+                    'quantity' => $quantity,
+                    'nominal' => floatval($recipe->nominal),
+                    'is_hpp' => true,
+                ];
                 $totalNominal = $quantity * floatval($recipe->nominal);
             } else {
                 foreach ($transactionsData as $index => $transaction) {
@@ -1163,20 +1163,19 @@ class VoucherService
                     $nominal = floatval($transaction['nominal']);
                     $totalNominal += $quantity * $nominal;
                     $isHpp = str_starts_with($transaction['description'], 'HPP ');
+                    $transactionItems[$index] = [
+                        'description' => $transaction['description'],
+                        'size' => $transaction['size'] ?? null,
+                        'quantity' => $quantity,
+                        'nominal' => $nominal,
+                        'is_hpp' => $isHpp,
+                    ];
                     if ($request->voucher_type === 'PJ' && $isHpp) {
                         $hppStockUpdates[$index] = [
                             'description' => $transaction['description'],
                             'size' => $transaction['size'] ?? null,
                             'quantity' => $quantity,
                             'index' => $index,
-                        ];
-                    } else {
-                        $transactionItems[$index] = [
-                            'description' => $transaction['description'],
-                            'size' => $transaction['size'] ?? null,
-                            'quantity' => $quantity,
-                            'nominal' => $nominal,
-                            'is_hpp' => $isHpp,
                         ];
                     }
                 }

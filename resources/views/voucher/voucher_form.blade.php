@@ -549,21 +549,14 @@
             const selectedRecipeId = this.value;
             const voucherType = voucherTypeSelect.value;
             const useStock = document.querySelector('input[name="use_stock"]:checked')?.value || 'no';
-            console.log('Recipe Change:', {
-                selectedRecipeId,
-                voucherType,
-                useStock
-            });
 
             clearTimeout(this._debounceTimeout);
             this._debounceTimeout = setTimeout(() => {
                 if (selectedRecipeId && voucherType === 'PK' && useStock === 'yes') {
                     addTransactionRowBtn.disabled = true;
-                    // console.log('Disabling Tambah Transaksi button');
                     populateTransactionTableFromRecipe(selectedRecipeId);
                 } else {
                     addTransactionRowBtn.disabled = false;
-                    // console.log('Enabling Tambah Transaksi button');
                     refreshTransactionTable();
                 }
             }, 100);
@@ -572,12 +565,9 @@
         function populateTransactionTableFromRecipe(recipeId) {
             const selectedRecipe = recipes.find(r => r.id == recipeId);
             if (!selectedRecipe) {
-                console.error('Invalid recipe data:', selectedRecipe);
                 transactionTableBody.innerHTML = '<tr><td colspan="6">No valid recipe data available</td></tr>';
                 return;
             }
-
-            console.log('Selected Recipe:', selectedRecipe); // Debug selected recipe data
             transactionTableBody.innerHTML = '';
             const row = generateTransactionTableRow(0);
             transactionTableBody.appendChild(row);
@@ -591,12 +581,10 @@
             if (descriptionInput && descriptionInput.tagName === 'INPUT') {
                 descriptionInput.value = selectedRecipe.product_name || '';
                 descriptionInput.readonly = true;
-                // console.log('Description set to:', descriptionInput.value); // Debug
             }
             if (sizeInput && sizeInput.tagName === 'INPUT') {
                 sizeInput.value = selectedRecipe.size || '';
                 sizeInput.readonly = true;
-                // console.log('Size set to:', sizeInput.value); // Debug
             }
             if (quantityInput) {
                 quantityInput.value = 1;
@@ -1041,8 +1029,6 @@
                         quantity: stock.quantity || 0
                     }));
 
-                // console.log(`Sizes for Item ${selectedItem}:`, sizesWithQuantity);
-
                 if (sizesWithQuantity.length > 0) {
                     sizesWithQuantity.forEach(item => {
                         const option = document.createElement('option');
@@ -1067,7 +1053,6 @@
                 const description = row.querySelector('.descriptionInput:not([type="text"])')?.value ||
                     row.querySelector('.descriptionInput[type="text"]')?.value || '';
                 const quantity = parseFloat(row.querySelector('.quantityInput')?.value) || 1;
-                // console.log(`Size changed: index=${rowIndex}, item=${description}, size=${this.value}`);
                 updateAllCalculationsAndValidations();
             });
 
@@ -1083,7 +1068,6 @@
                 const description = row.querySelector('.descriptionInput:not([type="text"])')?.value ||
                     row.querySelector('.descriptionInput[type="text"]')?.value || '';
                 const quantity = parseFloat(row.querySelector('.quantityInput')?.value) || 1;
-                // console.log(`Size input changed: index=${rowIndex}, item=${description}, size=${this.value}`);
                 updateAllCalculationsAndValidations();
             });
 
@@ -1550,8 +1534,6 @@
                         quantity: stock.quantity || 0
                     }));
 
-                // console.log(`Sizes for Item ${selectedItem}:`, sizesWithQuantity);
-
                 if (sizesWithQuantity.length > 0) {
                     sizesWithQuantity.forEach(item => {
                         const option = document.createElement('option');
@@ -1576,7 +1558,6 @@
                 const description = row.querySelector('.descriptionInput:not([type="text"])')?.value ||
                     row.querySelector('.descriptionInput[type="text"]')?.value || '';
                 const quantity = parseFloat(row.querySelector('.quantityInput')?.value) || 1;
-                // console.log(`Size changed: index=${rowIndex}, item=${description}, size=${this.value}`);
                 updateAllCalculationsAndValidations();
             });
 
@@ -1592,7 +1573,6 @@
                 const description = row.querySelector('.descriptionInput:not([type="text"])')?.value ||
                     row.querySelector('.descriptionInput[type="text"]')?.value || '';
                 const quantity = parseFloat(row.querySelector('.quantityInput')?.value) || 1;
-                // console.log(`Size input changed: index=${rowIndex}, item=${description}, size=${this.value}`);
                 updateAllCalculationsAndValidations();
             });
 
@@ -1668,7 +1648,6 @@
 
         function calculateAverageHpp(description, size) {
             if (!transactions || !Array.isArray(transactions) || transactions.length === 0) {
-                console.log('No transactions data available, returning 0');
                 return 0;
             }
 
@@ -1677,17 +1656,12 @@
                 `${t.description} ${t.size}`.trim() === fullDescription
             );
             if (matchingTransactions.length === 0) {
-                console.log(`No matching transactions for ${fullDescription}, returning 0`);
                 return 0;
             }
 
             const totalNominal = matchingTransactions.reduce((sum, t) => sum + (parseFloat(t.nominal) || 0), 0);
             const transactionCount = matchingTransactions.length;
-            const averageHpp = transactionCount > 0 ? totalNominal / transactionCount : 0;
-
-            console.log(`Matching transactions for ${fullDescription}:`, matchingTransactions);
-            console.log(`Total Nominal: ${totalNominal}, Transaction Count: ${transactionCount}`);
-            console.log(`Calculated average HPP for ${fullDescription}: ${averageHpp}`);
+            const averageHpp = transactionCount > 0 ? Math.round(totalNominal / transactionCount) : 0;
             return averageHpp;
         }
 
@@ -1707,7 +1681,6 @@
             rowsToRemove.forEach(row => {
                 const description = row.querySelector('.descriptionInput')?.value || '';
                 const size = row.querySelector('.sizeInput')?.value || '';
-                // console.log(`Removing HPP row: description=${description}, size=${size}, rowIndex=${row.dataset.rowIndex}`);
                 row.remove();
             });
 
@@ -1796,8 +1769,6 @@
             const currentRow = transactionTableBody.querySelector(`tr[data-row-index="${currentIndex}"]`);
             if (currentRow.nextSibling) transactionTableBody.insertBefore(hppRow, currentRow.nextSibling);
             else transactionTableBody.appendChild(hppRow);
-
-            // console.log(`Added HPP row for PB: item=${selectedItem}, size=${size}, rowIndex=${newIndex}`);
             updateTransactionRowIndices();
             updateAllCalculationsAndValidations();
         }
