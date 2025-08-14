@@ -569,7 +569,8 @@
             const currentVoucherType = @json($voucher->voucher_type);
             const hasInvoice = @json($voucher->invoice ? true : false);
             const voucherRecipeId = @json($voucher->recipe_id);
-
+            // const voucherCreatedAt = @json($voucher->created_at ? $voucher->created_at : now() . toISOString());
+            const voucherCreatedAt = @json($voucherCreatedAt ?? now()->toIso8601String());
             // --- Voucher Types ---
             const voucherTypes = {
                 PJ: {
@@ -767,10 +768,24 @@
             // --- Stock and Size Handling ---
             function getStockSource() {
                 const voucherType = voucherTypeSelect.value;
-                if (voucherType === 'PJ') return usedStocks;
-                if (voucherType === 'PH') return transferStocks;
-                if (voucherType === 'PK') return stocks;
-                return stocks;
+                if (voucherType === 'PJ') return [...stocks, ...usedStocks]; // Combine stocks and usedStocks for PJ
+                if (voucherType === 'PH') return stocks; // Use stocks for PH
+                if (voucherType === 'PK') return usedStocks; // Use usedStocks for PK
+                return stocks; // Default to stocks for other types
+            }
+
+            function getCorrespondingHppRow(parentRow, item) {
+                let nextRow = parentRow.nextElementSibling;
+                while (nextRow) {
+                    if (nextRow.dataset.isHppRow === 'true' && nextRow.querySelector('.descriptionInput')?.value
+                        .trim() === `HPP ${item.trim()}`) {
+                        return nextRow;
+                    }
+                    // Stop jika hit row non-HPP (parent lain)
+                    if (nextRow.dataset.isHppRow !== 'true') break;
+                    nextRow = nextRow.nextElementSibling;
+                }
+                return null;
             }
 
             function createStockDropdown(index, initialValue = '') {
@@ -779,16 +794,86 @@
                 select.name = `transactions[${index}][description]`;
                 select.dataset.listenerAttached = 'false';
                 select.innerHTML = '<option value="">Pilih Nama Stock</option>';
+
                 const stockSource = getStockSource();
                 const filteredStocks = stockSource.filter(s => !s.item.startsWith('HPP '));
                 const uniqueItems = [...new Set(filteredStocks.map(s => s.item))];
-                uniqueItems.forEach(item => {
-                    const option = document.createElement('option');
-                    option.value = item;
-                    option.textContent = item;
-                    if (item === initialValue) option.selected = true;
-                    select.appendChild(option);
+
+                if (voucherTypeSelect.value === 'PJ') {
+                    // Add Bahan Baku (stocks)
+                    const bahanBakuItems = [...new Set(stocks.filter(s => !s.item.startsWith('HPP ')).map(s => s
+                        .item))];
+                    if (bahanBakuItems.length > 0) {
+                        const optgroupBahanBaku = document.createElement('optgroup');
+                        optgroupBahanBaku.label = '--Bahan Baku--';
+                        bahanBakuItems.forEach(item => {
+                            const option = document.createElement('option');
+                            option.value = item;
+                            option.textContent = item;
+                            if (item === initialValue) option.selected = true;
+                            optgroupBahanBaku.appendChild(option);
+                        });
+                        select.appendChild(optgroupBahanBaku);
+                    }
+
+                    // Add Barang Jadi (usedStocks)
+                    const barangJadiItems = [...new Set(usedStocks.filter(s => !s.item.startsWith('HPP ')).map(s =>
+                        s.item))];
+                    if (barangJadiItems.length > 0) {
+                        const optgroupBarangJadi = document.createElement('optgroup');
+                        optgroupBarangJadi.label = '--Barang Jadi--';
+                        barangJadiItems.forEach(item => {
+                            const option = document.createElement('option');
+                            option.value = item;
+                            option.textContent = item;
+                            if (item === initialValue) option.selected = true;
+                            optgroupBarangJadi.appendChild(option);
+                        });
+                        select.appendChild(optgroupBarangJadi);
+                    }
+                } else {
+                    uniqueItems.forEach(item => {
+                        const option = document.createElement('option');
+                        option.value = item;
+                        option.textContent = item;
+                        if (item === initialValue) option.selected = true;
+                        select.appendChild(option);
+                    });
+                }
+                select.addEventListener('focus', (e) => {
+                    e.target.dataset.oldValue = e.target.value;
                 });
+
+                select.addEventListener('change', (e) => {
+                    const oldItem = e.target.dataset.oldValue.trim();
+                    const newItem = e.target.value.trim();
+                    const row = e.target.closest('tr');
+                    const index = parseInt(row.dataset.rowIndex);
+                    if (oldItem && oldItem !== newItem && voucherTypeSelect.value === 'PJ') {
+                        // Hapus corresponding HPP untuk oldItem
+                        const oldHppRow = getCorrespondingHppRow(row, oldItem);
+                        if (oldHppRow) {
+                            oldHppRow.remove();
+                            updateTransactionRowIndices();
+                        }
+                    }
+                    updateSizeDropdown(row, newItem);
+                    if (voucherTypeSelect.value === 'PJ' && newItem) {
+                        const sizeSelect = row.querySelector('.sizeInput');
+                        const quantity = parseFloat(row.querySelector('.quantityInput')?.value) || 1;
+                        let size = sizeSelect.value;
+                        if (sizeSelect.options.length > 1 && !size) {
+                            sizeSelect.selectedIndex = 1; // Auto-select first size jika belum dipilih
+                            size = sizeSelect.value;
+                        }
+                        if (size) {
+                            updateHppRow(row, newItem, size, quantity,
+                                voucherCreatedAt); // Pass row bukan index
+                        }
+                    }
+                    updateAllCalculationsAndValidations();
+                });
+
                 return select;
             }
 
@@ -808,6 +893,18 @@
                         select.appendChild(option);
                     });
                 }
+                select.addEventListener('change', (e) => {
+                    const row = e.target.closest('tr');
+                    const item = row.querySelector('.descriptionInput:not([type="text"])')?.value.trim() ||
+                        row.querySelector('.descriptionInput[type="text"]')?.value.trim() || '';
+                    const newSize = e.target.value.trim();
+                    const quantity = parseFloat(row.querySelector('.quantityInput')?.value) || 1;
+                    if (voucherTypeSelect.value === 'PJ' && item && newSize) {
+                        updateHppRow(row, item, newSize, quantity,
+                            voucherCreatedAt); // Update corresponding HPP
+                    }
+                    updateAllCalculationsAndValidations();
+                });
                 return select;
             }
 
@@ -828,97 +925,154 @@
             }
 
             // --- HPP Logic ---
-            function calculateAverageHpp(item, size) {
-                if (!transactionsData || !Array.isArray(transactionsData)) return 0;
-                const matchingTransactions = transactionsData.filter(t => t.description === item && t.size ===
-                    size && !t.description.startsWith('HPP '));
-                if (matchingTransactions.length === 0) return 0;
-                const totalNominal = matchingTransactions.reduce((sum, t) => sum + (parseFloat(t.nominal) || 0), 0);
-                return matchingTransactions.length > 0 ? totalNominal / matchingTransactions.length : 0;
-            }
-
-            function addHppRow(currentIndex, item, size, quantity) {
-                if (!item || !size) return;
-                const newIndex = transactionTableBody.querySelectorAll('tr').length;
-                const hppRow = document.createElement('tr');
-                hppRow.dataset.rowIndex = newIndex;
-                hppRow.dataset.isHppRow = 'true';
-
-                const descriptionCell = document.createElement('td');
-                const descriptionInput = document.createElement('input');
-                descriptionInput.type = 'text';
-                descriptionInput.className = 'form-control descriptionInput';
-                descriptionInput.name = `transactions[${newIndex}][description]`;
-                descriptionInput.value = `HPP ${item}`;
-                descriptionInput.readOnly = true;
-                descriptionCell.appendChild(descriptionInput);
-                hppRow.appendChild(descriptionCell);
-
-                const sizeCell = document.createElement('td');
-                const sizeInput = document.createElement('input');
-                sizeInput.type = 'text';
-                sizeInput.className = 'form-control sizeInput';
-                sizeInput.name = `transactions[${newIndex}][size]`;
-                sizeInput.value = size;
-                sizeInput.readOnly = true;
-                sizeCell.appendChild(sizeInput);
-                hppRow.appendChild(sizeCell);
-
-                const quantityCell = document.createElement('td');
-                const quantityInput = document.createElement('input');
-                quantityInput.type = 'number';
-                quantityInput.min = '1';
-                quantityInput.className = 'form-control quantityInput';
-                quantityInput.name = `transactions[${newIndex}][quantity]`;
-                quantityInput.value = quantity;
-                quantityInput.readOnly = true;
-                quantityCell.appendChild(quantityInput);
-                hppRow.appendChild(quantityCell);
-
-                const nominalCell = document.createElement('td');
-                const nominalInput = document.createElement('input');
-                nominalInput.type = 'number';
-                nominalInput.min = '0';
-                nominalInput.className = 'form-control nominalInput';
-                nominalInput.name = `transactions[${newIndex}][nominal]`;
-                const averageHpp = calculateAverageHpp(item, size);
-                nominalInput.value = averageHpp.toFixed(2);
-                nominalInput.readOnly = true;
-                nominalCell.appendChild(nominalInput);
-                hppRow.appendChild(nominalCell);
-
-                const totalCell = document.createElement('td');
-                const totalInput = document.createElement('input');
-                totalInput.type = 'number';
-                totalInput.className = 'form-control totalInput';
-                totalInput.name = `transactions[${newIndex}][total]`;
-                totalInput.value = (quantity * averageHpp).toFixed(2);
-                totalInput.readOnly = true;
-                totalCell.appendChild(totalInput);
-                hppRow.appendChild(totalCell);
-
-                const actionCell = document.createElement('td');
-                actionCell.className = 'text-center';
-                const deleteButton = document.createElement('button');
-                deleteButton.type = 'button';
-                deleteButton.className = 'btn btn-danger removeTransactionRowBtn';
-                deleteButton.textContent = 'Hapus';
-                deleteButton.disabled = true;
-                actionCell.appendChild(deleteButton);
-                hppRow.appendChild(actionCell);
-
-                const currentRow = transactionTableBody.querySelector(`tr[data-row-index="${currentIndex}"]`);
-                if (currentRow.nextSibling) {
-                    transactionTableBody.insertBefore(hppRow, currentRow.nextSibling);
-                } else {
-                    transactionTableBody.appendChild(hppRow);
+            function calculateAverageHpp(item, size, currentCreatedAt) {
+                console.log('Calculating HPP for:', {
+                    item,
+                    size,
+                    currentCreatedAt
+                });
+                console.log('Available transactionsData:', transactionsData);
+                if (!transactionsData || !Array.isArray(transactionsData)) {
+                    console.warn('transactionsData is empty or not an array');
+                    validationInput.value = 'Data transaksi historis kosong.';
+                    return 0;
                 }
-
-                updateTransactionRowIndices();
-                updateAllCalculationsAndValidations();
+                if (!currentCreatedAt) {
+                    console.warn('currentCreatedAt is undefined, using current time as fallback');
+                    currentCreatedAt = new Date().toISOString();
+                }
+                const matchingTransactions = transactionsData.filter(t =>
+                    t.description === item &&
+                    t.size === size &&
+                    !t.description.startsWith('HPP ') &&
+                    t.created_at &&
+                    new Date(t.created_at) < new Date(currentCreatedAt)
+                );
+                console.log('Matching transactions details:', matchingTransactions.map(t => ({
+                    description: t.description,
+                    size: t.size,
+                    nominal: t.nominal,
+                    created_at: t.created_at
+                })));
+                if (matchingTransactions.length === 0) {
+                    console.warn(`No matching transactions found for item: ${item}, size: ${size}`);
+                    validationInput.value =
+                        `Tidak ada transaksi sebelumnya untuk item "${item}" dengan ukuran "${size}".`;
+                    return 0;
+                }
+                const totalNominal = matchingTransactions.reduce((sum, t) => sum + (parseFloat(t.nominal) || 0), 0);
+                console.log('Total nominal:', totalNominal, 'Count:', matchingTransactions.length);
+                const average = totalNominal / matchingTransactions.length;
+                return Math.round(average);
             }
 
-            function addHppRowDirectly(index, description, size, quantity, nominal) {
+            function addHppRow(currentIndex, item, size, quantity, currentCreatedAt) {
+                if (!item || !size) return;
+
+                const allRows = Array.from(transactionTableBody.querySelectorAll('tr'));
+                const existingHppRow = allRows.find(row =>
+                    row.dataset.isHppRow === 'true' &&
+                    row.querySelector('.descriptionInput')?.value === `HPP ${item}` &&
+                    row.querySelector('.sizeInput')?.value === size
+                );
+
+                console.log('Adding HPP row for:', {
+                    currentIndex,
+                    item,
+                    size,
+                    quantity
+                });
+
+                if (existingHppRow) {
+                    const quantityInput = existingHppRow.querySelector('.quantityInput');
+                    const nominalInput = existingHppRow.querySelector('.nominalInput');
+                    const totalInput = existingHppRow.querySelector('.totalInput');
+                    quantityInput.value = quantity;
+                    const averageHpp = calculateAverageHpp(item, size, currentCreatedAt);
+                    nominalInput.value = averageHpp.toFixed(2);
+                    totalInput.value = (quantity * averageHpp).toFixed(2);
+                } else {
+                    const newIndex = transactionTableBody.querySelectorAll('tr').length;
+                    const hppRow = document.createElement('tr');
+                    hppRow.dataset.rowIndex = newIndex;
+                    hppRow.dataset.isHppRow = 'true';
+
+                    const descriptionCell = document.createElement('td');
+                    const descriptionInput = document.createElement('input');
+                    descriptionInput.type = 'text';
+                    descriptionInput.className = 'form-control descriptionInput';
+                    descriptionInput.name = `transactions[${newIndex}][description]`;
+                    descriptionInput.value = `HPP ${item}`;
+                    descriptionInput.readOnly = true;
+                    descriptionCell.appendChild(descriptionInput);
+                    hppRow.appendChild(descriptionCell);
+
+                    const sizeCell = document.createElement('td');
+                    const sizeInput = document.createElement('input');
+                    sizeInput.type = 'text';
+                    sizeInput.className = 'form-control sizeInput';
+                    sizeInput.name = `transactions[${newIndex}][size]`;
+                    sizeInput.value = size;
+                    sizeInput.readOnly = true;
+                    sizeCell.appendChild(sizeInput);
+                    hppRow.appendChild(sizeCell);
+
+                    const quantityCell = document.createElement('td');
+                    const quantityInput = document.createElement('input');
+                    quantityInput.type = 'number';
+                    quantityInput.min = '1';
+                    quantityInput.className = 'form-control quantityInput';
+                    quantityInput.name = `transactions[${newIndex}][quantity]`;
+                    quantityInput.value = quantity;
+                    quantityInput.readOnly = true;
+                    quantityCell.appendChild(quantityInput);
+                    hppRow.appendChild(quantityCell);
+
+                    const nominalCell = document.createElement('td');
+                    const nominalInput = document.createElement('input');
+                    nominalInput.type = 'number';
+                    nominalInput.min = '0';
+                    nominalInput.className = 'form-control nominalInput';
+                    nominalInput.name = `transactions[${newIndex}][nominal]`;
+                    const averageHpp = calculateAverageHpp(item, size, currentCreatedAt);
+                    nominalInput.value = averageHpp.toFixed(2);
+                    nominalInput.readOnly = true;
+                    nominalCell.appendChild(nominalInput);
+                    hppRow.appendChild(nominalCell);
+
+                    const totalCell = document.createElement('td');
+                    const totalInput = document.createElement('input');
+                    totalInput.type = 'number';
+                    totalInput.className = 'form-control totalInput';
+                    totalInput.name = `transactions[${newIndex}][total]`;
+                    totalInput.value = (quantity * averageHpp).toFixed(2);
+                    totalInput.readOnly = true;
+                    totalCell.appendChild(totalInput);
+                    hppRow.appendChild(totalCell);
+
+                    const actionCell = document.createElement('td');
+                    actionCell.className = 'text-center';
+                    const deleteButton = document.createElement('button');
+                    deleteButton.type = 'button';
+                    deleteButton.className = 'btn btn-danger removeTransactionRowBtn';
+                    deleteButton.textContent = 'Hapus';
+                    deleteButton.disabled = true;
+                    actionCell.appendChild(deleteButton);
+                    hppRow.appendChild(actionCell);
+
+                    const currentRow = transactionTableBody.querySelector(`tr[data-row-index="${currentIndex}"]`);
+                    if (currentRow && currentRow.nextSibling) {
+                        transactionTableBody.insertBefore(hppRow, currentRow.nextSibling);
+                    } else {
+                        transactionTableBody.appendChild(hppRow);
+                    }
+
+                    updateTransactionRowIndices();
+                    updateAllCalculationsAndValidations();
+                }
+            }
+
+            function addHppRowDirectly(index, description, size, quantity, nominal, currentCreatedAt) {
                 const newIndex = transactionTableBody.querySelectorAll('tr').length;
                 const hppRow = document.createElement('tr');
                 hppRow.dataset.rowIndex = newIndex;
@@ -961,7 +1115,9 @@
                 nominalInput.min = '0';
                 nominalInput.className = 'form-control nominalInput';
                 nominalInput.name = `transactions[${newIndex}][nominal]`;
-                nominalInput.value = nominal.toFixed(2);
+                // Konversi nominal ke angka dan tangani nilai tidak valid
+                const nominalValue = parseFloat(nominal) || 0;
+                nominalInput.value = nominalValue.toFixed(2);
                 nominalInput.readOnly = true;
                 nominalCell.appendChild(nominalInput);
                 hppRow.appendChild(nominalCell);
@@ -971,7 +1127,7 @@
                 totalInput.type = 'number';
                 totalInput.className = 'form-control totalInput';
                 totalInput.name = `transactions[${newIndex}][total]`;
-                totalInput.value = (quantity * nominal).toFixed(2);
+                totalInput.value = (quantity * nominalValue).toFixed(2);
                 totalInput.readOnly = true;
                 totalCell.appendChild(totalInput);
                 hppRow.appendChild(totalCell);
@@ -997,30 +1153,118 @@
                 updateAllCalculationsAndValidations();
             }
 
-            function updateHppRow(currentIndex, item, size, quantity) {
-                if (!item || !size) return;
-                const currentRow = transactionTableBody.querySelector(`tr[data-row-index="${currentIndex}"]`);
-                let nextRow = currentRow.nextSibling;
-                while (nextRow) {
-                    if (nextRow.dataset.isHppRow === 'true' && nextRow.querySelector('.descriptionInput')?.value ===
-                        `HPP ${item}`) {
-                        const descriptionInput = nextRow.querySelector('.descriptionInput');
-                        descriptionInput.value = `HPP ${item}`;
-                        const sizeInput = nextRow.querySelector('.sizeInput');
-                        sizeInput.value = size;
-                        const quantityInput = nextRow.querySelector('.quantityInput');
-                        quantityInput.value = quantity;
-                        const nominalInput = nextRow.querySelector('.nominalInput');
-                        const averageHpp = calculateAverageHpp(item, size);
-                        nominalInput.value = averageHpp.toFixed(2);
-                        const totalInput = nextRow.querySelector('.totalInput');
-                        totalInput.value = (quantity * averageHpp).toFixed(2);
-                        updateAllCalculationsAndValidations();
-                        return;
-                    }
-                    nextRow = nextRow.nextSibling;
+            function updateHppRow(parentRow, item, size, quantity, currentCreatedAt) {
+                if (!item || !size || isUpdatingHpp) {
+                    console.log('Skipping HPP update: missing item/size or in progress', {
+                        item,
+                        size,
+                        isUpdatingHpp
+                    });
+                    return;
                 }
-                addHppRow(currentIndex, item, size, quantity);
+                item = item.trim();
+                size = size.trim();
+                currentCreatedAt = currentCreatedAt || voucherCreatedAt || new Date().toISOString();
+
+                isUpdatingHpp = true;
+                try {
+                    const averageHpp = calculateAverageHpp(item, size, currentCreatedAt);
+                    const hppRow = getCorrespondingHppRow(parentRow, item);
+
+                    if (hppRow) {
+                        // Update existing corresponding HPP row
+                        console.log('Found corresponding HPP row, updating...', {
+                            item,
+                            size,
+                            quantity,
+                            nominal: averageHpp
+                        });
+                        hppRow.querySelector('.sizeInput').value = size;
+                        hppRow.querySelector('.quantityInput').value = quantity;
+                        hppRow.querySelector('.nominalInput').value = averageHpp.toFixed(2);
+                        hppRow.querySelector('.totalInput').value = (quantity * averageHpp).toFixed(2);
+                    } else {
+                        // Create new HPP row after parent
+                        console.log('No corresponding HPP found, creating new...', {
+                            item,
+                            size,
+                            quantity,
+                            nominal: averageHpp
+                        });
+                        const newIndex = transactionTableBody.querySelectorAll('tr').length;
+                        const hppRow = document.createElement('tr');
+                        hppRow.dataset.rowIndex = newIndex;
+                        hppRow.dataset.isHppRow = 'true';
+
+                        const descriptionCell = document.createElement('td');
+                        const descriptionInput = document.createElement('input');
+                        descriptionInput.type = 'text';
+                        descriptionInput.className = 'form-control descriptionInput';
+                        descriptionInput.name = `transactions[${newIndex}][description]`;
+                        descriptionInput.value = `HPP ${item}`;
+                        descriptionInput.readOnly = true;
+                        descriptionCell.appendChild(descriptionInput);
+                        hppRow.appendChild(descriptionCell);
+
+                        const sizeCell = document.createElement('td');
+                        const sizeInput = document.createElement('input');
+                        sizeInput.type = 'text';
+                        sizeInput.className = 'form-control sizeInput';
+                        sizeInput.name = `transactions[${newIndex}][size]`;
+                        sizeInput.value = size;
+                        sizeInput.readOnly = true;
+                        sizeCell.appendChild(sizeInput);
+                        hppRow.appendChild(sizeCell);
+
+                        const quantityCell = document.createElement('td');
+                        const quantityInput = document.createElement('input');
+                        quantityInput.type = 'number';
+                        quantityInput.min = '1';
+                        quantityInput.className = 'form-control quantityInput';
+                        quantityInput.name = `transactions[${newIndex}][quantity]`;
+                        quantityInput.value = quantity;
+                        quantityInput.readOnly = true;
+                        quantityCell.appendChild(quantityInput);
+                        hppRow.appendChild(quantityCell);
+
+                        const nominalCell = document.createElement('td');
+                        const nominalInput = document.createElement('input');
+                        nominalInput.type = 'number';
+                        nominalInput.min = '0';
+                        nominalInput.className = 'form-control nominalInput';
+                        nominalInput.name = `transactions[${newIndex}][nominal]`;
+                        nominalInput.value = averageHpp.toFixed(2);
+                        nominalInput.readOnly = true;
+                        nominalCell.appendChild(nominalInput);
+                        hppRow.appendChild(nominalCell);
+
+                        const totalCell = document.createElement('td');
+                        const totalInput = document.createElement('input');
+                        totalInput.type = 'number';
+                        totalInput.className = 'form-control totalInput';
+                        totalInput.name = `transactions[${newIndex}][total]`;
+                        totalInput.value = (quantity * averageHpp).toFixed(2);
+                        totalInput.readOnly = true;
+                        totalCell.appendChild(totalInput);
+                        hppRow.appendChild(totalCell);
+
+                        const actionCell = document.createElement('td');
+                        actionCell.className = 'text-center';
+                        const deleteButton = document.createElement('button');
+                        deleteButton.type = 'button';
+                        deleteButton.className = 'btn btn-danger removeTransactionRowBtn';
+                        deleteButton.textContent = 'Hapus';
+                        deleteButton.disabled = true;
+                        actionCell.appendChild(deleteButton);
+                        hppRow.appendChild(actionCell);
+
+                        parentRow.parentNode.insertBefore(hppRow, parentRow.nextSibling);
+                        updateTransactionRowIndices();
+                    }
+                    updateAllCalculationsAndValidations();
+                } finally {
+                    isUpdatingHpp = false;
+                }
             }
 
             // --- Stock Validation ---
@@ -1067,11 +1311,16 @@
                     descriptionElement.addEventListener('change', (e) => {
                         const row = e.target.closest('tr');
                         const item = e.target.value;
+                        const index = parseInt(row.dataset.rowIndex);
                         updateSizeDropdown(row, item);
                         if (voucherType === 'PJ' && item) {
+                            const sizeSelect = row.querySelector('.sizeInput');
                             const quantity = parseFloat(row.querySelector('.quantityInput')?.value) || 1;
-                            const size = row.querySelector('.sizeInput')?.value || '';
-                            updateHppRow(index, item, size, quantity);
+                            if (sizeSelect.options.length > 1) {
+                                sizeSelect.selectedIndex = 1; // Auto-select first size
+                                const size = sizeSelect.value;
+                                updateHppRow(index, item, size, quantity, voucherCreatedAt);
+                            }
                         }
                         updateAllCalculationsAndValidations();
                     });
@@ -1123,10 +1372,33 @@
                     sizeElement.readOnly = isHppRow;
                 } else {
                     sizeElement = createSizeDropdown(index, transactionData?.description, transactionData?.size);
+                    sizeElement.addEventListener('change', (e) => {
+                        const row = e.target.closest('tr');
+                        const index = parseInt(row.dataset.rowIndex);
+                        const item = row.querySelector('.descriptionInput:not([type="text"])')?.value ||
+                            row.querySelector('.descriptionInput[type="text"]')?.value || '';
+                        const size = e.target.value;
+                        const quantity = parseFloat(row.querySelector('.quantityInput')?.value) || 1;
+                        if (voucherType === 'PJ' && item && size) {
+                            // Remove any existing HPP row for the same item but different size
+                            const allRows = Array.from(transactionTableBody.querySelectorAll('tr'));
+                            const oldHppRow = allRows.find(r =>
+                                r.dataset.isHppRow === 'true' &&
+                                r.querySelector('.descriptionInput')?.value === `HPP ${item}` &&
+                                r.querySelector('.sizeInput')?.value !== size
+                            );
+                            if (oldHppRow) {
+                                oldHppRow.remove();
+                                updateTransactionRowIndices();
+                            }
+                            // Update or create HPP row for the new size
+                            updateHppRow(index, item, size, quantity, voucherCreatedAt);
+                        }
+                        updateAllCalculationsAndValidations();
+                    });
                 }
                 sizeCell.appendChild(sizeElement);
                 row.appendChild(sizeCell);
-
                 // Quantity Cell
                 const quantityCell = document.createElement('td');
                 const quantityInput = document.createElement('input');
@@ -1143,7 +1415,16 @@
                         const item = row.querySelector('.descriptionInput:not([type="text"])')?.value || row
                             .querySelector('.descriptionInput[type="text"]')?.value || '';
                         const size = row.querySelector('.sizeInput')?.value || '';
-                        updateHppRow(index, item, size, parseFloat(quantityInput.value) || 1);
+                        const index = parseInt(row.dataset.rowIndex);
+                        if (item && size) {
+                            console.log('Quantity changed, updating HPP row for:', {
+                                item,
+                                size,
+                                quantity: quantityInput.value
+                            });
+                            updateHppRow(index, item, size, parseFloat(quantityInput.value) || 1,
+                                voucherCreatedAt);
+                        }
                     }
                     updateAllCalculationsAndValidations();
                 });
@@ -1267,19 +1548,22 @@
                 });
             }
 
+            let isUpdatingHpp = false;
+
             function handleTransactionInput(event) {
                 const row = event.target.closest('tr');
-                updateRowTotal(row);
-                const voucherType = voucherTypeSelect.value;
-                if (voucherType === 'PJ' && row.dataset.isHppRow !== 'true') {
-                    const item = row.querySelector('.descriptionInput:not([type="text"])')?.value || row
-                        .querySelector('.descriptionInput[type="text"]')?.value || '';
-                    const size = row.querySelector('.sizeInput')?.value || '';
-                    const quantity = parseFloat(row.querySelector('.quantityInput')?.value) || 1;
-                    if (item && size) {
-                        updateHppRow(row.dataset.rowIndex, item, size, quantity);
-                    }
+                const isHppRow = row.dataset.isHppRow === 'true';
+                if (isHppRow) return;
+
+                const item = row.querySelector('.descriptionInput')?.value.trim() || '';
+                const size = row.querySelector('.sizeInput')?.value.trim() || '';
+                const quantity = parseFloat(row.querySelector('.quantityInput')?.value) || 1;
+
+                if (item && size && voucherTypeSelect.value === 'PJ') {
+                    updateHppRow(row, item, size, quantity, voucherCreatedAt); // Pass row
                 }
+
+                updateRowTotal(row);
                 updateAllCalculationsAndValidations();
             }
 
@@ -1327,23 +1611,11 @@
                             updateSizeDropdown(newRow, '');
                         }
                     }
-                    if (voucherType === 'PJ') {
-                        transactionTableBody.querySelectorAll('tr').forEach((row, index) => {
-                            if (row.dataset.isHppRow !== 'true') {
-                                const item = row.querySelector('.descriptionInput:not([type="text"])')
-                                    ?.value || row.querySelector('.descriptionInput[type="text"]')?.value ||
-                                    '';
-                                const size = row.querySelector('.sizeInput')?.value || '';
-                                const quantity = parseFloat(row.querySelector('.quantityInput')?.value) ||
-                                    1;
-                                if (item && size) {
-                                    updateHppRow(index, item, size, quantity);
-                                }
-                            }
-                        });
-                    }
                 }
                 updateTransactionRowIndices();
+                if (voucherType === 'PJ') {
+                    initializeHppRows(); // Re-init HPP rows setelah refresh
+                }
             }
 
             // --- Voucher Detail Table ---
@@ -1921,21 +2193,22 @@
             function initializeHppRows() {
                 const voucherType = voucherTypeSelect.value;
                 if (voucherType !== 'PJ') return;
-                const existingTransactions = @json($voucher->transactions);
-                transactionTableBody.querySelectorAll('tr').forEach(row => {
-                    if (row.dataset.isHppRow !== 'true') {
-                        const index = parseInt(row.dataset.rowIndex);
-                        const description = row.querySelector('.descriptionInput')?.value || '';
-                        const size = row.querySelector('.sizeInput')?.value || '';
-                        const quantity = parseFloat(row.querySelector('.quantityInput')?.value) || 1;
-                        const transaction = existingTransactions.find(t => t.description ===
-                            `HPP ${description}` && t.size === size);
-                        if (transaction) {
-                            addHppRowDirectly(index, description, size, transaction.quantity, transaction
-                                .nominal);
-                        }
+
+                const existingTransactions = @json($voucher->transactions) || [];
+                const currentCreatedAt = @json($voucherCreatedAt) || new Date().toISOString();
+
+                transactionTableBody.querySelectorAll('tr[data-is-hpp-row="true"]').forEach(row => row.remove());
+
+                transactionTableBody.querySelectorAll('tr[data-is-hpp-row="false"]').forEach((parentRow) => {
+                    const item = parentRow.querySelector('.descriptionInput')?.value.trim();
+                    const size = parentRow.querySelector('.sizeInput')?.value.trim();
+                    const quantity = parseFloat(parentRow.querySelector('.quantityInput')?.value) || 1;
+                    if (item && size) {
+                        updateHppRow(parentRow, item, size, quantity, currentCreatedAt);
                     }
                 });
+
+                updateAllCalculationsAndValidations();
             }
 
             function initializePage() {

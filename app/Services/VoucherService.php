@@ -109,20 +109,17 @@ class VoucherService
             return $voucher;
         });
 
-        $transactionsData = Transactions::join('vouchers', 'transactions.voucher_id', '=', 'vouchers.id')
-            ->select([
-                'transactions.description',
-                'transactions.size',
-                'transactions.nominal',
-                'vouchers.voucher_type'
-            ])
+        $transactionsData = DB::table('transactions')
+            ->select('transactions.description', 'transactions.size', 'transactions.quantity', 'transactions.nominal')
+            ->join('vouchers', 'transactions.voucher_id', '=', 'vouchers.id')
+            ->where('vouchers.voucher_type', 'PB')
             ->get()
             ->map(function ($transaction) {
                 return [
                     'description' => $transaction->description,
                     'size' => $transaction->size,
-                    'nominal' => floatval($transaction->nominal),
-                    'voucher_type' => $transaction->voucher_type,
+                    'quantity' => $transaction->quantity,
+                    'nominal' => $transaction->nominal,
                 ];
             })->values()->toArray();
 
@@ -920,6 +917,14 @@ class VoucherService
         $company = Company::select('company_name', 'director')->firstOrFail();
         $voucher = Voucher::with(['voucherDetails', 'transactions'])->findOrFail($id);
 
+        // Validasi voucher->created_at
+        if (!$voucher->created_at) {
+            Log::warning('Voucher created_at is null for voucher ID: ' . $id);
+            $voucherCreatedAt = now()->toIso8601String();
+        } else {
+            $voucherCreatedAt = $voucher->created_at->toIso8601String();
+        }
+
         $accounts = ChartOfAccount::orderBy('account_code')->get();
         if ($accounts->isEmpty()) {
             throw new \Exception('Tidak ada chart of accounts yang ditemukan.');
@@ -977,13 +982,13 @@ class VoucherService
                     'id' => $recipe->id,
                     'product_name' => $recipe->product_name,
                     'size' => $recipe->size,
-                    'nominal' => $recipe->nominal,
+                    'nominal' => $recipe->nominal ?? 0,
                     'transfer_stocks' => $recipe->transferStocks->map(function ($stock) use ($recipe) {
                         return [
                             'item' => $stock->pivot->item,
                             'size' => $stock->pivot->size,
                             'quantity' => $stock->pivot->quantity,
-                            'nominal' => $recipe->nominal ?? 0, // Use recipe nominal or derive from elsewhere
+                            'nominal' => $recipe->nominal ?? 0,
                         ];
                     })->toArray(),
                 ];
@@ -991,7 +996,48 @@ class VoucherService
 
         // Prepare transactionsData based on voucher type
         $transactionsData = [];
-        if ($voucher->voucher_type === 'PK' && $voucher->recipe_id) {
+        if ($voucher->voucher_type === 'PJ') {
+            // Fetch historical purchase transactions for PJ vouchers
+            $historicalTransactions = Transactions::whereHas('voucher', function ($query) use ($voucher) {
+                $query->where('voucher_type', 'PB')
+                    ->where('created_at', '<', $voucher->created_at);
+            })
+                ->whereNotNull('description')
+                ->whereNotNull('size')
+                ->whereNotNull('nominal')
+                ->whereNotNull('created_at')
+                ->select('description', 'size', 'quantity', 'nominal', 'created_at')
+                ->get()
+                ->map(function ($transaction) {
+                    return [
+                        'description' => $transaction->description,
+                        'size' => $transaction->size,
+                        'quantity' => $transaction->quantity,
+                        'nominal' => number_format($transaction->nominal, 2, '.', ''),
+                        'total' => number_format($transaction->quantity * ($transaction->nominal ?? 0), 2, '.', ''),
+                        'created_at' => $transaction->created_at ? $transaction->created_at->toIso8601String() : now()->toIso8601String(),
+                    ];
+                })->toArray();
+
+            // Current transactions (exclude those with same created_at as voucher)
+            $currentTransactions = $voucher->transactions
+                ->filter(function ($transaction) use ($voucher) {
+                    return $transaction->created_at->toIso8601String() !== $voucher->created_at->toIso8601String();
+                })
+                ->map(function ($transaction) {
+                    return [
+                        'description' => $transaction->description,
+                        'size' => $transaction->size,
+                        'quantity' => $transaction->quantity,
+                        'nominal' => number_format($transaction->nominal, 2, '.', ''),
+                        'total' => number_format($transaction->quantity * ($transaction->nominal ?? 0), 2, '.', ''),
+                        'created_at' => $transaction->created_at ? $transaction->created_at->toIso8601String() : now()->toIso8601String(),
+                    ];
+                })->values()->toArray();
+
+            $transactionsData = array_merge($historicalTransactions, $currentTransactions);
+        } elseif ($voucher->voucher_type === 'PK' && $voucher->recipe_id) {
+            // For PK vouchers, use recipe data
             $selectedRecipe = Recipes::find($voucher->recipe_id);
             if ($selectedRecipe) {
                 $transactionsData = [
@@ -999,21 +1045,24 @@ class VoucherService
                         'description' => $selectedRecipe->product_name,
                         'size' => $selectedRecipe->size,
                         'quantity' => 1,
-                        'nominal' => $selectedRecipe->nominal ?? 0,
-                        'total' => ($selectedRecipe->nominal ?? 0),
+                        'nominal' => number_format($selectedRecipe->nominal ?? 0, 2, '.', ''),
+                        'total' => number_format($selectedRecipe->nominal ?? 0, 2, '.', ''),
+                        'created_at' => $voucher->created_at ? $voucher->created_at->toIso8601String() : now()->toIso8601String(),
                     ]
                 ];
             }
         } else {
+            // For other voucher types, use current voucher's transactions
             $transactionsData = $voucher->transactions->map(function ($transaction) {
                 return [
                     'description' => $transaction->description,
                     'size' => $transaction->size,
                     'quantity' => $transaction->quantity,
-                    'nominal' => $transaction->nominal ?? 0,
-                    'total' => ($transaction->quantity * ($transaction->nominal ?? 0)),
+                    'nominal' => number_format($transaction->nominal ?? 0, 2, '.', ''),
+                    'total' => number_format($transaction->quantity * ($transaction->nominal ?? 0), 2, '.', ''),
+                    'created_at' => $transaction->created_at ? $transaction->created_at->toIso8601String() : now()->toIso8601String(),
                 ];
-            })->toArray();
+            })->values()->toArray();
         }
 
         $headingText = $this->getVoucherHeading($voucher->voucher_type);
@@ -1021,14 +1070,19 @@ class VoucherService
         $dueDate = '';
         if ($voucher->invoice) {
             $invoice = Invoice::where('invoice', $voucher->invoice)->first();
-            if ($invoice) {
-                if ($invoice->due_date instanceof \Carbon\Carbon) {
-                    $dueDate = $invoice->due_date->format('Y-m-d');
-                } elseif (is_string($invoice->due_date) && !empty($invoice->due_date)) {
-                    $dueDate = \Carbon\Carbon::parse($invoice->due_date)->format('Y-m-d');
-                }
+            if ($invoice && $invoice->due_date) {
+                $dueDate = \Carbon\Carbon::parse($invoice->due_date)->format('Y-m-d');
             }
         }
+
+        // Logging untuk debugging
+        // Log::info('Preparing voucher edit data for voucher ID: ' . $id, [
+        //     'voucher_type' => $voucher->voucher_type,
+        //     'voucher_created_at' => $voucherCreatedAt,
+        //     'historical_transactions_count' => isset($historicalTransactions) ? count($historicalTransactions) : 0,
+        //     'current_transactions_count' => isset($currentTransactions) ? count($currentTransactions) : 0,
+        //     'transactions_data_count' => count($transactionsData),
+        // ]);
 
         return compact(
             'voucher',
@@ -1042,7 +1096,8 @@ class VoucherService
             'stocks',
             'transactionsData',
             'dueDate',
-            'recipes'
+            'recipes',
+            'voucherCreatedAt' // Tambahkan ini
         );
     }
 

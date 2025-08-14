@@ -39,7 +39,7 @@
                             @endif
                         </div>
                         <div class="row mb-3">
-                            <label for="useStock" class="col-sm-3 col-form-label">Kategori Stok?</label>
+                            <label for="useStock" class="col-sm-3 col-form-label">Kategori Voucher?</label>
                             <div class="col-sm-9">
                                 <div class="form-check form-check-inline">
                                     <input class="form-check-input" type="radio" id="useStockYes" name="use_stock"
@@ -49,7 +49,7 @@
                                 <div class="form-check form-check-inline">
                                     <input class="form-check-input" type="radio" id="useStockNo" name="use_stock"
                                         value="no">
-                                    <label class="form-check-label" for="useStockNo">Non-Stok</label>
+                                    <label class="form-check-label" for="useStockNo">Keuangan</label>
                                 </div>
                                 <div class="form-check form-check-inline">
                                     <input class="form-check-input" type="radio" id="adjustment" name="use_stock"
@@ -102,7 +102,7 @@
                         <div class="row mb-3">
                             <label for="deskripsi_voucher" class="col-sm-3 col-form-label">Deskripsi Voucher</label>
                             <div class="col-sm-9">
-                                <textarea class="form-control" id="deskripsi_voucher" name="deskripsi_voucher" rows="3" readonly></textarea>
+                                <textarea class="form-control" id="deskripsi_voucher" name="deskripsi_voucher" rows="5" readonly></textarea>
                             </div>
                         </div>
                         <div class="row mb-3">
@@ -370,52 +370,52 @@
             PJ: {
                 value: 'PJ',
                 text: 'Penjualan',
-                description: 'Voucher Penjualan - Dokumen internal perusahaan untuk mencatat transaksi penjualan barang atau jasa yang tidak dapat dicatat pada voucher lain.'
+                description: 'Voucher Penjualan digunakan untuk mencatat transaksi penjualan barang atau jasa yang dilakukan oleh perusahaan kepada pelanggan, yang tidak dapat dicatat pada jenis voucher lain. Voucher ini mencakup detail seperti nama barang, jumlah, harga jual, dan informasi pelanggan. Contoh penggunaan termasuk penjualan produk jadi, jasa layanan, atau barang dagang. Voucher ini juga dapat digunakan untuk menghitung Harga Pokok Penjualan (HPP) untuk mencatat biaya barang yang dijual, memastikan akurasi laporan keuangan.'
             },
             PB: {
                 value: 'PB',
                 text: 'Pembelian',
-                description: 'Voucher Pembelian - Dokumen untuk mencatat transaksi pembelian barang atau jasa, seperti pembelian material, peralatan, atau layanan dari pemasok.'
+                description: 'Voucher Pembelian digunakan untuk mendokumentasikan transaksi pembelian barang atau jasa dari pemasok atau vendor. Voucher ini mencatat detail seperti nama barang, ukuran, jumlah, harga satuan, dan total biaya pembelian. Contoh penggunaan meliputi pembelian bahan baku, peralatan kantor, atau layanan seperti perawatan mesin. Voucher ini penting untuk memperbarui stok barang di sistem inventaris dan mencatat kewajiban pembayaran kepada pemasok dalam laporan keuangan.'
             },
             PG: {
                 value: 'PG',
                 text: 'Pengeluaran',
-                description: 'Voucher Pengeluaran - Dokumen untuk mencatat pengeluaran dana perusahaan, seperti pembayaran tagihan, pembelian material, atau biaya operasional, sebagai bukti otorisasi transaksi.'
+                description: 'Voucher Pengeluaran digunakan untuk mencatat semua pengeluaran dana perusahaan, baik dalam bentuk tunai, transfer bank, maupun metode pembayaran lainnya. Voucher ini berfungsi sebagai bukti otorisasi transaksi pengeluaran, seperti pembayaran tagihan listrik, sewa kantor, gaji karyawan, atau pembelian material kecil. Voucher ini mencakup informasi seperti penerima dana, jumlah, dan tujuan pengeluaran, memastikan bahwa semua pengeluaran terdokumentasi dengan baik untuk audit dan pelaporan keuangan.'
             },
             PM: {
                 value: 'PM',
                 text: 'Pemasukan',
-                description: 'Voucher Pemasukan - Dokumen internal perusahaan untuk mencatat penerimaan dana, seperti pembayaran dari pelanggan, setoran tunai, atau penerimaan lain yang masuk ke kas atau bank perusahaan.'
+                description: 'Voucher Pemasukan digunakan untuk mencatat semua penerimaan dana yang masuk ke kas atau rekening bank perusahaan. Ini mencakup pembayaran dari pelanggan atas penjualan barang atau jasa, setoran tunai, bunga bank, atau penerimaan dana lain seperti pengembalian pinjaman. Voucher ini mencatat detail seperti sumber dana, jumlah, dan tanggal penerimaan, memastikan bahwa semua pemasukan didokumentasikan dengan akurat untuk pelaporan keuangan dan rekonsiliasi kas.'
             },
             LN: {
                 value: 'LN',
                 text: 'Lainnya',
-                description: 'Voucher Lainnya - Dokumen untuk mencatat transaksi yang tidak termasuk dalam kategori voucher lain, seperti koreksi jurnal atau transaksi khusus lainnya.'
+                description: 'Voucher Lainnya digunakan untuk mencatat transaksi khusus atau non-standar yang tidak termasuk dalam kategori voucher lain seperti Penjualan, Pembelian, Pengeluaran, atau Pemasukan. Voucher ini mencakup transaksi seperti donasi, hadiah, penyelesaian sengketa keuangan, atau transaksi internal khusus seperti pemindahan dana antar akun perusahaan tanpa kaitan dengan operasional rutin. Contoh penggunaan termasuk pencatatan penerimaan hibah dari pihak eksternal, pembayaran denda atau penalti, atau transaksi barter barang yang tidak memengaruhi stok. Voucher ini mencatat detail seperti deskripsi transaksi, jumlah, pihak terkait, dan akun yang terpengaruh, memastikan dokumentasi yang jelas untuk pelaporan keuangan dan kepatuhan audit.'
             },
             PH: {
                 value: 'PH',
                 text: 'Pemindahan',
-                description: 'Voucher Pemindahan - Dokumen untuk mencatat pemindahan stok barang dari satu lokasi ke lokasi lain dalam perusahaan.'
+                description: 'Voucher Pemindahan digunakan untuk mencatat perpindahan stok barang dari satu lokasi penyimpanan ke lokasi lain dalam perusahaan, seperti dari gudang pusat ke cabang atau antar departemen. Voucher ini mencatat detail seperti nama barang, ukuran, jumlah, dan lokasi asal serta tujuan. Contoh penggunaan termasuk pemindahan bahan baku ke unit produksi atau pengiriman stok ke toko cabang. Voucher ini membantu melacak pergerakan inventaris tanpa memengaruhi nilai keuangan stok.'
             },
             PK: {
                 value: 'PK',
                 text: 'Pemakaian',
-                description: 'Voucher Pemakaian - Dokumen untuk mencatat pemakaian barang dalam operasional perusahaan.'
+                description: 'Voucher Pemakaian digunakan untuk mencatat penggunaan barang atau bahan dalam operasional perusahaan, seperti bahan baku yang digunakan dalam proses produksi atau barang yang dikonsumsi untuk keperluan operasional. Voucher ini mencatat detail seperti nama barang, ukuran, jumlah, dan tujuan pemakaian. Contoh penggunaan termasuk pemakaian kayu untuk produksi furnitur atau penggunaan bahan kimia dalam proses manufaktur. Voucher ini penting untuk memperbarui stok dan menghitung biaya produksi.'
             },
             PYB: {
                 value: 'PYB',
                 text: 'Penyesuaian Bertambah',
-                description: 'Voucher Penyesuaian Bertambah - Dokumen untuk mencatat penambahan stok akibat penyesuaian.'
+                description: 'Voucher Penyesuaian Bertambah digunakan untuk mencatat penambahan stok barang akibat penyesuaian, seperti penerimaan barang tambahan dari pemasok, temuan stok yang tidak tercatat, atau koreksi kesalahan inventaris. Voucher ini mencatat detail seperti nama barang, ukuran, jumlah tambahan, dan alasan penyesuaian. Contoh penggunaan termasuk menambahkan stok setelah audit fisik menemukan kelebihan barang. Voucher ini memastikan akurasi data inventaris dalam sistem.'
             },
             PYK: {
                 value: 'PYK',
                 text: 'Penyesuaian Berkurang',
-                description: 'Voucher Penyesuaian Berkurang - Dokumen untuk mencatat pengurangan stok akibat penyesuaian.'
+                description: 'Voucher Penyesuaian Berkurang digunakan untuk mencatat pengurangan stok barang akibat penyesuaian, seperti kerusakan barang, kehilangan stok, atau koreksi kesalahan inventaris. Voucher ini mencatat detail seperti nama barang, ukuran, jumlah yang dikurangi, dan alasan penyesuaian. Contoh penggunaan termasuk pengurangan stok karena barang rusak selama penyimpanan atau pencurian. Voucher ini membantu menjaga integritas data inventaris dan laporan keuangan.'
             },
             PYL: {
-                value: 'PK',
+                value: 'PYL',
                 text: 'Penyesuaian Lainnya',
-                description: 'Voucher Penyesuaian Lainnya - Dokumen untuk mencatat penyesuaian yang tidak memengaruhi stok.'
+                description: 'Voucher Penyesuaian Lainnya digunakan untuk mencatat penyesuaian yang tidak memengaruhi jumlah stok fisik, tetapi memengaruhi catatan akuntansi atau data lainnya, seperti penyesuaian nilai aset, penyusutan, atau koreksi harga barang. Voucher ini mencatat detail seperti deskripsi penyesuaian, akun yang terpengaruh, dan jumlah. Contoh penggunaan termasuk penyesuaian nilai buku barang karena perubahan harga pasar. Voucher ini memastikan akurasi laporan keuangan tanpa mengubah stok fisik.'
             },
         };
 
@@ -1666,55 +1666,29 @@
             });
         }
 
-        function calculateAverageHpp(item, size, voucherType) {
-            // Validate input parameters
-            if (!item || typeof item !== 'string') {
-                console.error(`Invalid item parameter: ${item}`);
-                return null;
+        function calculateAverageHpp(description, size) {
+            if (!transactions || !Array.isArray(transactions) || transactions.length === 0) {
+                console.log('No transactions data available, returning 0');
+                return 0;
             }
 
-            const trimmedItem = item.trim().toLowerCase();
-            const trimmedSize = size ? size.trim().replace(/\s*\(.*?\)/g, '') : '';
-            const effectiveVoucherType = voucherType || 'unknown'; // Handle undefined voucherType
-
-            // Determine stock data source based on voucherType
-            let stockData = [];
-            if (effectiveVoucherType === 'PJ') {
-                stockData = [...(usedStocks || []), ...(stocks || [])];
-            } else {
-                stockData = stocks || [];
+            const fullDescription = `${description} ${size}`.trim();
+            const matchingTransactions = transactions.filter(t =>
+                `${t.description} ${t.size}`.trim() === fullDescription
+            );
+            if (matchingTransactions.length === 0) {
+                console.log(`No matching transactions for ${fullDescription}, returning 0`);
+                return 0;
             }
 
-            // Normalize base item by removing "HPP" prefix
-            const baseItem = trimmedItem.replace(/^hpp\s+/i, '');
+            const totalNominal = matchingTransactions.reduce((sum, t) => sum + (parseFloat(t.nominal) || 0), 0);
+            const transactionCount = matchingTransactions.length;
+            const averageHpp = transactionCount > 0 ? totalNominal / transactionCount : 0;
 
-            // Filter transactions for matching item, size, and voucher_type='PB' or 'PK'
-            const matchingTransactions = transactions.filter(t => {
-                const transactionDescription = t.description ? t.description.trim().toLowerCase() : '';
-                const transactionSize = t.size ? t.size.trim().replace(/\s*\(.*?\)/g, '') : '';
-                const transactionVoucherType = t.voucher_type || '';
-                return (
-                    transactionDescription === baseItem &&
-                    (!trimmedSize || transactionSize === trimmedSize) &&
-                    (transactionVoucherType === 'PB' || transactionVoucherType === 'PK')
-                );
-            });
-
-            // Calculate HPP: total cost (nominal) / total quantity
-            const totalCost = matchingTransactions.reduce((sum, t) => {
-                const nominal = parseFloat(t.nominal) || 0;
-                return sum + nominal;
-            }, 0);
-
-            const totalQuantity = matchingTransactions.reduce((sum, t) => {
-                const quantity = parseFloat(t.quantity) || 1; // Fallback to 1 if quantity is missing
-                return sum + quantity;
-            }, 0);
-
-            const averageHpp = totalCost / totalQuantity;
-
-            // Return rounded integer or null if invalid
-            return isNaN(averageHpp) ? null : Math.round(averageHpp);
+            console.log(`Matching transactions for ${fullDescription}:`, matchingTransactions);
+            console.log(`Total Nominal: ${totalNominal}, Transaction Count: ${transactionCount}`);
+            console.log(`Calculated average HPP for ${fullDescription}: ${averageHpp}`);
+            return averageHpp;
         }
 
         function removeHppRowForItem(rowIndex) {
@@ -2378,7 +2352,7 @@
                 row.remove();
                 updateTransactionRowIndices();
                 updateAllCalculationsAndValidations();
-                updateAddItemButtonState();
+                // updateAddItemButtonState();
             } else {
                 alert("Tidak dapat menghapus baris transaksi terakhir.");
             }
