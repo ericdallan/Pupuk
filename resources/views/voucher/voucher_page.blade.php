@@ -113,6 +113,12 @@
                         <option value="PYL" {{ request('voucher_type') == 'PYL' ? 'selected' : '' }}>Penyesuaian
                             Lainnya</option>
                     </optgroup>
+                    <optgroup label="Retur Barang">
+                        <option value="RPB" {{ request('voucher_type') == 'RPB' ? 'selected' : '' }}>Retur Pembelian
+                        </option>
+                        <option value="RPJ" {{ request('voucher_type') == 'RPJ' ? 'selected' : '' }}>Retur Penjualan
+                        </option>
+                    </optgroup>
                 </select>
             </div>
             <div class="col-md-3">

@@ -128,7 +128,9 @@ class StockService
                 'transactions.description',
                 'transactions.quantity as transaction_quantity',
                 'transactions.nominal',
-                'vouchers.voucher_type'
+                'vouchers.voucher_type',
+                'vouchers.voucher_number',
+                'vouchers.id as voucher_id'
             )
             ->leftJoin('transactions', function ($join) use ($tableName) {
                 $join->on("$tableName.item", '=', 'transactions.description')
@@ -154,6 +156,8 @@ class StockService
                     'size' => $record->size,
                     'description' => $record->description ?? 'No Description',
                     'voucher_type' => $record->voucher_type ?? 'Unknown',
+                    'voucher_number' => $record->voucher_number ?? 'N/A',
+                    'voucher_id' => $record->voucher_id ?? null,
                     'transaction_quantity' => $record->transaction_quantity ?? 0,
                     'nominal' => $record->nominal ?? 0,
                     'created_at' => $record->created_at ? Carbon::parse($record->created_at)->toDateTimeString() : null,
@@ -224,14 +228,14 @@ class StockService
 
             // Define incoming and outgoing voucher types based on table
             $incomingVoucherTypes = match ($tableName) {
-                'stocks' => ['PB', 'PYB'],
+                'stocks' => ['PB', 'PYB', 'RPJ'],
                 'transfer_stocks' => ['PH', 'PYB'],
-                'used_stocks' => ['PK', 'PB', 'PYB'],
+                'used_stocks' => ['PK', 'PB', 'PYB', 'RPJ'],
                 default => [],
             };
 
             $outgoingVoucherTypes = match ($tableName) {
-                'stocks' => ['PH', 'PJ', 'PYK'],
+                'stocks' => ['PH', 'PJ', 'PYK', 'RPB'],
                 'transfer_stocks' => ['PK', 'PYK'],
                 'used_stocks' => ['PJ', 'PYK'],
                 default => [],
@@ -270,7 +274,7 @@ class StockService
                     ->join('vouchers as v', 't.voucher_id', '=', 'v.id')
                     ->where('v.voucher_type', 'PK')
                     ->whereBetween('t.created_at', [$startDate, $endDate])
-                    ->select('t.id', 't.description', 't.quantity as transaction_quantity', 't.size as transaction_size', 't.nominal')
+                    ->select('t.id', 't.description', 't.quantity as transaction_quantity', 't.size as transaction_size', 't.nominal', 'v.voucher_number', 'v.id as voucher_id')
                     ->get();
 
                 // Get all recipes that use this transfer_stocks item with standard cost
@@ -379,6 +383,8 @@ class StockService
                     return (object) [
                         'description' => $record->description ?? 'No Description',
                         'voucher_type' => $record->voucher_type ?? 'Unknown',
+                        'voucher_number' => $record->voucher_number ?? 'N/A',
+                        'voucher_id' => $record->voucher_id ?? null,
                         'quantity' => $record->transaction_quantity ?? 0,
                         'nominal' => $record->nominal ?? 0,
                         'created_at' => $record->created_at,

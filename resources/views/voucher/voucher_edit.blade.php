@@ -124,7 +124,7 @@
             <div class="row mb-3">
                 <label for="description" class="col-sm-3 col-form-label">Deskripsi:</label>
                 <div class="col-sm-9">
-                    <textarea class="form-control" id="description" name="description" readonly>{{ $voucher->description }}</textarea>
+                    <textarea class="form-control" id="description" name="description" rows="5" readonly>{{ $voucher->description }}</textarea>
                 </div>
             </div>
             <!-- Prepared By -->
@@ -576,44 +576,62 @@
                 PJ: {
                     value: 'PJ',
                     text: 'Penjualan',
-                    description: 'Voucher Penjualan - Dokumen internal perusahaan untuk mencatat transaksi penjualan barang atau jasa yang tidak dapat dicatat pada voucher lain.',
-                    stock: true
+                    description: 'Voucher Penjualan digunakan untuk mencatat transaksi penjualan barang atau jasa yang dilakukan oleh perusahaan kepada pelanggan, yang tidak dapat dicatat pada jenis voucher lain. Voucher ini mencakup detail seperti nama barang, jumlah, harga jual, dan informasi pelanggan. Contoh penggunaan termasuk penjualan produk jadi, jasa layanan, atau barang dagang. Voucher ini juga dapat digunakan untuk menghitung Harga Pokok Penjualan (HPP) untuk mencatat biaya barang yang dijual, memastikan akurasi laporan keuangan.'
                 },
                 PB: {
                     value: 'PB',
                     text: 'Pembelian',
-                    description: 'Voucher Pembelian - Dokumen untuk mencatat transaksi pembelian barang atau jasa, seperti pembelian material, peralatan, atau layanan dari pemasok.',
-                    stock: true
+                    description: 'Voucher Pembelian digunakan untuk mendokumentasikan transaksi pembelian barang atau jasa dari pemasok atau vendor. Voucher ini mencatat detail seperti nama barang, ukuran, jumlah, harga satuan, dan total biaya pembelian. Contoh penggunaan meliputi pembelian bahan baku, peralatan kantor, atau layanan seperti perawatan mesin. Voucher ini penting untuk memperbarui stok barang di sistem inventaris dan mencatat kewajiban pembayaran kepada pemasok dalam laporan keuangan.'
                 },
                 PG: {
                     value: 'PG',
                     text: 'Pengeluaran',
-                    description: 'Voucher Pengeluaran - Dokumen untuk mencatat pengeluaran dana perusahaan, seperti pembayaran tagihan, pembelian material, atau biaya operasional, sebagai bukti otorisasi transaksi.',
-                    stock: false
+                    description: 'Voucher Pengeluaran digunakan untuk mencatat semua pengeluaran dana perusahaan, baik dalam bentuk tunai, transfer bank, maupun metode pembayaran lainnya. Voucher ini berfungsi sebagai bukti otorisasi transaksi pengeluaran, seperti pembayaran tagihan listrik, sewa kantor, gaji karyawan, atau pembelian material kecil. Voucher ini mencakup informasi seperti penerima dana, jumlah, dan tujuan pengeluaran, memastikan bahwa semua pengeluaran terdokumentasi dengan baik untuk audit dan pelaporan keuangan.'
                 },
                 PM: {
                     value: 'PM',
                     text: 'Pemasukan',
-                    description: 'Voucher Pemasukan - Dokumen internal perusahaan untuk mencatat penerimaan dana, seperti pembayaran dari pelanggan, setoran tunai, atau penerimaan lain yang masuk ke kas atau bank perusahaan.',
-                    stock: false
+                    description: 'Voucher Pemasukan digunakan untuk mencatat semua penerimaan dana yang masuk ke kas atau rekening bank perusahaan. Ini mencakup pembayaran dari pelanggan atas penjualan barang atau jasa, setoran tunai, bunga bank, atau penerimaan dana lain seperti pengembalian pinjaman. Voucher ini mencatat detail seperti sumber dana, jumlah, dan tanggal penerimaan, memastikan bahwa semua pemasukan didokumentasikan dengan akurat untuk pelaporan keuangan dan rekonsiliasi kas.'
                 },
                 LN: {
                     value: 'LN',
                     text: 'Lainnya',
-                    description: 'Voucher Lainnya - Dokumen untuk mencatat transaksi yang tidak termasuk dalam kategori voucher lain, seperti koreksi jurnal atau transaksi khusus lainnya.',
-                    stock: false
+                    description: 'Voucher Lainnya digunakan untuk mencatat transaksi khusus atau non-standar yang tidak termasuk dalam kategori voucher lain seperti Penjualan, Pembelian, Pengeluaran, atau Pemasukan. Voucher ini mencakup transaksi seperti donasi, hadiah, penyelesaian sengketa keuangan, atau transaksi internal khusus seperti pemindahan dana antar akun perusahaan tanpa kaitan dengan operasional rutin. Contoh penggunaan termasuk pencatatan penerimaan hibah dari pihak eksternal, pembayaran denda atau penalti, atau transaksi barter barang yang tidak memengaruhi stok. Voucher ini mencatat detail seperti deskripsi transaksi, jumlah, pihak terkait, dan akun yang terpengaruh, memastikan dokumentasi yang jelas untuk pelaporan keuangan dan kepatuhan audit.'
                 },
                 PH: {
                     value: 'PH',
                     text: 'Pemindahan',
-                    description: 'Voucher Pemindahan - Dokumen untuk mencatat pemindahan stok barang dari satu lokasi ke lokasi lain dalam perusahaan.',
-                    stock: true
+                    description: 'Voucher Pemindahan digunakan untuk mencatat perpindahan stok barang dari satu lokasi penyimpanan ke lokasi lain dalam perusahaan, seperti dari gudang pusat ke cabang atau antar departemen. Voucher ini mencatat detail seperti nama barang, ukuran, jumlah, dan lokasi asal serta tujuan. Contoh penggunaan termasuk pemindahan bahan baku ke unit produksi atau pengiriman stok ke toko cabang. Voucher ini membantu melacak pergerakan inventaris tanpa memengaruhi nilai keuangan stok.'
                 },
                 PK: {
                     value: 'PK',
                     text: 'Pemakaian',
-                    description: 'Voucher Pemakaian - Dokumen untuk mencatat pemakaian barang dalam operasional perusahaan.',
-                    stock: true
+                    description: 'Voucher Pemakaian digunakan untuk mencatat penggunaan barang atau bahan dalam operasional perusahaan, seperti bahan baku yang digunakan dalam proses produksi atau barang yang dikonsumsi untuk keperluan operasional. Voucher ini mencatat detail seperti nama barang, ukuran, jumlah, dan tujuan pemakaian. Contoh penggunaan termasuk pemakaian kayu untuk produksi furnitur atau penggunaan bahan kimia dalam proses manufaktur. Voucher ini penting untuk memperbarui stok dan menghitung biaya produksi.'
+                },
+                PYB: {
+                    value: 'PYB',
+                    text: 'Penyesuaian Bertambah',
+                    description: 'Voucher Penyesuaian Bertambah digunakan untuk mencatat penambahan stok barang akibat penyesuaian, seperti penerimaan barang tambahan dari pemasok, temuan stok yang tidak tercatat, atau koreksi kesalahan inventaris. Voucher ini mencatat detail seperti nama barang, ukuran, jumlah tambahan, dan alasan penyesuaian. Contoh penggunaan termasuk menambahkan stok setelah audit fisik menemukan kelebihan barang. Voucher ini memastikan akurasi data inventaris dalam sistem.'
+                },
+                PYK: {
+                    value: 'PYK',
+                    text: 'Penyesuaian Berkurang',
+                    description: 'Voucher Penyesuaian Berkurang digunakan untuk mencatat pengurangan stok barang akibat penyesuaian, seperti kerusakan barang, kehilangan stok, atau koreksi kesalahan inventaris. Voucher ini mencatat detail seperti nama barang, ukuran, jumlah yang dikurangi, dan alasan penyesuaian. Contoh penggunaan termasuk pengurangan stok karena barang rusak selama penyimpanan atau pencurian. Voucher ini membantu menjaga integritas data inventaris dan laporan keuangan.'
+                },
+                PYL: {
+                    value: 'PYL',
+                    text: 'Penyesuaian Lainnya',
+                    description: 'Voucher Penyesuaian Lainnya digunakan untuk mencatat penyesuaian yang tidak memengaruhi jumlah stok fisik, tetapi memengaruhi catatan akuntansi atau data lainnya, seperti penyesuaian nilai aset, penyusutan, atau koreksi harga barang. Voucher ini mencatat detail seperti deskripsi penyesuaian, akun yang terpengaruh, dan jumlah. Contoh penggunaan termasuk penyesuaian nilai buku barang karena perubahan harga pasar. Voucher ini memastikan akurasi laporan keuangan tanpa mengubah stok fisik.'
+                },
+                RPB: {
+                    value: 'RPB',
+                    text: 'Retur Pembelian',
+                    description: 'Voucher Retur Pembelian digunakan untuk mencatat pengembalian barang yang telah dibeli dari pemasok karena alasan seperti barang cacat, tidak sesuai pesanan, atau kerusakan. Voucher ini mencatat detail seperti nama barang, ukuran, jumlah yang dikembalikan, dan alasan retur. Contoh penggunaan termasuk pengembalian bahan baku yang tidak memenuhi standar kualitas. Voucher ini penting untuk memperbarui stok barang di sistem inventaris dan mencatat pengembalian dana atau kredit kepada pemasok dalam laporan keuangan.'
+                },
+                RPJ: {
+                    value: 'RPJ',
+                    text: 'Retur Penjualan',
+                    description: 'Voucher Retur Penjualan digunakan untuk mencatat pengembalian barang dari pelanggan ke perusahaan karena alasan seperti barang cacat, salah kirim, atau ketidaksesuaian dengan pesanan. Voucher ini mencatat detail seperti nama barang, ukuran, jumlah yang dikembalikan, dan alasan retur. Contoh penggunaan termasuk pengembalian produk jadi oleh pelanggan karena kerusakan. Voucher ini penting untuk memperbarui stok barang di sistem inventaris dan mencatat pengembalian dana atau kredit kepada pelanggan dalam laporan keuangan.'
                 }
             };
             const voucherTypeOptions = Object.values(voucherTypes);

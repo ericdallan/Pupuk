@@ -31,14 +31,6 @@ class StockController extends Controller
     {
         try {
             $data = $this->stockService->prepareStockData($request->all());
-            // Log::debug('Stock Page Data:', [
-            //     'stockData' => $data['stockData'],
-            //     'transferStockData' => $data['transferStockData'],
-            //     'usedStockData' => $data['usedStockData'],
-            //     'startDate' => $data['startDate']->toDateString(),
-            //     'endDate' => $data['endDate']->toDateString(),
-            //     'table_filter' => $request->input('table_filter', 'all')
-            // ]);
             return view('stock.stock_page', $data);
         } catch (\Exception $e) {
             Log::error('Stock Page Error: ' . $e->getMessage(), ['exception' => $e]);

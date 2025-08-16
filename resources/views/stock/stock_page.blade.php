@@ -467,7 +467,8 @@
                                                     <thead class="table-dark">
                                                         <tr>
                                                             <th>No</th>
-                                                            <th>Deskripsi</th>
+                                                            <th>Nama Item</th>
+                                                            <th>No Voucher</th>
                                                             <th>Tipe Transaksi</th>
                                                             <th>Kuantitas</th>
                                                             <th>Nominal</th>
@@ -481,6 +482,16 @@
                                                                     data-transaction-date="{{ $transaction->created_at }}">
                                                                     <td>{{ $loop->iteration }}</td>
                                                                     <td>{{ htmlspecialchars($transaction->description ?? 'No Description') }}
+                                                                    <td>
+                                                                        @if ($transaction->voucher_id && $transaction->voucher_number !== 'N/A')
+                                                                            <a href="{{ route('voucher_detail', $transaction->voucher_id) }}"
+                                                                                class="text-decoration-none">
+                                                                                {{ htmlspecialchars($transaction->voucher_number) }}
+                                                                            </a>
+                                                                        @else
+                                                                            {{ htmlspecialchars($transaction->voucher_number ?? 'No Voucher') }}
+                                                                        @endif
+                                                                    </td>
                                                                     </td>
                                                                     <td>
                                                                         @switch($transaction->voucher_type)
