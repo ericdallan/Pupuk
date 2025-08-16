@@ -508,6 +508,14 @@
                                                                                 Penyesuaian Bertambah
                                                                             @break
 
+                                                                            @case('RPB')
+                                                                                Retur Pembelian
+                                                                            @break
+
+                                                                            @case('RPJ')
+                                                                                Retur Penjualan
+                                                                            @break
+
                                                                             @default
                                                                                 {{ htmlspecialchars($transaction->voucher_type ?? 'Unknown') }}
                                                                         @endswitch

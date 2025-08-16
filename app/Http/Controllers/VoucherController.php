@@ -130,7 +130,7 @@ class VoucherController extends Controller
     protected function validateVoucherRequest(Request $request, array $transactions, array $voucherDetails, bool $isUpdate = false)
     {
         $rules = [
-            'voucher_type' => 'required|string|in:PJ,PG,PM,PB,LN,PH,PK,PYB,PYK,PYL',
+            'voucher_type' => 'required|string|in:PJ,PG,PM,PB,LN,PH,PK,PYB,PYK,PYL,RPJ,RPB',
             'voucher_date' => 'required|date',
             'voucher_day' => 'nullable|string|max:50',
             'prepared_by' => 'required|string|max:255',

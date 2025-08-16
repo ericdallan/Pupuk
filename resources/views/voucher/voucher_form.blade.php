@@ -56,6 +56,11 @@
                                         value="adjustment">
                                     <label class="form-check-label" for="adjustment">Penyesuaian</label>
                                 </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" id="return" name="use_stock"
+                                        value="return">
+                                    <label class="form-check-label" for="return">Retur Barang</label>
+                                </div>
                             </div>
                         </div>
                         <div class="row mb-3" id="affectStockContainer">
@@ -88,6 +93,8 @@
                                     <option value="PYB">Penyesuaian Bertambah</option>
                                     <option value="PYK">Penyesuaian Berkurang</option>
                                     <option value="PYL">Penyesuaian Lainnya</option>
+                                    <option value="RPB">Retur Pembelian</option>
+                                    <option value="RPJ">Retur Penjualan</option>
                                 </select>
                             </div>
                             <label for="voucherDate" class="col-sm-2 col-form-label">Tanggal:</label>
@@ -351,6 +358,7 @@
         const useStockYes = document.getElementById('useStockYes');
         const useStockNo = document.getElementById('useStockNo');
         const useStockAdjustment = document.getElementById('adjustment');
+        const useStockReturn = document.getElementById('return');
         const affectStockContainer = document.getElementById('affectStockContainer');
         const affectStockYes = document.getElementById('affectStockYes');
         const affectStockNo = document.getElementById('affectStockNo');
@@ -417,12 +425,26 @@
                 text: 'Penyesuaian Lainnya',
                 description: 'Voucher Penyesuaian Lainnya digunakan untuk mencatat penyesuaian yang tidak memengaruhi jumlah stok fisik, tetapi memengaruhi catatan akuntansi atau data lainnya, seperti penyesuaian nilai aset, penyusutan, atau koreksi harga barang. Voucher ini mencatat detail seperti deskripsi penyesuaian, akun yang terpengaruh, dan jumlah. Contoh penggunaan termasuk penyesuaian nilai buku barang karena perubahan harga pasar. Voucher ini memastikan akurasi laporan keuangan tanpa mengubah stok fisik.'
             },
+            RPB: {
+                value: 'RPB',
+                text: 'Retur Pembelian',
+                description: 'Voucher Retur Pembelian digunakan untuk mencatat pengembalian barang yang telah dibeli dari pemasok karena alasan seperti barang cacat, tidak sesuai pesanan, atau kerusakan. Voucher ini mencatat detail seperti nama barang, ukuran, jumlah yang dikembalikan, dan alasan retur. Contoh penggunaan termasuk pengembalian bahan baku yang tidak memenuhi standar kualitas. Voucher ini penting untuk memperbarui stok barang di sistem inventaris dan mencatat pengembalian dana atau kredit kepada pemasok dalam laporan keuangan.'
+            },
+            RPJ: {
+                value: 'RPJ',
+                text: 'Retur Penjualan',
+                description: 'Voucher Retur Penjualan digunakan untuk mencatat pengembalian barang dari pelanggan ke perusahaan karena alasan seperti barang cacat, salah kirim, atau ketidaksesuaian dengan pesanan. Voucher ini mencatat detail seperti nama barang, ukuran, jumlah yang dikembalikan, dan alasan retur. Contoh penggunaan termasuk pengembalian produk jadi oleh pelanggan karena kerusakan. Voucher ini penting untuk memperbarui stok barang di sistem inventaris dan mencatat pengembalian dana atau kredit kepada pelanggan dalam laporan keuangan.'
+            }
         };
 
         function toggleSizeInputState() {
             const useStock = document.querySelector('input[name="use_stock"]:checked')?.value || 'no';
             const affectStock = document.querySelector('input[name="affect_stock"]:checked')?.value || 'no';
-            const isSizeEnabled = (useStock === 'yes') || (useStock === 'adjustment' && affectStock === 'yes');
+            const voucherType = voucherTypeSelect.value;
+            const isSizeEnabled = (useStock === 'yes') ||
+                (useStock === 'adjustment' && affectStock === 'yes') ||
+                (useStock === 'return' && (voucherType === 'RPB' || voucherType ===
+                    'RPJ'));
             const sizeInputs = transactionTableBody.querySelectorAll('.sizeInput');
             sizeInputs.forEach(input => {
                 if (input.tagName.toLowerCase() === 'select') {
@@ -458,7 +480,7 @@
                 affectStockNo.disabled = true;
                 affectStockYes.checked = false;
                 affectStockNo.checked = false;
-                updateVoucherTypeOptions()
+                updateVoucherTypeOptions();
             }
             updateVoucherTypeOptionsForAdjustment();
         }
@@ -491,12 +513,20 @@
                     option.textContent = voucherTypes.PYL.text;
                     voucherTypeSelect.appendChild(option);
                 }
+            } else if (useStock === 'return') {
+                [
+                    voucherTypes.RPB,
+                    voucherTypes.RPJ
+                ].forEach(type => {
+                    const option = document.createElement('option');
+                    option.value = type.value;
+                    option.textContent = type.text;
+                    voucherTypeSelect.appendChild(option);
+                });
             } else {
-                // Jika bukan adjustment, panggil updateVoucherTypeOptions dari kode asli
                 updateVoucherTypeOptions();
             }
 
-            // Kembalikan nilai sebelumnya jika masih valid
             voucherTypeSelect.value = currentValue && voucherTypeSelect.querySelector(
                 `option[value="${currentValue}"]`) ? currentValue : '';
             deskripsiVoucherTextarea.value = voucherTypes[voucherTypeSelect.value]?.description || '';
@@ -505,6 +535,13 @@
         useStockAdjustment.addEventListener('change', updateAffectStockContainer);
         useStockYes.addEventListener('change', updateAffectStockContainer);
         useStockNo.addEventListener('change', updateAffectStockContainer);
+        useStockReturn.addEventListener('change', () => {
+            updateAffectStockContainer();
+            updateVoucherTypeOptionsForAdjustment();
+            refreshTransactionTable();
+            toggleSizeInputState();
+            updateRecipeField();
+        });
         affectStockYes.addEventListener('change', updateVoucherTypeOptionsForAdjustment);
         affectStockNo.addEventListener('change', updateVoucherTypeOptionsForAdjustment);
 
@@ -1086,8 +1123,14 @@
             defaultOption.textContent = 'Pilih Ukuran';
             select.appendChild(defaultOption);
 
+            const useStock = document.querySelector('input[name="use_stock"]:checked')?.value || 'no';
+            const affectStock = document.querySelector('input[name="affect_stock"]:checked')?.value || 'no';
+            const isStockEnabled = (useStock === 'yes') ||
+                (useStock === 'adjustment' && affectStock === 'yes' && (voucherType === 'PYB' || voucherType ===
+                    'PYK')) ||
+                (useStock === 'return' && (voucherType === 'RPB' || voucherType === 'RPJ'));
             let stockData = [];
-            if (voucherType === 'PJ') {
+            if (voucherType === 'PJ' || voucherType === 'RPJ') {
                 stockData = [...(usedStocks || []), ...(stocks || [])];
             } else if (voucherType === 'PYB' || voucherType === 'PYK') {
                 stockData = [...(usedStocks || []), ...(stocks || []), ...(transferStocks || [])];
@@ -1095,6 +1138,8 @@
                 stockData = stocks;
             } else if (voucherType === 'PK') {
                 stockData = transferStocks;
+            } else if (voucherType === 'PB' || voucherType === 'RPB') {
+                stockData = stocks;
             }
 
             if (selectedItem && stockData && Array.isArray(stockData) && stockData.length > 0) {
@@ -1114,7 +1159,7 @@
                     let stockSizes = [];
                     let transferStockSizes = [];
 
-                    if (voucherType === 'PJ') {
+                    if (voucherType === 'PJ' || voucherType === 'RPJ') {
                         stockSizes = sizesWithQuantity.filter(item => item.source === 'stocks');
                         usedStockSizes = sizesWithQuantity.filter(item => item.source === 'used_stocks');
 
@@ -1150,11 +1195,10 @@
                             });
                         }
                     } else if (voucherType === 'PYB' || voucherType === 'PYK') {
-                        stockSizes = sizesWithQuantity.filter(item => item.source === 'stocks');
-                        transferStockSizes = sizesWithQuantity.filter(item => item.source ===
+                        const stockSizes = sizesWithQuantity.filter(item => item.source === 'stocks');
+                        const transferStockSizes = sizesWithQuantity.filter(item => item.source ===
                             'transfer_stocks');
-                        usedStockSizes = sizesWithQuantity.filter(item => item.source === 'used_stocks');
-
+                        const usedStockSizes = sizesWithQuantity.filter(item => item.source === 'used_stocks');
                         if (stockSizes.length > 0) {
                             const separator = document.createElement('option');
                             separator.value = '';
@@ -1219,9 +1263,7 @@
                 }
             }
 
-            const useStock = document.querySelector('input[name="use_stock"]:checked')?.value || 'no';
-            const affectStock = document.querySelector('input[name="affect_stock"]:checked')?.value || 'no';
-            select.disabled = !(useStock === 'yes' || (useStock === 'adjustment' && affectStock === 'yes'));
+            select.disabled = !isStockEnabled; // Gunakan isStockEnabled yang telah diperbarui
 
             select.addEventListener('change', function(event) {
                 const row = select.closest('tr');
@@ -1247,12 +1289,14 @@
             const voucherType = voucherTypeSelect.value;
             const useStock = document.querySelector('input[name="use_stock"]:checked')?.value || 'no';
             const affectStock = document.querySelector('input[name="affect_stock"]:checked')?.value || 'no';
-            const isStockEnabled = useStock === 'yes' || (useStock === 'adjustment' && affectStock === 'yes');
+            const isStockEnabled = (useStock === 'yes') || (useStock === 'adjustment' && affectStock ===
+                'yes') || (useStock === 'return' && (voucherType === 'RPB' || voucherType === 'RPJ'));
             let newSizeElement;
 
             if (isStockEnabled && (voucherType === 'PB' || voucherType === 'PJ' || voucherType === 'PH' ||
-                    voucherType === 'PK' || voucherType === 'PYB' || voucherType === 'PYK')) {
-                if (voucherType === 'PB') {
+                    voucherType === 'PK' || voucherType === 'PYB' || voucherType === 'PYK' || voucherType ===
+                    'RPB' || voucherType === 'RPJ')) {
+                if (voucherType === 'PB' || voucherType === 'RPB') {
                     newSizeElement = createSizeInputWithDropdown(index, selectedItem);
                 } else {
                     newSizeElement = createSizeDropdown(index, selectedItem, voucherType);
@@ -1344,11 +1388,11 @@
             select.appendChild(defaultOption);
 
             let stockData = [];
-            if (voucherType === 'PJ') {
+            if (voucherType === 'PJ' || voucherType === 'RPJ') {
                 stockData = [...(usedStocks || []), ...(stocks || [])];
             } else if (voucherType === 'PYB' || voucherType === 'PYK') {
                 stockData = [...(usedStocks || []), ...(stocks || []), ...(transferStocks || [])];
-            } else if (voucherType === 'PH' || voucherType === 'PB') {
+            } else if (voucherType === 'PH' || voucherType === 'PB' || voucherType === 'RPB') {
                 stockData = stocks || [];
             } else if (voucherType === 'PK') {
                 stockData = transferStocks || [];
@@ -1373,7 +1417,7 @@
                     noItemsOption.textContent = 'Tidak ada item stok tersedia';
                     noItemsOption.disabled = true;
                     select.appendChild(noItemsOption);
-                } else if (voucherType === 'PJ') {
+                } else if (voucherType === 'PJ' || voucherType === 'RPJ') {
                     // Separate for PJ: stocks and usedStocks
                     const stockItems = uniqueItems.filter(item =>
                         stockData.some(stock => stock.item === item && (stocks || []).includes(stock))
@@ -1494,7 +1538,8 @@
 
             const useStock = document.querySelector('input[name="use_stock"]:checked')?.value || 'no';
             const affectStock = document.querySelector('input[name="affect_stock"]:checked')?.value || 'no';
-            const isStockEnabled = (useStock === 'yes') || (useStock === 'adjustment' && affectStock === 'yes');
+            const isStockEnabled = (useStock === 'yes') || (useStock === 'adjustment' && affectStock ===
+                'yes') || (useStock === 'return' && (voucherType === 'RPB' || voucherType === 'RPJ'));
             select.disabled = !isStockEnabled;
 
             select.addEventListener('change', function(event) {
@@ -1774,7 +1819,8 @@
         }
 
         function addHppRowForPJ(currentIndex, selectedItem, size, quantity) {
-            if (!selectedItem || voucherTypeSelect.value !== 'PJ') return;
+            if (!selectedItem || (voucherTypeSelect.value !== 'PJ' && voucherTypeSelect.value !== 'RPJ'))
+                return;
 
             const transactionTableBody = document.querySelector('#transactionTable tbody');
             const newIndex = transactionTableBody.querySelectorAll('tr').length;
@@ -1863,7 +1909,8 @@
         }
 
         function updateHppRowForPJ(currentIndex, selectedItem, size, quantity) {
-            if (!selectedItem || voucherTypeSelect.value !== 'PJ') return;
+            if (!selectedItem || (voucherTypeSelect.value !== 'PJ' && voucherTypeSelect.value !== 'RPJ'))
+                return;
 
             const transactionTableBody = document.querySelector('#transactionTable tbody');
             const currentRow = transactionTableBody.querySelector(`tr[data-row-index="${currentIndex}"]`);
@@ -1944,7 +1991,7 @@
                 let isValidItem = false;
                 let inferredSize = initialSize;
 
-                if (voucherType === 'PJ') {
+                if (voucherType === 'PJ' || voucherType === 'RPJ') {
                     const stockData = [...usedStocks, ...(stocks || [])];
                     isValidItem = stockData.some(s => s.item.trim().toLowerCase() === selectedItem.trim()
                         .toLowerCase());
@@ -2011,7 +2058,7 @@
                 // Remove existing HPP row for this transaction row
                 removeHppRowForItem(index);
 
-                if (selectedItem && voucherType === 'PJ') {
+                if (selectedItem && voucherType === 'PJ' || voucherType === 'RPJ') {
                     updateHppRowForPJ(index, selectedItem, inferredSize, quantity);
                 }
 
@@ -2040,17 +2087,25 @@
             const affectStock = document.querySelector('input[name="affect_stock"]:checked')?.value || 'no';
             const recipeSelected = document.querySelector('#recipe')?.value && voucherType === 'PK' &&
                 useStock === 'yes';
-            const isStockVoucher = useStock === 'yes' || (useStock === 'adjustment' && affectStock === 'yes' &&
-                (voucherType === 'PYB' || voucherType === 'PYK'));
+            const isStockVoucher = useStock === 'yes' ||
+                (useStock === 'adjustment' && affectStock === 'yes' && (voucherType === 'PYB' || voucherType ===
+                    'PYK')) ||
+                (useStock === 'return' && (voucherType === 'RPB' || voucherType === 'RPJ'));
+            const isStockEnabled = useStock === 'yes' ||
+                (useStock === 'adjustment' && affectStock === 'yes') ||
+                (useStock === 'return' && (voucherType === 'RPB' || voucherType ===
+                    'RPJ')); // Konsisten dengan toggleSizeInputState
 
             if (isStockVoucher && (voucherType === 'PJ' || voucherType === 'PB' || voucherType === 'PH' ||
-                    voucherType === 'PK' || voucherType === 'PYB' || voucherType === 'PYK')) {
-                if (voucherType === 'PB') {
+                    voucherType === 'PK' || voucherType === 'PYB' || voucherType === 'PYK' || voucherType ===
+                    'RPB' || voucherType === 'RPJ')) {
+                if (voucherType === 'PB' || voucherType === 'RPB') {
                     descriptionElement = document.createElement('div');
                     descriptionElement.className = 'input-group';
 
                     const select = createStockDropdown(index, voucherType);
                     select.style.width = '50%';
+                    select.disabled = !isStockEnabled;
 
                     const input = createDescriptionInput(index);
                     input.className = 'form-control';
@@ -2077,6 +2132,7 @@
                     descriptionElement.name = `transactions[${index}][description]`;
                 } else {
                     descriptionElement = createStockDropdown(index, voucherType);
+                    descriptionElement.disabled = !isStockEnabled;
                 }
                 if (recipeSelected) {
                     descriptionElement.readOnly = true;
@@ -2089,7 +2145,7 @@
 
             const sizeCell = document.createElement('td');
             let sizeElement;
-            if (isStockVoucher && voucherType === 'PB') {
+            if (isStockVoucher && (voucherType === 'PB' || voucherType === 'RPB')) {
                 sizeElement = createSizeInputWithDropdown(index, descriptionElement.value);
             } else if (isStockVoucher && voucherType === 'PK') {
                 sizeElement = document.createElement('input');
@@ -2102,7 +2158,7 @@
             if (recipeSelected) {
                 sizeElement.readOnly = true;
             }
-            sizeElement.disabled = !isStockVoucher;
+            sizeElement.disabled = !isStockEnabled; // Gunakan isStockEnabled
             sizeCell.appendChild(sizeElement);
             row.appendChild(sizeCell);
 
@@ -2304,7 +2360,7 @@
                 const isHppRow = row.dataset.isHppRow === 'true';
                 const voucherType = voucherTypeSelect.value;
 
-                if (voucherType === 'PJ' && !isHppRow) {
+                if ((voucherType === 'PJ' || voucherType === 'RPJ') && !isHppRow) {
                     const description = row.querySelector('.descriptionInput:not([type="text"])')?.value || row
                         .querySelector('.descriptionInput[type="text"]')?.value || '';
                     const size = row.querySelector('.sizeInput')?.value || '';
@@ -2345,7 +2401,8 @@
 
         function syncHppQuantity(row) {
             const voucherType = voucherTypeSelect.value;
-            if (voucherType !== 'PJ' && voucherType !== 'PB') return;
+            if (voucherType !== 'PJ' && voucherType !== 'PB' && voucherType !== 'RPJ' && voucherType !==
+                'RPB' && voucherType !== 'PYK' && voucherType !== 'PYB') return;
 
             const rowIndex = parseInt(row.dataset.rowIndex);
             const isHppRow = row.dataset.isHppRow === 'true';
@@ -2534,7 +2591,8 @@
                 rowQuantityInput.value = t.quantity;
                 rowNominalInput.value = t.nominal;
 
-                if (voucherTypeSelect.value === 'PJ' && t.description && !t.isNewItem) {
+                if ((voucherTypeSelect.value === 'PJ' || voucherTypeSelect.value === 'RPJ') && t
+                    .description && !t.isNewItem) {
                     addHppRowForPJ(index, t.description, t.size, parseFloat(t.quantity));
                 }
             });

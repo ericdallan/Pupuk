@@ -238,7 +238,7 @@ class VoucherService
                     'updated_at' => now(),
                 ]);
             }
-        } elseif ($voucherType === 'PH') {
+        } elseif ($voucherType === 'PH' || $voucherType === 'RPB') {
             if (!$stock) {
                 throw new \Exception("Stok untuk item {$item} dengan ukuran {$size} tidak ditemukan di tabel stocks.");
             }
@@ -247,6 +247,19 @@ class VoucherService
 
             if ($stock->quantity < 0) {
                 throw new \Exception("Stok untuk item {$item} dengan ukuran {$size} tidak mencukupi di tabel stocks.");
+            }
+        } elseif ($voucherType === 'RPJ') {
+            if ($stock) {
+                $stock->quantity += $quantity;
+                $stock->save();
+            } else {
+                Stock::create([
+                    'item' => $item,
+                    'size' => $size,
+                    'quantity' => $quantity,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
             }
         }
     }
@@ -436,6 +449,33 @@ class VoucherService
                     'new_quantity' => $usedStock->quantity,
                 ]);
             }
+        } elseif ($voucherType === 'RPJ') {
+            if ($quantity <= 0) {
+                throw new \Exception("Kuantitas tidak valid untuk item {$item} pada voucher tipe RPJ: {$quantity}.");
+            }
+            if ($usedStock) {
+                $usedStock->quantity += $quantity;
+                $usedStock->save();
+                Log::info('Updated used_stocks:', [
+                    'item' => $item,
+                    'size' => $size,
+                    'added_quantity' => $quantity,
+                    'new_quantity' => $usedStock->quantity,
+                ]);
+            } else {
+                UsedStock::create([
+                    'item' => $item,
+                    'size' => $size,
+                    'quantity' => $quantity,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+                Log::info('Created new used_stocks record:', [
+                    'item' => $item,
+                    'size' => $size,
+                    'quantity' => $quantity,
+                ]);
+            }
         } else {
             throw new \Exception("Tipe voucher {$voucherType} tidak didukung untuk update used_stocks.");
         }
@@ -583,6 +623,47 @@ class VoucherService
                 if ($usedStock && $remainingQuantity > 0) {
                     $usedStock->quantity += $remainingQuantity;
                     $usedStock->save();
+                }
+            }
+        } elseif ($voucherType === 'RPB') {
+            $stock = Stock::where('item', $item)->where('size', $size)->first();
+            if ($stock) {
+                $stock->quantity += $quantity;
+                $stock->save();
+            }
+        } elseif ($voucherType === 'RPJ') {
+            // Reverse RPJ: reduce stock since original RPJ increases it
+            $stock = Stock::where('item', $item)->where('size', $size)->first();
+            $usedStock = UsedStock::where('item', $item)->where('size', $size)->first();
+            if ($stock) {
+                $stock->quantity -= $quantity;
+                $stock->save();
+                if ($stock->quantity < 0) {
+                    throw new \Exception("Stok untuk item {$item} dengan ukuran {$size} tidak mencukupi setelah pembalikan di tabel stocks.");
+                }
+            }
+            if ($usedStock) {
+                $usedStock->quantity -= $quantity;
+                $usedStock->save();
+                if ($usedStock->quantity < 0) {
+                    throw new \Exception("Stok untuk item {$item} dengan ukuran {$size} tidak mencukupi setelah pembalikan di tabel used_stocks.");
+                }
+            }
+            // Also reverse HPP stock
+            $hppStock = Stock::where('item', "HPP {$item}")->where('size', $size)->first();
+            $hppUsedStock = UsedStock::where('item', "HPP {$item}")->where('size', $size)->first();
+            if ($hppStock) {
+                $hppStock->quantity -= $quantity;
+                $hppStock->save();
+                if ($hppStock->quantity < 0) {
+                    throw new \Exception("Stok untuk item HPP {$item} dengan ukuran {$size} tidak mencukupi setelah pembalikan di tabel stocks.");
+                }
+            }
+            if ($hppUsedStock) {
+                $hppUsedStock->quantity -= $quantity;
+                $hppUsedStock->save();
+                if ($hppUsedStock->quantity < 0) {
+                    throw new \Exception("Stok untuk item HPP {$item} dengan ukuran {$size} tidak mencukupi setelah pembalikan di tabel used_stocks.");
                 }
             }
         }
@@ -752,7 +833,7 @@ class VoucherService
                 ]);
             }
 
-            if (in_array($request->voucher_type, ['PB', 'PH', 'PJ']) && (!empty($transactionsToCreate) || !empty($hppStockUpdates))) {
+            if (in_array($request->voucher_type, ['PB', 'PH', 'PJ', 'RPB', 'RPJ']) && (!empty($transactionsToCreate) || !empty($hppStockUpdates))) {
                 if ($request->voucher_type === 'PJ') {
                     foreach ($transactionsToCreate as $transaction) {
                         $item = $transaction['description'];
@@ -773,6 +854,19 @@ class VoucherService
                         $this->updateUsedStock($item, $quantity, 'PJ', $size);
                         $this->updateUsedStock("HPP {$item}", $quantity, 'PJ', $size);
                     }
+                } elseif ($request->voucher_type === 'RPJ') {
+                    foreach ($transactionsToCreate as $transaction) {
+                        $item = $transaction['description'];
+                        $quantity = $transaction['quantity'];
+                        $size = $transaction['size'] ?? null;
+
+                        $hppItem = collect($hppStockUpdates)->firstWhere(function ($hpp) use ($item, $size) {
+                            return $hpp['description'] === "HPP {$item}" && $hpp['size'] === $size;
+                        });
+
+                        $this->updateStock($item, $quantity, 'RPJ', $size);
+                        $this->updateStock("HPP {$item}", $quantity, 'RPJ', $size);
+                    }
                 } else {
                     foreach ($transactionsToCreate as $transaction) {
                         if (!$transaction['is_hpp']) {
@@ -785,6 +879,8 @@ class VoucherService
                             } elseif ($request->voucher_type === 'PH') {
                                 $this->updateStock($item, $quantity, 'PH', $size);
                                 $this->updateTransferStock($item, $quantity, 'PH', $size);
+                            } elseif ($request->voucher_type === 'RPB') {
+                                $this->updateStock($item, $quantity, 'RPB', $size);
                             }
                         }
                     }
@@ -996,7 +1092,7 @@ class VoucherService
 
         // Prepare transactionsData based on voucher type
         $transactionsData = [];
-        if ($voucher->voucher_type === 'PJ') {
+        if ($voucher->voucher_type === 'PJ' || $voucher->voucher_type === 'RPJ') {
             // Fetch historical purchase transactions for PJ vouchers
             $historicalTransactions = Transactions::whereHas('voucher', function ($query) use ($voucher) {
                 $query->where('voucher_type', 'PB')
@@ -1242,7 +1338,7 @@ class VoucherService
                 }
             }
 
-            if ($request->voucher_type === 'PH') {
+            if ($request->voucher_type === 'PH' || $request->voucher_type === 'RPB') {
                 foreach ($transactionItems as $transaction) {
                     if (!str_starts_with($transaction['description'], 'HPP ')) {
                         $item = $transaction['description'];
@@ -1266,7 +1362,7 @@ class VoucherService
                         }
                     }
                 }
-            } elseif ($request->voucher_type === 'PJ') {
+            } elseif ($request->voucher_type === 'PJ' || $request->voucher_type === 'RPJ') {
                 foreach ($transactionItems as $transaction) {
                     $item = $transaction['description'];
                     $quantity = $transaction['quantity'];
@@ -1317,7 +1413,7 @@ class VoucherService
                 }
             }
 
-            if (in_array($voucher->voucher_type, ['PB', 'PH', 'PK', 'PJ', 'PYB', 'PYK'])) {
+            if (in_array($voucher->voucher_type, ['PB', 'PH', 'PK', 'PJ', 'PYB', 'PYK', 'RPB', 'RPJ'])) {
                 foreach ($voucher->transactions as $transaction) {
                     if (!str_starts_with($transaction->description, 'HPP ')) {
                         $this->reverseStock(
@@ -1331,7 +1427,7 @@ class VoucherService
                 }
             }
 
-            if (in_array($request->voucher_type, ['PB', 'PH', 'PK', 'PJ', 'PYB', 'PYK'])) {
+            if (in_array($request->voucher_type, ['PB', 'PH', 'PK', 'PJ', 'PYB', 'PYK', 'RPB', 'RPJ'])) {
                 if ($request->voucher_type === 'PK' && $recipeId) {
                     $quantity = floatval($transactionItems[0]['quantity']);
                     $this->updateUsedStock($transactionItems[0]['description'], $quantity, 'PK', $transactionItems[0]['size']);
@@ -1344,6 +1440,16 @@ class VoucherService
                         $size = $transaction['size'] ?? null;
                         $this->updateUsedStock($item, $quantity, 'PJ', $size);
                         $this->updateUsedStock("HPP {$item}", $quantity, 'PJ', $size);
+                    }
+                } elseif ($request->voucher_type === 'RPJ') {
+                    foreach ($transactionItems as $transaction) {
+                        if (!$transaction['is_hpp']) {
+                            $item = $transaction['description'];
+                            $quantity = $transaction['quantity'];
+                            $size = $transaction['size'] ?? null;
+                            $this->updateStock($item, $quantity, 'RPJ', $size);
+                            $this->updateStock("HPP {$item}", $quantity, 'RPJ', $size);
+                        }
                     }
                 } elseif (in_array($request->voucher_type, ['PYB', 'PYK'])) {
                     foreach ($transactionItems as $transaction) {
@@ -1368,6 +1474,8 @@ class VoucherService
                             } elseif ($request->voucher_type === 'PK') {
                                 $this->updateTransferStock($item, $quantity, 'PK', $size);
                                 $this->updateUsedStock($item, $quantity, 'PK', $size);
+                            } elseif ($request->voucher_type === 'RPB') {
+                                $this->updateStock($item, $quantity, 'RPB', $size);
                             }
                         }
                     }
@@ -1599,17 +1707,28 @@ class VoucherService
      */
     public function generateVoucherNumber(string $voucherType): string
     {
+        // Fetch the last voucher for the given type, ordered by voucher_number
         $lastVoucher = Voucher::where('voucher_type', $voucherType)
             ->orderBy('voucher_number', 'desc')
             ->first();
 
-        if ($lastVoucher) {
-            $lastNumber = intval(substr($lastVoucher->voucher_number, 3));
-            $newNumber = $lastNumber + 1;
-        } else {
-            $newNumber = 1;
+        $newNumber = 1; // Default starting number
+        if ($lastVoucher && !empty($lastVoucher->voucher_number)) {
+            // Extract the numeric part after the prefix (e.g., 'RPJ-')
+            $prefixLength = strlen($voucherType) + 1; // +1 for the hyphen
+            $numericPart = substr($lastVoucher->voucher_number, $prefixLength);
+
+            // Ensure the numeric part is valid
+            if (is_numeric($numericPart)) {
+                $lastNumber = intval($numericPart);
+                $newNumber = $lastNumber + 1;
+            } else {
+                // Log a warning if the voucher number format is invalid
+                Log::warning("Invalid voucher number format for type {$voucherType}: {$lastVoucher->voucher_number}");
+            }
         }
 
+        // Generate the new voucher number with proper padding
         return $voucherType . '-' . str_pad($newNumber, 8, '0', STR_PAD_LEFT);
     }
 
@@ -1706,6 +1825,10 @@ class VoucherService
                 return 'Penyesuaian Lainnya';
             case 'LN':
                 return 'Lainnya';
+            case 'RPB':
+                return 'Retur Pembelian';
+            case 'RPJ':
+                return 'Retur Penjualan';
             default:
                 return 'Voucher';
         }
