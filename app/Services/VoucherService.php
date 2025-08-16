@@ -112,7 +112,7 @@ class VoucherService
         $transactionsData = DB::table('transactions')
             ->select('transactions.description', 'transactions.size', 'transactions.quantity', 'transactions.nominal')
             ->join('vouchers', 'transactions.voucher_id', '=', 'vouchers.id')
-            ->where('vouchers.voucher_type', 'PB')
+            ->whereIn('vouchers.voucher_type', ['PB', 'PK'])
             ->get()
             ->map(function ($transaction) {
                 return [
