@@ -79,12 +79,12 @@
                 <div class="col-sm-9">
                     <div class="form-check form-check-inline">
                         <input class="form-check-input" type="radio" id="useStockYes" name="use_stock" value="yes"
-                            {{ in_array($voucher->voucher_type, ['PB', 'PJ', 'PH', 'PK']) ? 'checked' : '' }}>
+                            {{ in_array($voucher->voucher_type, ['PB', 'PJ', 'PH', 'PK', 'PYK', 'PYB', 'RPB', 'RPJ']) ? 'checked' : '' }}>
                         <label class="form-check-label" for="useStockYes">Ya</label>
                     </div>
                     <div class="form-check form-check-inline">
                         <input class="form-check-input" type="radio" id="useStockNo" name="use_stock" value="no"
-                            {{ in_array($voucher->voucher_type, ['PG', 'PM', 'LN']) ? 'checked' : '' }}>
+                            {{ in_array($voucher->voucher_type, ['PG', 'PM', 'LN', 'PYL']) ? 'checked' : '' }}>
                         <label class="form-check-label" for="useStockNo">Tidak</label>
                     </div>
                 </div>
@@ -105,6 +105,19 @@
                         <option value="PH" {{ $voucher->voucher_type == 'PH' ? 'selected' : '' }}>Pemindahan
                         </option>
                         <option value="PK" {{ $voucher->voucher_type == 'PK' ? 'selected' : '' }}>Pemakaian
+                        </option>
+                        <option value="PYK" {{ $voucher->voucher_type == 'PYK' ? 'selected' : '' }}>Penyesuaian
+                            Berkurang
+                        </option>
+                        <option value="PYB" {{ $voucher->voucher_type == 'PYB' ? 'selected' : '' }}>Penyesuaian
+                            Bertambah
+                        </option>
+                        <option value="PYL" {{ $voucher->voucher_type == 'PYL' ? 'selected' : '' }}>Penyesuaian
+                            Lainnya
+                        </option>
+                        <option value="RPB" {{ $voucher->voucher_type == 'RPB' ? 'selected' : '' }}>Retur Pembelian
+                        </option>
+                        <option value="RPJ" {{ $voucher->voucher_type == 'RPJ' ? 'selected' : '' }}>Retur Penjualan
                         </option>
                     </select>
                     <div class="invalid-feedback">Tipe Voucher wajib dipilih.</div>
@@ -642,22 +655,39 @@
                 voucherTypeSelect.innerHTML = '';
                 const validOptions = voucherTypeOptions.filter(option => useStock === 'yes' ? option.stock : !option
                     .stock);
+
+                // Pastikan currentVoucherType tetap ada sebagai opsi terpilih
+                let selectedFound = false;
                 validOptions.forEach(option => {
                     const opt = document.createElement('option');
                     opt.value = option.value;
                     opt.textContent = option.text;
-                    if (option.value === currentVoucherType) opt.selected = true;
+                    if (option.value === currentVoucherType) {
+                        opt.selected = true;
+                        selectedFound = true;
+                    }
                     voucherTypeSelect.appendChild(opt);
                 });
-                if (!validOptions.some(opt => opt.value === voucherTypeSelect.value)) {
-                    voucherTypeSelect.value = validOptions[0]?.value || '';
+
+                // Jika currentVoucherType tidak ada dalam validOptions, tambahkan sebagai opsi terpilih
+                if (!selectedFound && currentVoucherType) {
+                    const opt = document.createElement('option');
+                    opt.value = currentVoucherType;
+                    opt.textContent = voucherTypes[currentVoucherType]?.text || currentVoucherType;
+                    opt.selected = true;
+                    voucherTypeSelect.appendChild(opt);
                 }
+
+                // Pastikan nilai dipilih jika ada opsi
+                if (voucherTypeSelect.value === '' && voucherTypeSelect.options.length > 0) {
+                    voucherTypeSelect.value = currentVoucherType || voucherTypeSelect.options[0].value;
+                }
+
                 updateDescription();
                 refreshTransactionTable();
                 updateRecipeContainer();
                 updateAllCalculationsAndValidations();
             }
-
             // --- Update Description ---
             function updateDescription() {
                 const selectedType = voucherTypeSelect.value;
@@ -745,7 +775,8 @@
                 if (transactionTableBody.querySelectorAll('tr').length === 0) {
                     const newRow = generateTransactionTableRow(0);
                     transactionTableBody.appendChild(newRow);
-                    if (useStockYes.checked && ['PJ', 'PB', 'PH', 'PK'].includes(voucherTypeSelect.value)) {
+                    if (useStockYes.checked && ['PJ', 'PB', 'PH', 'PK', 'PYB', 'PYK', 'RPJ', 'RPB'].includes(
+                            voucherTypeSelect.value)) {
                         updateSizeDropdown(newRow, '');
                     }
                 }
@@ -784,23 +815,29 @@
             // --- Stock and Size Handling ---
             function getStockSource() {
                 const voucherType = voucherTypeSelect.value;
-                if (voucherType === 'PJ') {
-                    const stockItems = [...new Set([...stocks, ...usedStocks].map(s => s.item + s.size))];
+                let stockData = []; // Default to empty array
+
+                if (voucherType === 'PJ' || voucherType === 'RPJ') {
+                    const stockItems = [...new Set([...(stocks || []), ...(usedStocks || [])].map(s => s.item + s
+                        .size))];
                     const combinedStocks = [];
                     stockItems.forEach(key => {
-                        const stock = stocks.find(s => (s.item + s.size) === key) || usedStocks.find(s => (s
-                            .item + s.size) === key);
-                        combinedStocks.push(stock);
+                        const stock = (stocks || []).find(s => (s.item + s.size) === key) ||
+                            (usedStocks || []).find(s => (s.item + s.size) === key);
+                        if (stock) combinedStocks.push(stock);
                     });
                     return combinedStocks;
+                } else if (voucherType === 'PYB' || voucherType === 'PYK') {
+                    stockData = [...(usedStocks || []), ...(stocks || []), ...(transferStocks || [])];
+                } else if (voucherType === 'PH') {
+                    stockData = stocks || [];
+                } else if (voucherType === 'PK') {
+                    stockData = transferStocks || [];
+                } else if (voucherType === 'PB' || voucherType === 'RPB') {
+                    stockData = stocks || [];
                 }
-                if (voucherType === 'PH') {
-                    return stocks;
-                }
-                if (voucherType === 'PK') {
-                    return usedStocks;
-                }
-                return stocks;
+
+                return stockData;
             }
 
             function getCorrespondingHppRow(parentRow, item) {
@@ -828,7 +865,7 @@
                 const filteredStocks = stockSource.filter(s => !s.item.startsWith('HPP '));
                 const uniqueItems = [...new Set(filteredStocks.map(s => s.item))];
 
-                if (voucherTypeSelect.value === 'PJ') {
+                if (voucherTypeSelect.value === 'PJ' || voucherTypeSelect.value === 'RPJ') {
                     // Add Bahan Baku (stocks)
                     const bahanBakuItems = [...new Set(stocks.filter(s => !s.item.startsWith('HPP ')).map(s => s
                         .item))];
@@ -878,7 +915,8 @@
                     const newItem = e.target.value.trim();
                     const row = e.target.closest('tr');
                     const index = parseInt(row.dataset.rowIndex);
-                    if (oldItem && oldItem !== newItem && voucherTypeSelect.value === 'PJ') {
+                    if (oldItem && oldItem !== newItem && voucherTypeSelect.value === 'PJ' ||
+                        voucherTypeSelect.value === 'RPJ') {
                         // Hapus corresponding HPP untuk oldItem
                         const oldHppRow = getCorrespondingHppRow(row, oldItem);
                         if (oldHppRow) {
@@ -887,7 +925,8 @@
                         }
                     }
                     updateSizeDropdown(row, newItem);
-                    if (voucherTypeSelect.value === 'PJ' && newItem) {
+                    if ((voucherTypeSelect.value === 'PJ' || voucherTypeSelect.value === 'RPJ') &&
+                        newItem) {
                         const sizeSelect = row.querySelector('.sizeInput');
                         const quantity = parseFloat(row.querySelector('.quantityInput')?.value) || 1;
                         let size = sizeSelect.value;
@@ -928,7 +967,8 @@
                         row.querySelector('.descriptionInput[type="text"]')?.value.trim() || '';
                     const newSize = e.target.value.trim();
                     const quantity = parseFloat(row.querySelector('.quantityInput')?.value) || 1;
-                    if (voucherTypeSelect.value === 'PJ' && item && newSize) {
+                    if ((voucherTypeSelect.value === 'PJ' || voucherTypeSelect.value === 'RPJ') && item &&
+                        newSize) {
                         updateHppRow(row, item, newSize, quantity,
                             voucherCreatedAt); // Update corresponding HPP
                     }
@@ -946,7 +986,7 @@
                 sizeCell.appendChild(sizeSelect);
                 sizeSelect.addEventListener('change', () => {
                     updateAllCalculationsAndValidations();
-                    if (voucherTypeSelect.value === 'PJ') {
+                    if ((voucherTypeSelect.value === 'PJ' || voucherTypeSelect.value === 'RPJ')) {
                         const quantity = parseFloat(row.querySelector('.quantityInput')?.value) || 1;
                         updateHppRow(index, item, currentSize, quantity);
                     }
@@ -1298,7 +1338,8 @@
                     descriptionElement.name = `transactions[${index}][description]`;
                     descriptionElement.value = transactionData?.description || '';
                     descriptionElement.readOnly = true;
-                } else if (useStock === 'yes' && ['PJ', 'PH', 'PK'].includes(voucherType)) {
+                } else if (useStock === 'yes' && ['PJ', 'PH', 'PK', 'PYB', 'PYK', 'RPB', 'RPJ'].includes(
+                        voucherType)) {
                     descriptionElement = createStockDropdown(index, transactionData?.description);
                     descriptionElement.addEventListener('change', (e) => {
                         const row = e.target.closest('tr');
@@ -1316,7 +1357,8 @@
                         }
                         updateAllCalculationsAndValidations();
                     });
-                } else if (voucherType === 'PB' && useStock === 'yes') {
+                } else if ((voucherType === 'PB' || voucherType === 'RPB' || voucherType === 'PYB') && useStock ===
+                    'yes') {
                     const inputGroup = document.createElement('div');
                     inputGroup.className = 'input-group';
                     const select = createStockDropdown(index, transactionData?.description_select || transactionData
@@ -1355,7 +1397,8 @@
                 // Size Cell
                 const sizeCell = document.createElement('td');
                 let sizeElement;
-                if (isHppRow || useStock !== 'yes' || !['PJ', 'PB', 'PH', 'PK'].includes(voucherType)) {
+                if (isHppRow || useStock !== 'yes' || !['PJ', 'PB', 'PH', 'PK', 'PYB', 'PYK', 'RPB', 'RPJ']
+                    .includes(voucherType)) {
                     sizeElement = document.createElement('input');
                     sizeElement.type = 'text';
                     sizeElement.className = 'form-control sizeInput';
@@ -1523,7 +1566,8 @@
                             const index = parseInt(row.dataset.rowIndex);
                             const item = e.target.value;
                             updateSizeDropdown(row, item);
-                            if (voucherTypeSelect.value === 'PJ' && item) {
+                            if ((voucherTypeSelect.value === 'PJ' || voucherTypeSelect.value ===
+                                    'RPJ') && item) {
                                 const quantity = parseFloat(row.querySelector('.quantityInput')
                                     ?.value) || 1;
                                 const size = row.querySelector('.sizeInput')?.value || '';
@@ -1586,7 +1630,8 @@
                     transactionsData.forEach((data, index) => {
                         const newRow = generateTransactionTableRow(index, data);
                         transactionTableBody.appendChild(newRow);
-                        if (useStock === 'yes' && ['PJ', 'PB', 'PH', 'PK'].includes(voucherType) && !data
+                        if (useStock === 'yes' && ['PJ', 'PB', 'PH', 'PK', 'PYB', 'PYK', 'RPJ', 'RPB']
+                            .includes(voucherType) && !data
                             .isHppRow) {
                             updateSizeDropdown(newRow, data.description || data.description_select);
                         }
@@ -1594,13 +1639,14 @@
                     if (transactionTableBody.querySelectorAll('tr').length === 0) {
                         const newRow = generateTransactionTableRow(0);
                         transactionTableBody.appendChild(newRow);
-                        if (useStock === 'yes' && ['PJ', 'PB', 'PH', 'PK'].includes(voucherType)) {
+                        if (useStock === 'yes' && ['PJ', 'PB', 'PH', 'PK', 'PYB', 'PYK', 'RPJ', 'RPB'].includes(
+                                voucherType)) {
                             updateSizeDropdown(newRow, '');
                         }
                     }
                 }
                 updateTransactionRowIndices();
-                if (voucherType === 'PJ') {
+                if (voucherType === 'PJ' || voucherType === 'RPJ') {
                     initializeHppRows(); // Re-init HPP rows setelah refresh
                 }
             }
@@ -2024,7 +2070,7 @@
 
                 // Validate stock quantities for PJ, PH, PK
                 const voucherType = voucherTypeSelect.value;
-                if (['PJ', 'PH', 'PK'].includes(voucherType)) {
+                if (['PJ', 'PH', 'PK', 'PYB', 'PYK', 'RPB', 'RPJ'].includes(voucherType)) {
                     const stockDescriptions = new Set();
                     transactionTableBody.querySelectorAll('tr').forEach(row => {
                         const description = row.querySelector('.descriptionInput')?.value || '';
@@ -2040,7 +2086,7 @@
                     });
 
                     // Validate HPP rows for PJ
-                    if (voucherType === 'PJ') {
+                    if (voucherType === 'PJ' || voucherType === 'RPJ') {
                         transactionTableBody.querySelectorAll('tr').forEach(row => {
                             const description = row.querySelector('.descriptionInput')?.value || '';
                             const size = row.querySelector('.sizeInput')?.value || '';
@@ -2164,7 +2210,8 @@
                 const newIndex = transactionTableBody.querySelectorAll('tr').length;
                 const newRow = generateTransactionTableRow(newIndex);
                 transactionTableBody.appendChild(newRow);
-                if (useStock === 'yes' && ['PJ', 'PB', 'PH', 'PK'].includes(voucherType)) {
+                if (useStock === 'yes' && ['PJ', 'PB', 'PH', 'PK', 'PYK', 'PYB', 'RPJ', 'RPB'].includes(
+                        voucherType)) {
                     updateSizeDropdown(newRow, '');
                 }
                 updateTransactionRowIndices();
@@ -2199,7 +2246,7 @@
             // --- Initialize Existing HPP Rows ---
             function initializeHppRows() {
                 const voucherType = voucherTypeSelect.value;
-                if (voucherType !== 'PJ') return;
+                if (voucherType !== 'PJ' || voucherType !== 'PJ') return;
 
                 const existingTransactions = @json($voucher->transactions) || [];
                 const currentCreatedAt = @json($voucherCreatedAt) || new Date().toISOString();
@@ -2219,16 +2266,21 @@
             }
 
             function initializePage() {
+                // Set initial useStock based on voucher type
+                const isStockVoucher = ['PJ', 'PB', 'PH', 'PK', 'RPJ', 'RPB', 'PYJ', 'PYB'].includes(
+                    currentVoucherType);
+                useStockYes.checked = isStockVoucher;
+                useStockNo.checked = !isStockVoucher;
+
                 updateVoucherTypeOptions();
                 if (recipeContainer) createRecipeDropdown();
                 updateInvoiceAndStoreFields();
                 updateAccountCodeDatalist();
-                // Initialize recipe and transactions for PK vouchers
                 if (currentVoucherType === 'PK' && useStockYes.checked && voucherRecipeId) {
                     const recipeSelect = document.getElementById('recipe');
                     if (recipeSelect) {
                         recipeSelect.value = voucherRecipeId;
-                        handleRecipeChange(); // Populate transactions based on selected recipe
+                        handleRecipeChange();
                     }
                 } else {
                     refreshTransactionTable();
