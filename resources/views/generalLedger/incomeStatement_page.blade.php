@@ -116,33 +116,24 @@
                 <td>Pendapatan Penjualan</td>
                 <td class="text-end">{{ number_format($pendapatanPenjualan, 2, ',', '.') }}</td>
             </tr>
-            <tr class="sub-row" data-parent="pendapatanPenjualan">
-                <td></td>
-                <td class="indent">Pendapatan Penjualan Bahan Baku</td>
-                <td class="text-end">{{ number_format($pendapatanPenjualanDagangan, 2, ',', '.') }}</td>
-            </tr>
-            @foreach ($details['Pendapatan Penjualan Bahan Baku'] ?? [] as $code => $balance)
-                <tr class="sub-row" data-parent="pendapatanPenjualan" style="display: none;">
-                    <td></td>
-                    <td class="indent indent">
-                        {{ \App\Models\ChartOfAccount::where('account_code', $code)->first()->name ?? $code }}</td>
-                    <td class="text-end">{{ number_format($balance, 2, ',', '.') }}</td>
-                </tr>
+            @foreach ($details['Pendapatan Penjualan Bahan Baku'] ?? [] as $subsection => $balance)
+                @if ($balance != 0)
+                    <tr class="sub-row" data-parent="pendapatanPenjualan">
+                        <td></td>
+                        <td class="indent">{{ $subsection }}</td>
+                        <td class="text-end">{{ number_format($balance, 2, ',', '.') }}</td>
+                    </tr>
+                @endif
             @endforeach
-            <tr class="sub-row" data-parent="pendapatanPenjualan">
-                <td></td>
-                <td class="indent">Pendapatan Penjualan Barang Jadi</td>
-                <td class="text-end">{{ number_format($pendapatanPenjualanJadi, 2, ',', '.') }}</td>
-            </tr>
-            @foreach ($details['Pendapatan Penjualan Barang Jadi'] ?? [] as $code => $balance)
-                <tr class="sub-row" data-parent="pendapatanPenjualan" style="display: none;">
-                    <td></td>
-                    <td class="indent indent">
-                        {{ \App\Models\ChartOfAccount::where('account_code', $code)->first()->name ?? $code }}</td>
-                    <td class="text-end">{{ number_format($balance, 2, ',', '.') }}</td>
-                </tr>
+            @foreach ($details['Pendapatan Penjualan Barang Jadi'] ?? [] as $subsection => $balance)
+                @if ($balance != 0)
+                    <tr class="sub-row" data-parent="pendapatanPenjualan">
+                        <td></td>
+                        <td class="indent">{{ $subsection }}</td>
+                        <td class="text-end">{{ number_format($balance, 2, ',', '.') }}</td>
+                    </tr>
+                @endif
             @endforeach
-
             <!-- Harga Pokok Penjualan -->
             <tr class="expandable" data-category="hpp">
                 <td>Harga Pokok Penjualan</td>
@@ -195,37 +186,18 @@
                 </tr>
             @endforeach
 
-            <!-- Beban Lain-lain -->
-            <tr class="expandable" data-category="bebanLain">
-                <td class="fw-bolder">Beban Lain-lain</td>
-                <td class="text-end">({{ number_format($totalBebanLain, 2, ',', '.') }})</td>
-            </tr>
-            @foreach ($details['Beban Lain-lain'] ?? [] as $subsection => $balance)
-                <tr class="sub-row" data-parent="bebanLain">
-                    <td></td>
-                    <td class="indent">{{ $subsection }}</td>
-                    <td class="text-end">({{ number_format($balance, 2, ',', '.') }})</td>
-                </tr>
-            @endforeach
-
             <tr>
                 <td></td>
                 <td class="fw-bolder">Laba Sebelum Pajak</td>
                 <td class="text-end">{{ number_format($labaSebelumPajak, 2, ',', '.') }}</td>
             </tr>
 
-            <!-- Pajak Penghasilan -->
-            <tr class="expandable" data-category="pajak">
-                <td class="fw-bolder">Pajak Penghasilan</td>
-                <td class="text-end">({{ number_format($totalBebanPajak, 2, ',', '.') }})</td>
+            <!-- Beban Pajak Penghasilan (di luar COA) -->
+            <tr>
+                <td></td>
+                <td class="fw-bolder">Pajak Penghasilan Final</td>
+                <td class="text-end">({{ number_format($bebanPajakPenghasilan, 2, ',', '.') }})</td>
             </tr>
-            @foreach ($details['Pajak Penghasilan'] ?? [] as $subsection => $balance)
-                <tr class="sub-row" data-parent="pajak">
-                    <td></td>
-                    <td class="indent">{{ $subsection }}</td>
-                    <td class="text-end">({{ number_format($balance, 2, ',', '.') }})</td>
-                </tr>
-            @endforeach
 
             <tr>
                 <td></td>

@@ -27,17 +27,68 @@ class GeneralLedgerService
             'Pendapatan Penjualan Bahan Baku' => ['4.1.'],
             'Pendapatan Penjualan Barang Jadi' => ['4.2.'],
             'Harga Pokok Penjualan' => ['5.1.', '5.2.', '5.3.'],
-            'Beban Operasional' => ['6.1.', '6.2.', '6.3.'],
-            'Pendapatan Lain-lain' => ['7.1.'],
-            'Beban Lain-lain' => ['7.2.'],
-            'Pajak Penghasilan' => ['7.3.'],
+            'Beban Operasional' => ['6.1.', '6.2.', '6.3.', '7.3'],
+            'Pendapatan Lain-lain' => ['7.1.', '7.2.'],
         ];
 
         $totals = array_fill_keys(array_keys($accountCategories), 0);
         $details = array_fill_keys(array_keys($accountCategories), []);
 
-        // Pertama, ambil semua akun yang sesuai dengan kategori dari chart_of_accounts
-        $relevantAccounts = DB::table('chart_of_accounts')
+        // Ambil data transaksi dengan JOIN langsung ke chart_of_accounts
+        $voucherDetails = VoucherDetails::with(['voucher', 'chartOfAccount'])
+            ->whereHas('voucher', function ($query) use ($startDate, $endDate) {
+                $query->whereBetween('voucher_date', [$startDate, $endDate]);
+            })
+            ->whereHas('chartOfAccount', function ($query) use ($accountCategories) {
+                $query->where(function ($q) use ($accountCategories) {
+                    foreach ($accountCategories as $prefixes) {
+                        foreach ($prefixes as $prefix) {
+                            $q->orWhere('account_code', 'like', $prefix . '%');
+                        }
+                    }
+                });
+            })
+            ->select('voucher_details.account_code')
+            ->selectRaw('SUM(credit - debit) as pendapatan_balance')
+            ->selectRaw('SUM(debit - credit) as beban_balance')
+            ->groupBy('account_code')
+            ->get();
+
+        // Proses data transaksi
+        foreach ($voucherDetails as $detail) {
+            $accountCode = $detail->account_code;
+            $chartAccount = $detail->chartOfAccount;
+            $subsection = $chartAccount ? $chartAccount->account_subsection : 'Unknown';
+
+            // Cari kategori yang sesuai
+            foreach ($accountCategories as $category => $prefixes) {
+                $matched = false;
+                foreach ($prefixes as $prefix) {
+                    if (strpos($accountCode, $prefix) === 0) {
+                        // Tentukan balance berdasarkan kategori
+                        $balance = in_array($category, ['Pendapatan Penjualan Bahan Baku', 'Pendapatan Penjualan Barang Jadi', 'Pendapatan Lain-lain'])
+                            ? $detail->pendapatan_balance
+                            : $detail->beban_balance;
+
+                        // Tambahkan ke total
+                        $totals[$category] += $balance;
+
+                        // Tambahkan ke detail per subsection (hindari duplikasi)
+                        if (!isset($details[$category][$subsection])) {
+                            $details[$category][$subsection] = 0;
+                        }
+                        $details[$category][$subsection] += $balance;
+
+                        $matched = true;
+                        break;
+                    }
+                }
+                if ($matched) break; // Keluar dari loop kategori jika sudah cocok
+            }
+        }
+
+        // Tambahkan subsection dengan nilai 0 untuk kategori yang tidak memiliki transaksi
+        $allAccounts = DB::table('chart_of_accounts')
             ->where(function ($query) use ($accountCategories) {
                 foreach ($accountCategories as $prefixes) {
                     foreach ($prefixes as $prefix) {
@@ -48,69 +99,39 @@ class GeneralLedgerService
             ->select('account_code', 'account_subsection')
             ->get();
 
-        // Kemudian ambil data transaksi
-        $voucherDetails = VoucherDetails::with(['voucher', 'chartOfAccount'])
-            ->whereHas('voucher', function ($query) use ($startDate, $endDate) {
-                $query->whereBetween('voucher_date', [$startDate, $endDate]);
-            })
-            ->select('voucher_details.account_code')
-            ->selectRaw('SUM(credit - debit) as pendapatan_balance')
-            ->selectRaw('SUM(debit - credit) as beban_balance')
-            ->where(function ($query) use ($accountCategories) {
-                foreach ($accountCategories as $prefixes) {
-                    foreach ($prefixes as $prefix) {
-                        $query->orWhere('account_code', 'like', $prefix . '%');
-                    }
-                }
-            })
-            ->groupBy('account_code')
-            ->get()
-            ->keyBy('account_code'); // Buat index berdasarkan account_code untuk lookup cepat
-
-        // Proses semua akun yang relevan
-        foreach ($relevantAccounts as $account) {
+        foreach ($allAccounts as $account) {
             $accountCode = $account->account_code;
             $subsection = $account->account_subsection ?? 'Unknown';
 
-            // Cari kategori yang sesuai
             foreach ($accountCategories as $category => $prefixes) {
                 foreach ($prefixes as $prefix) {
                     if (strpos($accountCode, $prefix) === 0) {
-                        // Inisialisasi subsection jika belum ada
                         if (!isset($details[$category][$subsection])) {
                             $details[$category][$subsection] = 0;
                         }
-
-                        // Cek apakah akun ini memiliki transaksi
-                        if (isset($voucherDetails[$accountCode])) {
-                            $detail = $voucherDetails[$accountCode];
-                            $balance = in_array($category, ['Pendapatan Penjualan Bahan Baku', 'Pendapatan Penjualan Barang Jadi', 'Pendapatan Lain-lain'])
-                                ? $detail->pendapatan_balance
-                                : $detail->beban_balance;
-                            $totals[$category] += $balance;
-                            $details[$category][$subsection] += $balance;
-                        }
-                        // Jika tidak ada transaksi, nilai tetap 0 (sudah di-set saat inisialisasi)
-
-                        break;
+                        break 2; // Keluar dari kedua loop
                     }
                 }
             }
         }
 
+        // Hitung komponen laba rugi
         $pendapatanPenjualanDagangan = $totals['Pendapatan Penjualan Bahan Baku'] ?? 0;
         $pendapatanPenjualanJadi = $totals['Pendapatan Penjualan Barang Jadi'] ?? 0;
         $pendapatanPenjualan = $pendapatanPenjualanDagangan + $pendapatanPenjualanJadi;
         $hpp = $totals['Harga Pokok Penjualan'] ?? 0;
         $totalBebanOperasional = $totals['Beban Operasional'] ?? 0;
         $totalPendapatanLain = $totals['Pendapatan Lain-lain'] ?? 0;
-        $totalBebanLain = $totals['Beban Lain-lain'] ?? 0;
-        $totalBebanPajak = $totals['Pajak Penghasilan'] ?? 0;
 
+        // Hitung Beban Pajak Penghasilan
+        $pphFinalRate = 0.005;
+        $bebanPajakPenghasilan = $pendapatanPenjualan * $pphFinalRate;
+
+        // Hitung laba rugi
         $labaKotor = $pendapatanPenjualan - $hpp;
         $labaOperasi = $labaKotor - $totalBebanOperasional;
-        $labaSebelumPajak = $labaOperasi + $totalPendapatanLain - $totalBebanLain;
-        $labaBersih = $labaSebelumPajak - $totalBebanPajak;
+        $labaSebelumPajak = $labaOperasi + $totalPendapatanLain;
+        $labaBersih = $labaSebelumPajak - $bebanPajakPenghasilan;
 
         return [
             'pendapatanPenjualan' => $pendapatanPenjualan,
@@ -121,9 +142,8 @@ class GeneralLedgerService
             'totalBebanOperasional' => $totalBebanOperasional,
             'labaOperasi' => $labaOperasi,
             'totalPendapatanLain' => $totalPendapatanLain,
-            'totalBebanLain' => $totalBebanLain,
             'labaSebelumPajak' => $labaSebelumPajak,
-            'totalBebanPajak' => $totalBebanPajak,
+            'bebanPajakPenghasilan' => $bebanPajakPenghasilan,
             'labaBersih' => $labaBersih,
             'details' => $details,
         ];
@@ -419,7 +439,10 @@ class GeneralLedgerService
                 ->keyBy('account_name');
 
             $profitData = $this->calculateNetProfit($start, $end);
-            $labaBersih = $profitData['labaBersih'];
+
+            // Gunakan laba sebelum pajak sebagai laba bersih untuk balance sheet
+            // karena pajak penghasilan sudah dihitung otomatis di luar COA
+            $labaBersih = $profitData['labaSebelumPajak'];
 
             if (isset($ekuitasData['Laba Rugi Ditahan'])) {
                 $labaDitahanSaldo = $ekuitasData['Laba Rugi Ditahan']->saldo ?? 0;
@@ -459,7 +482,7 @@ class GeneralLedgerService
                 'ekuitasData' => $ekuitasData,
                 'start_date' => $startDate,
                 'end_date' => $endDate,
-                'labaBersih' => $labaBersih,
+                'labaBersih' => $labaBersih, // Ini sekarang menggunakan labaSebelumPajak
             ];
         } catch (\Exception $e) {
             Log::error('Error preparing Balance Sheet data: ' . $e->getMessage());
