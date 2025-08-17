@@ -1066,6 +1066,34 @@ class VoucherService
             $stocks = [];
         }
 
+        $transferStocks = TransferStock::select('item', 'size', 'quantity')
+            ->orderBy('item')
+            ->get()
+            ->map(function ($transferStock) {
+                return [
+                    'item' => $transferStock->item,
+                    'size' => $transferStock->size,
+                    'quantity' => $transferStock->quantity,
+                ];
+            })->values()->toArray();
+        if (empty($transferStocks)) {
+            $transferStocks = [];
+        }
+
+        $usedStocks = UsedStock::select('item', 'size', 'quantity')
+            ->orderBy('item')
+            ->get()
+            ->map(function ($usedStock) {
+                return [
+                    'item' => $usedStock->item,
+                    'size' => $usedStock->size,
+                    'quantity' => $usedStock->quantity,
+                ];
+            })->values()->toArray();
+        if (empty($usedStocks)) {
+            $usedStocks = [];
+        }
+
         // Fetch recipes with transferStocks relationship
         $recipes = Recipes::with(['transferStocks' => function ($query) {
             $query->select('transfer_stocks.id', 'transfer_stocks.item', 'transfer_stocks.size')
@@ -1171,15 +1199,6 @@ class VoucherService
             }
         }
 
-        // Logging untuk debugging
-        // Log::info('Preparing voucher edit data for voucher ID: ' . $id, [
-        //     'voucher_type' => $voucher->voucher_type,
-        //     'voucher_created_at' => $voucherCreatedAt,
-        //     'historical_transactions_count' => isset($historicalTransactions) ? count($historicalTransactions) : 0,
-        //     'current_transactions_count' => isset($currentTransactions) ? count($currentTransactions) : 0,
-        //     'transactions_data_count' => count($transactionsData),
-        // ]);
-
         return compact(
             'voucher',
             'headingText',
@@ -1190,10 +1209,12 @@ class VoucherService
             'subsidiariesData',
             'accountsData',
             'stocks',
+            'transferStocks',
+            'usedStocks',
             'transactionsData',
             'dueDate',
             'recipes',
-            'voucherCreatedAt' // Tambahkan ini
+            'voucherCreatedAt'
         );
     }
 

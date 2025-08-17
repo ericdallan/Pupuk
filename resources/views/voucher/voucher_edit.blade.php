@@ -291,7 +291,21 @@
                                                 <input type="text" class="form-control descriptionInput"
                                                     name="transactions[{{ $index }}][description]"
                                                     value="{{ $transaction->description }}" readonly>
-                                            @elseif (in_array($voucher->voucher_type, ['PJ', 'PH', 'PK']))
+                                            @elseif (in_array($voucher->voucher_type, ['PJ', 'RPJ']))
+                                                <select class="form-control descriptionInput"
+                                                    name="transactions[{{ $index }}][description]"
+                                                    data-initial-value="{{ $transaction->description }}">
+                                                    <option value="">Pilih Nama Stock</option>
+                                                    @foreach (array_merge($stocks, $usedStocks) as $stock)
+                                                        @if (!str_starts_with($stock['item'], 'HPP '))
+                                                            <option value="{{ $stock['item'] }}"
+                                                                {{ $transaction->description == $stock['item'] ? 'selected' : '' }}>
+                                                                {{ $stock['item'] }}
+                                                            </option>
+                                                        @endif
+                                                    @endforeach
+                                                </select>
+                                            @elseif ($voucher->voucher_type == 'PH')
                                                 <select class="form-control descriptionInput"
                                                     name="transactions[{{ $index }}][description]"
                                                     data-initial-value="{{ $transaction->description }}">
@@ -300,23 +314,50 @@
                                                         @if (!str_starts_with($stock['item'], 'HPP '))
                                                             <option value="{{ $stock['item'] }}"
                                                                 {{ $transaction->description == $stock['item'] ? 'selected' : '' }}>
-                                                                {{ $stock['item'] }}</option>
+                                                                {{ $stock['item'] }}
+                                                            </option>
                                                         @endif
                                                     @endforeach
                                                 </select>
-                                            @elseif ($voucher->voucher_type == 'PB')
+                                            @elseif ($voucher->voucher_type == 'PK')
+                                                <select class="form-control descriptionInput"
+                                                    name="transactions[{{ $index }}][description]"
+                                                    data-initial-value="{{ $transaction->description }}">
+                                                    <option value="">Pilih Nama Stock</option>
+                                                    @foreach ($transferStocks as $transferStock)
+                                                        @if (!str_starts_with($transferStock['item'], 'HPP '))
+                                                            <option value="{{ $transferStock['item'] }}"
+                                                                {{ $transaction->description == $transferStock['item'] ? 'selected' : '' }}>
+                                                                {{ $transferStock['item'] }}
+                                                            </option>
+                                                        @endif
+                                                    @endforeach
+                                                </select>
+                                            @elseif (in_array($voucher->voucher_type, ['PB', 'RPB', 'PYB', 'PYK']))
                                                 <div class="input-group">
                                                     <select class="form-control descriptionInput"
                                                         name="transactions[{{ $index }}][description_select]"
                                                         style="width: 50%;">
                                                         <option value="">Pilih Nama Stock</option>
-                                                        @foreach ($stocks as $stock)
-                                                            @if (!str_starts_with($stock['item'], 'HPP '))
-                                                                <option value="{{ $stock['item'] }}"
-                                                                    {{ $transaction->description == $stock['item'] ? 'selected' : '' }}>
-                                                                    {{ $stock['item'] }}</option>
-                                                            @endif
-                                                        @endforeach
+                                                        @if (in_array($voucher->voucher_type, ['PYB', 'PYK']))
+                                                            @foreach (array_merge($stocks, $usedStocks, $transferStocks) as $stock)
+                                                                @if (!str_starts_with($stock['item'], 'HPP '))
+                                                                    <option value="{{ $stock['item'] }}"
+                                                                        {{ $transaction->description == $stock['item'] ? 'selected' : '' }}>
+                                                                        {{ $stock['item'] }}
+                                                                    </option>
+                                                                @endif
+                                                            @endforeach
+                                                        @else
+                                                            @foreach ($stocks as $stock)
+                                                                @if (!str_starts_with($stock['item'], 'HPP '))
+                                                                    <option value="{{ $stock['item'] }}"
+                                                                        {{ $transaction->description == $stock['item'] ? 'selected' : '' }}>
+                                                                        {{ $stock['item'] }}
+                                                                    </option>
+                                                                @endif
+                                                            @endforeach
+                                                        @endif
                                                     </select>
                                                     <input type="text" class="form-control descriptionInput"
                                                         name="transactions[{{ $index }}][description]"
@@ -329,7 +370,20 @@
                                             @endif
                                         </td>
                                         <td>
-                                            @if (in_array($voucher->voucher_type, ['PJ', 'PB', 'PH', 'PK']) && !str_starts_with($transaction->description, 'HPP '))
+                                            @if (in_array($voucher->voucher_type, ['PJ', 'RPJ']) && !str_starts_with($transaction->description, 'HPP '))
+                                                <select class="form-control sizeInput"
+                                                    name="transactions[{{ $index }}][size]">
+                                                    <option value="">Pilih Ukuran</option>
+                                                    @foreach (array_merge($stocks, $usedStocks) as $stock)
+                                                        @if ($stock['item'] == $transaction->description)
+                                                            <option value="{{ $stock['size'] }}"
+                                                                {{ $transaction->size == $stock['size'] ? 'selected' : '' }}>
+                                                                {{ $stock['size'] }}
+                                                            </option>
+                                                        @endif
+                                                    @endforeach
+                                                </select>
+                                            @elseif (in_array($voucher->voucher_type, ['PH', 'PB', 'RPB']) && !str_starts_with($transaction->description, 'HPP '))
                                                 <select class="form-control sizeInput"
                                                     name="transactions[{{ $index }}][size]">
                                                     <option value="">Pilih Ukuran</option>
@@ -337,7 +391,34 @@
                                                         @if ($stock['item'] == $transaction->description)
                                                             <option value="{{ $stock['size'] }}"
                                                                 {{ $transaction->size == $stock['size'] ? 'selected' : '' }}>
-                                                                {{ $stock['size'] }}</option>
+                                                                {{ $stock['size'] }}
+                                                            </option>
+                                                        @endif
+                                                    @endforeach
+                                                </select>
+                                            @elseif ($voucher->voucher_type == 'PK' && !str_starts_with($transaction->description, 'HPP '))
+                                                <select class="form-control sizeInput"
+                                                    name="transactions[{{ $index }}][size]">
+                                                    <option value="">Pilih Ukuran</option>
+                                                    @foreach ($transferStocks as $transferStock)
+                                                        @if ($transferStock['item'] == $transaction->description)
+                                                            <option value="{{ $transferStock['size'] }}"
+                                                                {{ $transaction->size == $transferStock['size'] ? 'selected' : '' }}>
+                                                                {{ $transferStock['size'] }}
+                                                            </option>
+                                                        @endif
+                                                    @endforeach
+                                                </select>
+                                            @elseif (in_array($voucher->voucher_type, ['PYB', 'PYK']) && !str_starts_with($transaction->description, 'HPP '))
+                                                <select class="form-control sizeInput"
+                                                    name="transactions[{{ $index }}][size]">
+                                                    <option value="">Pilih Ukuran</option>
+                                                    @foreach (array_merge($stocks, $usedStocks, $transferStocks) as $stock)
+                                                        @if ($stock['item'] == $transaction->description)
+                                                            <option value="{{ $stock['size'] }}"
+                                                                {{ $transaction->size == $stock['size'] ? 'selected' : '' }}>
+                                                                {{ $stock['size'] }}
+                                                            </option>
                                                         @endif
                                                     @endforeach
                                                 </select>
@@ -363,7 +444,8 @@
                                         <td>
                                             <input type="number" class="form-control totalInput"
                                                 name="transactions[{{ $index }}][total]"
-                                                value="{{ $transaction->quantity * $transaction->nominal }}" readonly>
+                                                value="{{ $transaction->quantity * $transaction->nominal }}"
+                                                readonly>
                                         </td>
                                         <td class="text-center">
                                             <button type="button" class="btn btn-danger removeTransactionRowBtn"
@@ -374,7 +456,18 @@
                             @else
                                 <tr data-row-index="0">
                                     <td>
-                                        @if (in_array($voucher->voucher_type, ['PJ', 'PH', 'PK']))
+                                        @if (in_array($voucher->voucher_type, ['PJ', 'RPJ']))
+                                            <select class="form-control descriptionInput"
+                                                name="transactions[0][description]">
+                                                <option value="">Pilih Nama Stock</option>
+                                                @foreach (array_merge($stocks, $usedStocks) as $stock)
+                                                    @if (!str_starts_with($stock['item'], 'HPP '))
+                                                        <option value="{{ $stock['item'] }}">{{ $stock['item'] }}
+                                                        </option>
+                                                    @endif
+                                                @endforeach
+                                            </select>
+                                        @elseif ($voucher->voucher_type == 'PH')
                                             <select class="form-control descriptionInput"
                                                 name="transactions[0][description]">
                                                 <option value="">Pilih Nama Stock</option>
@@ -385,17 +478,37 @@
                                                     @endif
                                                 @endforeach
                                             </select>
-                                        @elseif ($voucher->voucher_type == 'PB')
+                                        @elseif ($voucher->voucher_type == 'PK')
+                                            <select class="form-control descriptionInput"
+                                                name="transactions[0][description]">
+                                                <option value="">Pilih Nama Stock</option>
+                                                @foreach ($transferStocks as $transferStock)
+                                                    @if (!str_starts_with($transferStock['item'], 'HPP '))
+                                                        <option value="{{ $transferStock['item'] }}">
+                                                            {{ $transferStock['item'] }}</option>
+                                                    @endif
+                                                @endforeach
+                                            </select>
+                                        @elseif (in_array($voucher->voucher_type, ['PB', 'RPB', 'PYB', 'PYK']))
                                             <div class="input-group">
                                                 <select class="form-control descriptionInput"
                                                     name="transactions[0][description_select]" style="width: 50%;">
                                                     <option value="">Pilih Nama Stock</option>
-                                                    @foreach ($stocks as $stock)
-                                                        @if (!str_starts_with($stock['item'], 'HPP '))
-                                                            <option value="{{ $stock['item'] }}">{{ $stock['item'] }}
-                                                            </option>
-                                                        @endif
-                                                    @endforeach
+                                                    @if (in_array($voucher->voucher_type, ['PYB', 'PYK']))
+                                                        @foreach (array_merge($stocks, $usedStocks, $transferStocks) as $stock)
+                                                            @if (!str_starts_with($stock['item'], 'HPP '))
+                                                                <option value="{{ $stock['item'] }}">
+                                                                    {{ $stock['item'] }}</option>
+                                                            @endif
+                                                        @endforeach
+                                                    @else
+                                                        @foreach ($stocks as $stock)
+                                                            @if (!str_starts_with($stock['item'], 'HPP '))
+                                                                <option value="{{ $stock['item'] }}">
+                                                                    {{ $stock['item'] }}</option>
+                                                            @endif
+                                                        @endforeach
+                                                    @endif
                                                 </select>
                                                 <input type="text" class="form-control descriptionInput"
                                                     name="transactions[0][description]" style="width: 50%;">
@@ -406,9 +519,37 @@
                                         @endif
                                     </td>
                                     <td>
-                                        @if (in_array($voucher->voucher_type, ['PJ', 'PB', 'PH', 'PK']))
+                                        @if (in_array($voucher->voucher_type, ['PJ', 'RPJ']))
                                             <select class="form-control sizeInput" name="transactions[0][size]">
                                                 <option value="">Pilih Ukuran</option>
+                                                @foreach (array_merge($stocks, $usedStocks) as $stock)
+                                                    <option value="{{ $stock['size'] }}">{{ $stock['size'] }}
+                                                    </option>
+                                                @endforeach
+                                            </select>
+                                        @elseif (in_array($voucher->voucher_type, ['PH', 'PB', 'RPB']))
+                                            <select class="form-control sizeInput" name="transactions[0][size]">
+                                                <option value="">Pilih Ukuran</option>
+                                                @foreach ($stocks as $stock)
+                                                    <option value="{{ $stock['size'] }}">{{ $stock['size'] }}
+                                                    </option>
+                                                @endforeach
+                                            </select>
+                                        @elseif ($voucher->voucher_type == 'PK')
+                                            <select class="form-control sizeInput" name="transactions[0][size]">
+                                                <option value="">Pilih Ukuran</option>
+                                                @foreach ($transferStocks as $transferStock)
+                                                    <option value="{{ $transferStock['size'] }}">
+                                                        {{ $transferStock['size'] }}</option>
+                                                @endforeach
+                                            </select>
+                                        @elseif (in_array($voucher->voucher_type, ['PYB', 'PYK']))
+                                            <select class="form-control sizeInput" name="transactions[0][size]">
+                                                <option value="">Pilih Ukuran</option>
+                                                @foreach (array_merge($stocks, $usedStocks, $transferStocks) as $stock)
+                                                    <option value="{{ $stock['size'] }}">{{ $stock['size'] }}
+                                                    </option>
+                                                @endforeach
                                             </select>
                                         @else
                                             <input type="text" class="form-control sizeInput"
@@ -474,7 +615,8 @@
                                     <datalist id="dynamicAccountCodes">
                                         <option value="">Pilih Kode Akun</option>
                                         @foreach ($accounts as $account)
-                                            <option value="{{ $account->account_code }}">{{ $account->account_code }}
+                                            <option value="{{ $account->account_code }}">
+                                                {{ $account->account_code }}
                                                 - {{ $account->account_name }}</option>
                                         @endforeach
                                         @foreach ($subsidiariesData as $subsidiary)
