@@ -24,4 +24,9 @@ class voucherDetails extends Model
     {
         return $this->belongsTo(Voucher::class, 'voucher_id');
     }
+
+    public function chartOfAccount()
+    {
+        return $this->belongsTo(ChartOfAccount::class, 'account_code', 'account_code');
+    }
 }

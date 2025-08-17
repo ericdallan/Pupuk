@@ -248,7 +248,7 @@
                         <i class="fas fa-file-alt"></i> Neraca Keuangan
                     </a>
                 </li>
-                <li class="nav-item" hidden>
+                <li class="nav-item">
                     <a class="nav-link {{ request()->routeIs('zakat_page') ? 'active' : '' }}"
                         href="{{ route('zakat_page') }}">
                         <i class="fas fa-file-alt"></i> Zakat

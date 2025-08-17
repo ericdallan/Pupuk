@@ -63,7 +63,8 @@
                 <button type="submit" class="btn btn-primary">Filter</button>
             </div>
             <div class="col-md-auto">
-                <a href="{{ route('export_BalanceSheet', ['start_date' => request('start_date'), 'end_date' => request('end_date')]) }}" class="btn btn-success">
+                <a href="{{ route('export_BalanceSheet', ['start_date' => request('start_date'), 'end_date' => request('end_date')]) }}"
+                    class="btn btn-success">
                     Export as Excel
                 </a>
             </div>
@@ -91,125 +92,133 @@
                     <td colspan="2" class="account-group">KEWAJIBAN</td>
                 </tr>
                 @php
-                $totalAsetLancar = 0;
-                $totalKewajiban = 0;
-                $asetLancarSubsections = $allAset['Aset Lancar'] ?? collect([]);
-                $kewajibanSubsections = $allKewajiban;
-                $maxRows = max($asetLancarSubsections->count(), $kewajibanSubsections->count());
+                    $totalAsetLancar = 0;
+                    $totalKewajiban = 0;
+                    $asetLancarSubsections = $allAset['Aset Lancar'] ?? collect([]);
+                    $kewajibanSubsections = $allKewajiban;
+                    $maxRows = max($asetLancarSubsections->count(), $kewajibanSubsections->count());
                 @endphp
-                @for ($i = 0; $i < $maxRows; $i++) <tr>
-                    <!-- Aset Lancar -->
-                    <td>
-                        @if ($i < $asetLancarSubsections->count())
-                            {{ $asetLancarSubsections[$i]->account_name }}
-                            @endif
-                    </td>
-                    <td class="text-right">
-                        @if ($i < $asetLancarSubsections->count())
-                            @php
-                            $subsection = $asetLancarSubsections[$i]->account_name;
-                            $saldo = $asetLancarData->get($subsection)->saldo ?? 0;
-                            $totalAsetLancar += $saldo;
-                            @endphp
-                            {{ number_format($saldo, 2, ',', '.') }}
-                            @endif
-                    </td>
-                    <!-- Kewajiban -->
-                    <td>
-                        @if ($i < $kewajibanSubsections->count())
-                            {{ $kewajibanSubsections[$i]->account_name }}
-                            @endif
-                    </td>
-                    <td class="text-right">
-                        @if ($i < $kewajibanSubsections->count())
-                            @php
-                            $subsection = $kewajibanSubsections[$i]->account_name;
-                            $saldo = $kewajibanData->get($subsection)->saldo ?? 0;
-                            $totalKewajiban += $saldo;
-                            @endphp
-                            {{ number_format($saldo, 2, ',', '.') }}
-                            @endif
-                    </td>
-                    </tr>
-                    @endfor
-                    <!-- Total Aset Lancar and Total Kewajiban -->
-                    <tr class="total-row">
-                        <td class="font-weight-bold">Total Aset Lancar</td>
-                        <td class="text-right font-weight-bold">{{ number_format($totalAsetLancar, 2, ',', '.') }}</td>
-                        <td class="font-weight-bold">Total Kewajiban</td>
-                        <td class="text-right font-weight-bold">{{ number_format($totalKewajiban, 2, ',', '.') }}</td>
-                    </tr>
-
-                    <!-- Aset Tetap and Ekuitas -->
+                @for ($i = 0; $i < $maxRows; $i++)
                     <tr>
-                        <td colspan="2" class="account-group">ASET TETAP</td>
-                        <td colspan="2" class="account-group">EKUITAS</td>
+                        <!-- Aset Lancar -->
+                        <td>
+                            @if ($i < $asetLancarSubsections->count())
+                                {{ $asetLancarSubsections[$i]->account_name }}
+                            @endif
+                        </td>
+                        <td class="text-right">
+                            @if ($i < $asetLancarSubsections->count())
+                                @php
+                                    $subsection = $asetLancarSubsections[$i]->account_name;
+                                    $saldo = $asetLancarData->get($subsection)->saldo ?? 0;
+                                    $totalAsetLancar += $saldo;
+                                @endphp
+                                {{ number_format($saldo, 2, ',', '.') }}
+                            @endif
+                        </td>
+                        <!-- Kewajiban -->
+                        <td>
+                            @if ($i < $kewajibanSubsections->count())
+                                {{ $kewajibanSubsections[$i]->account_name }}
+                            @endif
+                        </td>
+                        <td class="text-right">
+                            @if ($i < $kewajibanSubsections->count())
+                                @php
+                                    $subsection = $kewajibanSubsections[$i]->account_name;
+                                    $saldo = $kewajibanData->get($subsection)->saldo ?? 0;
+                                    $totalKewajiban += $saldo;
+                                @endphp
+                                {{ number_format($saldo, 2, ',', '.') }}
+                            @endif
+                        </td>
                     </tr>
-                    @php
+                @endfor
+                <!-- Total Aset Lancar and Total Kewajiban -->
+                <tr class="total-row">
+                    <td class="font-weight-bold">Total Aset Lancar</td>
+                    <td class="text-right font-weight-bold">{{ number_format($totalAsetLancar, 2, ',', '.') }}</td>
+                    <td class="font-weight-bold">Total Kewajiban</td>
+                    <td class="text-right font-weight-bold">{{ number_format($totalKewajiban, 2, ',', '.') }}</td>
+                </tr>
+
+                <!-- Aset Tetap and Ekuitas -->
+                <tr>
+                    <td colspan="2" class="account-group">ASET TETAP</td>
+                    <td colspan="2" class="account-group">EKUITAS</td>
+                </tr>
+                @php
                     $totalAsetTetap = 0;
                     $totalEkuitas = 0;
                     $asetTetapSubsections = $allAset['Aset Tetap'] ?? collect([]);
                     $ekuitasSubsections = $allEkuitas;
                     $maxRows = max($asetTetapSubsections->count(), $ekuitasSubsections->count());
-                    @endphp
-                    @for ($i = 0; $i < $maxRows; $i++) <tr>
+                @endphp
+                @for ($i = 0; $i < $maxRows; $i++)
+                    <tr>
                         <!-- Aset Tetap -->
                         <td>
                             @if ($i < $asetTetapSubsections->count())
                                 {{ $asetTetapSubsections[$i]->account_name }}
-                                @endif
+                            @endif
                         </td>
                         <td class="text-right">
                             @if ($i < $asetTetapSubsections->count())
                                 @php
-                                $subsection = $asetTetapSubsections[$i]->account_name;
-                                $saldo = $asetTetapData->get($subsection)->saldo ?? 0;
-                                $totalAsetTetap += $saldo;
+                                    $subsection = $asetTetapSubsections[$i]->account_name;
+                                    $saldo = $asetTetapData->get($subsection)->saldo ?? 0;
+                                    $totalAsetTetap += $saldo;
                                 @endphp
                                 {{ number_format($saldo, 2, ',', '.') }}
-                                @endif
+                            @endif
                         </td>
                         <!-- Ekuitas -->
                         <td>
                             @if ($i < $ekuitasSubsections->count())
                                 {{ $ekuitasSubsections[$i]->account_name }}
-                                @endif
+                            @endif
                         </td>
                         <td class="text-right">
                             @if ($i < $ekuitasSubsections->count())
                                 @php
-                                $subsection = $ekuitasSubsections[$i]->account_name ?? null;
-                                $saldo = 0;
+                                    $subsection = $ekuitasSubsections[$i]->account_name ?? null;
+                                    $saldo = 0;
 
-                                if ($subsection && is_object($ekuitasData) && method_exists($ekuitasData, 'get')) {
-                                $saldoObject = $ekuitasData->get($subsection);
-                                $saldo = $saldoObject->saldo ?? 0; // Asumsi get() mengembalikan objek
-                                } elseif ($subsection && is_array($ekuitasData) && isset($ekuitasData[$subsection]['saldo'])) {
-                                $saldo = $ekuitasData[$subsection]['saldo'] ?? 0; // Jika $ekuitasData adalah array
-                                }
+                                    if ($subsection && is_object($ekuitasData) && method_exists($ekuitasData, 'get')) {
+                                        $saldoObject = $ekuitasData->get($subsection);
+                                        $saldo = $saldoObject->saldo ?? 0;
+                                    } elseif (
+                                        $subsection &&
+                                        is_array($ekuitasData) &&
+                                        isset($ekuitasData[$subsection]['saldo'])
+                                    ) {
+                                        $saldo = $ekuitasData[$subsection]['saldo'] ?? 0;
+                                    }
 
-                                $totalEkuitas += $saldo;
+                                    $totalEkuitas += $saldo;
                                 @endphp
-                                {{ number_format($saldo, 2, ',', '.') }}
-                                @endif
+                                {{ number_format(abs($saldo), 2, ',', '.') }} <!-- Tambahkan abs() di sini -->
+                            @endif
                         </td>
-                        </tr>
-                        @endfor
-                        <!-- Total Aset Tetap and Total Ekuitas -->
-                        <tr class="total-row">
-                            <td class="font-weight-bold">Total Aset Tetap</td>
-                            <td class="text-right font-weight-bold">{{ number_format($totalAsetTetap, 2, ',', '.') }}</td>
-                            <td class="font-weight-bold">Total Ekuitas</td>
-                            <td class="text-right font-weight-bold">{{ number_format($totalEkuitas, 2, ',', '.') }}</td>
-                        </tr>
+                    </tr>
+                @endfor
+                <!-- Total Aset Tetap and Total Ekuitas -->
+                <tr class="total-row">
+                    <td class="font-weight-bold">Total Aset Tetap</td>
+                    <td class="text-right font-weight-bold">{{ number_format($totalAsetTetap, 2, ',', '.') }}</td>
+                    <td class="font-weight-bold">Total Ekuitas</td>
+                    <td class="text-right font-weight-bold">{{ number_format($totalEkuitas, 2, ',', '.') }}</td>
+                </tr>
 
-                        <!-- Total Aset and Total Kewajiban + Ekuitas -->
-                        <tr class="total-row">
-                            <td class="font-weight-bold">TOTAL ASET</td>
-                            <td class="text-right font-weight-bold">{{ number_format($totalAsetLancar + $totalAsetTetap, 2, ',', '.') }}</td>
-                            <td class="font-weight-bold">TOTAL KEWAJIBAN + EKUITAS</td>
-                            <td class="text-right font-weight-bold">{{ number_format($totalKewajiban + $totalEkuitas, 2, ',', '.') }}</td>
-                        </tr>
+                <!-- Total Aset and Total Kewajiban + Ekuitas -->
+                <tr class="total-row">
+                    <td class="font-weight-bold">TOTAL ASET</td>
+                    <td class="text-right font-weight-bold">
+                        {{ number_format($totalAsetLancar + $totalAsetTetap, 2, ',', '.') }}</td>
+                    <td class="font-weight-bold">TOTAL KEWAJIBAN + EKUITAS</td>
+                    <td class="text-right font-weight-bold">
+                        {{ number_format($totalKewajiban + $totalEkuitas, 2, ',', '.') }}</td>
+                </tr>
             </tbody>
         </table>
     </div>
