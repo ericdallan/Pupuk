@@ -7,6 +7,8 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\Validator;
 
 class ExportService
 {
@@ -38,6 +40,133 @@ class ExportService
             'filename' => $filename,
         ];
     }
+    public function calculateNetProfit(Carbon $startDate, Carbon $endDate): array
+    {
+        $accountCategories = [
+            'Pendapatan Penjualan Bahan Baku' => ['4.1.'],
+            'Pendapatan Penjualan Barang Jadi' => ['4.2.'],
+            'Harga Pokok Penjualan' => ['5.1.', '5.2.', '5.3.'],
+            'Beban Operasional' => ['6.1.', '6.2.', '6.3.', '7.3'],
+            'Pendapatan Lain-lain' => ['7.1.', '7.2.'],
+        ];
+
+        $totals = array_fill_keys(array_keys($accountCategories), 0);
+        $details = array_fill_keys(array_keys($accountCategories), []);
+
+        // Ambil data transaksi dengan JOIN langsung ke chart_of_accounts
+        $voucherDetails = VoucherDetails::with(['voucher', 'chartOfAccount'])
+            ->whereHas('voucher', function ($query) use ($startDate, $endDate) {
+                $query->whereBetween('voucher_date', [$startDate, $endDate]);
+            })
+            ->whereHas('chartOfAccount', function ($query) use ($accountCategories) {
+                $query->where(function ($q) use ($accountCategories) {
+                    foreach ($accountCategories as $prefixes) {
+                        foreach ($prefixes as $prefix) {
+                            $q->orWhere('account_code', 'like', $prefix . '%');
+                        }
+                    }
+                });
+            })
+            ->select('voucher_details.account_code')
+            ->selectRaw('SUM(credit - debit) as pendapatan_balance')
+            ->selectRaw('SUM(debit - credit) as beban_balance')
+            ->groupBy('account_code')
+            ->get();
+
+        // Proses data transaksi
+        foreach ($voucherDetails as $detail) {
+            $accountCode = $detail->account_code;
+            $chartAccount = $detail->chartOfAccount;
+            $subsection = $chartAccount ? $chartAccount->account_subsection : 'Unknown';
+
+            // Cari kategori yang sesuai
+            foreach ($accountCategories as $category => $prefixes) {
+                $matched = false;
+                foreach ($prefixes as $prefix) {
+                    if (strpos($accountCode, $prefix) === 0) {
+                        // Tentukan balance berdasarkan kategori
+                        $balance = in_array($category, ['Pendapatan Penjualan Bahan Baku', 'Pendapatan Penjualan Barang Jadi', 'Pendapatan Lain-lain'])
+                            ? $detail->pendapatan_balance
+                            : $detail->beban_balance;
+
+                        // Tambahkan ke total
+                        $totals[$category] += $balance;
+
+                        // Tambahkan ke detail per subsection (hindari duplikasi)
+                        if (!isset($details[$category][$subsection])) {
+                            $details[$category][$subsection] = 0;
+                        }
+                        $details[$category][$subsection] += $balance;
+
+                        $matched = true;
+                        break;
+                    }
+                }
+                if ($matched) break; // Keluar dari loop kategori jika sudah cocok
+            }
+        }
+
+        // Tambahkan subsection dengan nilai 0 untuk kategori yang tidak memiliki transaksi
+        $allAccounts = DB::table('chart_of_accounts')
+            ->where(function ($query) use ($accountCategories) {
+                foreach ($accountCategories as $prefixes) {
+                    foreach ($prefixes as $prefix) {
+                        $query->orWhere('account_code', 'like', $prefix . '%');
+                    }
+                }
+            })
+            ->select('account_code', 'account_subsection')
+            ->get();
+
+        foreach ($allAccounts as $account) {
+            $accountCode = $account->account_code;
+            $subsection = $account->account_subsection ?? 'Unknown';
+
+            foreach ($accountCategories as $category => $prefixes) {
+                foreach ($prefixes as $prefix) {
+                    if (strpos($accountCode, $prefix) === 0) {
+                        if (!isset($details[$category][$subsection])) {
+                            $details[$category][$subsection] = 0;
+                        }
+                        break 2; // Keluar dari kedua loop
+                    }
+                }
+            }
+        }
+
+        // Hitung komponen laba rugi
+        $pendapatanPenjualanDagangan = $totals['Pendapatan Penjualan Bahan Baku'] ?? 0;
+        $pendapatanPenjualanJadi = $totals['Pendapatan Penjualan Barang Jadi'] ?? 0;
+        $pendapatanPenjualan = $pendapatanPenjualanDagangan + $pendapatanPenjualanJadi;
+        $hpp = $totals['Harga Pokok Penjualan'] ?? 0;
+        $totalBebanOperasional = $totals['Beban Operasional'] ?? 0;
+        $totalPendapatanLain = $totals['Pendapatan Lain-lain'] ?? 0;
+
+        // Hitung Beban Pajak Penghasilan
+        $pphFinalRate = 0.005;
+        $bebanPajakPenghasilan = $pendapatanPenjualan * $pphFinalRate;
+
+        // Hitung laba rugi
+        $labaKotor = $pendapatanPenjualan - $hpp;
+        $labaOperasi = $labaKotor - $totalBebanOperasional;
+        $labaSebelumPajak = $labaOperasi + $totalPendapatanLain;
+        $labaBersih = $labaSebelumPajak - $bebanPajakPenghasilan;
+
+        return [
+            'pendapatanPenjualan' => $pendapatanPenjualan,
+            'pendapatanPenjualanDagangan' => $pendapatanPenjualanDagangan,
+            'pendapatanPenjualanJadi' => $pendapatanPenjualanJadi,
+            'hpp' => $hpp,
+            'labaKotor' => $labaKotor,
+            'totalBebanOperasional' => $totalBebanOperasional,
+            'labaOperasi' => $labaOperasi,
+            'totalPendapatanLain' => $totalPendapatanLain,
+            'labaSebelumPajak' => $labaSebelumPajak,
+            'bebanPajakPenghasilan' => $bebanPajakPenghasilan,
+            'labaBersih' => $labaBersih,
+            'details' => $details,
+        ];
+    }
 
     /**
      * Prepare data for Income Statement export
@@ -48,172 +177,88 @@ class ExportService
      */
     public function prepareIncomeStatementData(array $data): array
     {
-        $year = $data['year'] ?? date('Y');
-        $month = $data['month'] ?? null;
+        try {
+            $year = $data['year'] ?? date('Y');
+            $month = $data['month'] ?? null;
 
-        validator($data, [
-            'year' => 'nullable|numeric|min:1900|max:' . date('Y'),
-            'month' => 'nullable|numeric|min:1|max:12',
-        ])->validate();
+            $validator = Validator::make($data, [
+                'year' => 'nullable|numeric|min:1900|max:' . date('Y'),
+                'month' => 'nullable|numeric|min:1|max:12',
+            ]);
 
-        if ($month) {
-            $startDate = Carbon::create($year, $month, 1)->startOfMonth();
-            $endDate = Carbon::create($year, $month, 1)->endOfMonth();
-        } else {
-            $startDate = Carbon::create($year, 1, 1)->startOfYear();
-            $endDate = Carbon::create($year, 12, 31)->endOfYear();
-        }
-
-        $cumulativeStartDate = Carbon::create($year, 1, 1)->startOfYear();
-        $cumulativeEndDate = $month ? Carbon::create($year, $month, 1)->endOfMonth() : Carbon::create($year, 12, 31)->endOfYear();
-
-        $accountCategories = [
-            'Pendapatan Penjualan' => ['4.'],
-            'Harga Pokok Penjualan' => ['5.1.', '5.2', '5.3'],
-            'Beban Operasional' => ['6.1.', '6.2.', '6.3.'],
-            'Pendapatan Lain-lain' => ['7.1.'],
-            'Beban Lain-lain' => ['7.2.'],
-            'Pajak Penghasilan' => ['7.3.'],
-        ];
-
-        $periodTotals = array_fill_keys(array_keys($accountCategories), 0);
-        $cumulativeTotals = array_fill_keys(array_keys($accountCategories), 0);
-
-        $voucherDetails = VoucherDetails::with('voucher')
-            ->whereHas('voucher', function ($query) use ($startDate, $endDate) {
-                $query->whereBetween('voucher_date', [$startDate, $endDate]);
-            })
-            ->select('account_code')
-            ->selectRaw('SUM(credit - debit) as pendapatan_balance')
-            ->selectRaw('SUM(debit - credit) as beban_balance')
-            ->where(function ($query) use ($accountCategories) {
-                foreach ($accountCategories as $prefixes) {
-                    foreach ($prefixes as $prefix) {
-                        $query->orWhere('account_code', 'like', $prefix . '%');
-                    }
-                }
-            })
-            ->groupBy('account_code')
-            ->get();
-
-        foreach ($voucherDetails as $detail) {
-            $accountCode = $detail->account_code;
-            foreach ($accountCategories as $category => $prefixes) {
-                foreach ($prefixes as $prefix) {
-                    if (strpos($accountCode, $prefix) === 0) {
-                        if (in_array($category, ['Pendapatan Penjualan', 'Pendapatan Lain-lain'])) {
-                            if ($category === 'Pendapatan Lain-lain' && strpos($accountCode, '7.1.02.') === 0) {
-                                continue;
-                            }
-                            $periodTotals[$category] += $detail->pendapatan_balance;
-                        } else {
-                            $periodTotals[$category] += $detail->beban_balance;
-                        }
-                        break;
-                    }
-                }
+            if ($validator->fails()) {
+                throw new ValidationException($validator);
             }
-        }
 
-        $cumulativeVoucherDetails = VoucherDetails::with('voucher')
-            ->whereHas('voucher', function ($query) use ($cumulativeStartDate, $cumulativeEndDate) {
-                $query->whereBetween('voucher_date', [$cumulativeStartDate, $cumulativeEndDate]);
-            })
-            ->select('account_code')
-            ->selectRaw('SUM(credit - debit) as pendapatan_balance')
-            ->selectRaw('SUM(debit - credit) as beban_balance')
-            ->where(function ($query) use ($accountCategories) {
-                foreach ($accountCategories as $prefixes) {
-                    foreach ($prefixes as $prefix) {
-                        $query->orWhere('account_code', 'like', $prefix . '%');
-                    }
-                }
-            })
-            ->groupBy('account_code')
-            ->get();
-
-        foreach ($cumulativeVoucherDetails as $detail) {
-            $accountCode = $detail->account_code;
-            foreach ($accountCategories as $category => $prefixes) {
-                foreach ($prefixes as $prefix) {
-                    if (strpos($accountCode, $prefix) === 0) {
-                        if (in_array($category, ['Pendapatan Penjualan', 'Pendapatan Lain-lain'])) {
-                            if ($category === 'Pendapatan Lain-lain' && strpos($accountCode, '7.1.02.') === 0) {
-                                continue;
-                            }
-                            $cumulativeTotals[$category] += $detail->pendapatan_balance;
-                        } else {
-                            $cumulativeTotals[$category] += $detail->beban_balance;
-                        }
-                        break;
-                    }
-                }
+            // Tentukan periode untuk data periodik
+            if ($month) {
+                $startDate = Carbon::create($year, $month, 1)->startOfMonth();
+                $endDate = Carbon::create($year, $month, 1)->endOfMonth();
+            } else {
+                $startDate = Carbon::create($year, 1, 1)->startOfYear();
+                $endDate = Carbon::create($year, 12, 31)->endOfYear();
             }
+
+            // Tentukan periode untuk data kumulatif
+            $cumulativeStartDate = Carbon::create($year, 1, 1)->startOfYear();
+            $cumulativeEndDate = $month ? Carbon::create($year, $month, 1)->endOfMonth() : Carbon::create($year, 12, 31)->endOfYear();
+
+            // Hitung data periodik
+            $periodData = $this->calculateNetProfit($startDate, $endDate);
+
+            // Hitung data kumulatif
+            $cumulativeData = $this->calculateNetProfit($cumulativeStartDate, $cumulativeEndDate);
+
+            // Format periodData untuk output konsisten
+            $formattedPeriodData = collect([
+                ['Keterangan' => 'Pendapatan Penjualan Bahan Baku', 'Jumlah (Rp)' => $periodData['pendapatanPenjualanDagangan']],
+                ['Keterangan' => 'Pendapatan Penjualan Barang Jadi', 'Jumlah (Rp)' => $periodData['pendapatanPenjualanJadi']],
+                ['Keterangan' => 'Total Pendapatan Penjualan', 'Jumlah (Rp)' => $periodData['pendapatanPenjualan']],
+                ['Keterangan' => 'Harga Pokok Penjualan', 'Jumlah (Rp)' => -$periodData['hpp']],
+                ['Keterangan' => 'Laba Kotor', 'Jumlah (Rp)' => $periodData['labaKotor']],
+                ['Keterangan' => 'Beban Operasional', 'Jumlah (Rp)' => -$periodData['totalBebanOperasional']],
+                ['Keterangan' => 'Laba Operasi', 'Jumlah (Rp)' => $periodData['labaOperasi']],
+                ['Keterangan' => 'Pendapatan Lain-lain', 'Jumlah (Rp)' => $periodData['totalPendapatanLain']],
+                ['Keterangan' => 'Laba Sebelum Pajak', 'Jumlah (Rp)' => $periodData['labaSebelumPajak']],
+                ['Keterangan' => 'Pajak Penghasilan', 'Jumlah (Rp)' => -$periodData['bebanPajakPenghasilan']],
+                ['Keterangan' => 'Laba Bersih', 'Jumlah (Rp)' => $periodData['labaBersih']],
+            ]);
+
+            // Format cumulativeData untuk output konsisten
+            $formattedCumulativeData = collect([
+                ['Keterangan' => 'Pendapatan Penjualan Bahan Baku', 'Jumlah (Rp)' => $cumulativeData['pendapatanPenjualanDagangan']],
+                ['Keterangan' => 'Pendapatan Penjualan Barang Jadi', 'Jumlah (Rp)' => $cumulativeData['pendapatanPenjualanJadi']],
+                ['Keterangan' => 'Total Pendapatan Penjualan', 'Jumlah (Rp)' => $cumulativeData['pendapatanPenjualan']],
+                ['Keterangan' => 'Harga Pokok Penjualan', 'Jumlah (Rp)' => -$cumulativeData['hpp']],
+                ['Keterangan' => 'Laba Kotor', 'Jumlah (Rp)' => $cumulativeData['labaKotor']],
+                ['Keterangan' => 'Beban Operasional', 'Jumlah (Rp)' => -$cumulativeData['totalBebanOperasional']],
+                ['Keterangan' => 'Laba Operasi', 'Jumlah (Rp)' => $cumulativeData['labaOperasi']],
+                ['Keterangan' => 'Pendapatan Lain-lain', 'Jumlah (Rp)' => $cumulativeData['totalPendapatanLain']],
+                ['Keterangan' => 'Laba Sebelum Pajak', 'Jumlah (Rp)' => $cumulativeData['labaSebelumPajak']],
+                ['Keterangan' => 'Pajak Penghasilan', 'Jumlah (Rp)' => -$cumulativeData['bebanPajakPenghasilan']],
+                ['Keterangan' => 'Laba Bersih', 'Jumlah (Rp)' => $cumulativeData['labaBersih']],
+            ]);
+
+            // Generate nama file
+            $fileName = $month
+                ? 'laporan_laba_rugi_' . str_pad($month, 2, '0', STR_PAD_LEFT) . '_' . $year . '.xlsx'
+                : 'laporan_laba_rugi_' . $year . '.xlsx';
+
+            return [
+                'periodData' => $formattedPeriodData,
+                'cumulativeData' => $formattedCumulativeData,
+                'year' => $year,
+                'month' => $month,
+                'filename' => $fileName,
+                'details' => [
+                    'period' => $periodData['details'],
+                    'cumulative' => $cumulativeData['details'],
+                ],
+            ];
+        } catch (\Exception $e) {
+            Log::error('Error preparing Income Statement data: ' . $e->getMessage());
+            throw $e;
         }
-
-        $pendapatanPenjualan = $periodTotals['Pendapatan Penjualan'] ?? 0;
-        $hpp = $periodTotals['Harga Pokok Penjualan'] ?? 0;
-        $totalBebanOperasional = $periodTotals['Beban Operasional'] ?? 0;
-        $totalPendapatanLain = $periodTotals['Pendapatan Lain-lain'] ?? 0;
-        $totalBebanLain = $periodTotals['Beban Lain-lain'] ?? 0;
-        $totalBebanPajak = $periodTotals['Pajak Penghasilan'] ?? 0;
-
-        $labaKotor = $pendapatanPenjualan - $hpp;
-        $labaOperasi = $labaKotor - $totalBebanOperasional;
-        $labaSebelumPajak = $labaOperasi + $totalPendapatanLain - $totalBebanLain;
-        $labaBersih = $labaSebelumPajak - $totalBebanPajak;
-
-        $periodData = collect([
-            ['Keterangan' => 'Pendapatan Penjualan', 'Jumlah (Rp)' => $pendapatanPenjualan],
-            ['Keterangan' => 'Harga Pokok Penjualan', 'Jumlah (Rp)' => -$hpp],
-            ['Keterangan' => 'Laba Kotor', 'Jumlah (Rp)' => $labaKotor],
-            ['Keterangan' => 'Beban Operasional', 'Jumlah (Rp)' => -$totalBebanOperasional],
-            ['Keterangan' => 'Total Beban Operasional', 'Jumlah (Rp)' => -$totalBebanOperasional],
-            ['Keterangan' => 'Laba Operasi', 'Jumlah (Rp)' => $labaOperasi],
-            ['Keterangan' => 'Pendapatan Lain-lain', 'Jumlah (Rp)' => $totalPendapatanLain],
-            ['Keterangan' => 'Beban Lain-lain', 'Jumlah (Rp)' => -$totalBebanLain],
-            ['Keterangan' => 'Laba Sebelum Pajak', 'Jumlah (Rp)' => $labaSebelumPajak],
-            ['Keterangan' => 'Pajak Penghasilan', 'Jumlah (Rp)' => -$totalBebanPajak],
-            ['Keterangan' => 'Laba Bersih', 'Jumlah (Rp)' => $labaBersih],
-        ]);
-
-        $cumulativePendapatanPenjualan = $cumulativeTotals['Pendapatan Penjualan'] ?? 0;
-        $cumulativeHpp = $cumulativeTotals['Harga Pokok Penjualan'] ?? 0;
-        $cumulativeTotalBebanOperasional = $cumulativeTotals['Beban Operasional'] ?? 0;
-        $cumulativeTotalPendapatanLain = $cumulativeTotals['Pendapatan Lain-lain'] ?? 0;
-        $cumulativeTotalBebanLain = $cumulativeTotals['Beban Lain-lain'] ?? 0;
-        $cumulativeTotalBebanPajak = $cumulativeTotals['Pajak Penghasilan'] ?? 0;
-
-        $cumulativeLabaKotor = $cumulativePendapatanPenjualan - $cumulativeHpp;
-        $cumulativeLabaOperasi = $cumulativeLabaKotor - $cumulativeTotalBebanOperasional;
-        $cumulativeLabaSebelumPajak = $cumulativeLabaOperasi + $cumulativeTotalPendapatanLain - $cumulativeTotalBebanLain;
-        $cumulativeLabaBersih = $cumulativeLabaSebelumPajak - $cumulativeTotalBebanPajak;
-
-        $cumulativeData = collect([
-            ['Keterangan' => 'Pendapatan Penjualan', 'Jumlah (Rp)' => $cumulativePendapatanPenjualan],
-            ['Keterangan' => 'Harga Pokok Penjualan', 'Jumlah (Rp)' => -$cumulativeHpp],
-            ['Keterangan' => 'Laba Kotor', 'Jumlah (Rp)' => $cumulativeLabaKotor],
-            ['Keterangan' => 'Beban Operasional', 'Jumlah (Rp)' => -$cumulativeTotalBebanOperasional],
-            ['Keterangan' => 'Total Beban Operasional', 'Jumlah (Rp)' => -$cumulativeTotalBebanOperasional],
-            ['Keterangan' => 'Laba Operasi', 'Jumlah (Rp)' => $cumulativeLabaOperasi],
-            ['Keterangan' => 'Pendapatan Lain-lain', 'Jumlah (Rp)' => $cumulativeTotalPendapatanLain],
-            ['Keterangan' => 'Beban Lain-lain', 'Jumlah (Rp)' => -$cumulativeTotalBebanLain],
-            ['Keterangan' => 'Laba Sebelum Pajak', 'Jumlah (Rp)' => $cumulativeLabaSebelumPajak],
-            ['Keterangan' => 'Pajak Penghasilan', 'Jumlah (Rp)' => -$cumulativeTotalBebanPajak],
-            ['Keterangan' => 'Laba Bersih', 'Jumlah (Rp)' => $cumulativeLabaBersih],
-        ]);
-
-        $fileName = $month
-            ? 'laporan_laba_rugi_' . str_pad($month, 2, '0', STR_PAD_LEFT) . '_' . $year . '.xlsx'
-            : 'laporan_laba_rugi_' . $year . '.xlsx';
-
-        return [
-            'periodData' => $periodData,
-            'cumulativeData' => $cumulativeData,
-            'year' => $year,
-            'month' => $month,
-            'filename' => $fileName,
-        ];
     }
 
     /**
