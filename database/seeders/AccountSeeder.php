@@ -137,9 +137,15 @@ class AccountSeeder extends Seeder
                     ],
                 ],
                 'Pendapatan Penjualan Barang Jadi' => [
-                    'Pendapatan Penjualan Barang Jadi' =>[
+                    'Pendapatan Penjualan Barang Jadi' => [
                         ['Pendapatan Penjualan Barang Jadi', '4.2.01.01'],
                         ['Diskon Penjualan Barang Jadi', '4.2.01.02'],
+                    ],
+                ],
+                'Pendapatan Sewa' => [
+                    'Pendapatan Sewa' => [
+                        ['Pendapatan Sewa', '4.3.01.01'],
+                        ['Diskon Sewa', '4.3.01.02'],
                     ],
                 ],
             ],
@@ -241,6 +247,16 @@ class AccountSeeder extends Seeder
                         ['Beban Pemasaran Lainnya', '6.3.99.99'],
                     ],
                 ],
+                'Beban Pajak' => [
+                    'Beban Pajak' => [
+                        ['Beban PPh 21', '6.4.01.01'],
+                        ['Beban PPh 23', '6.4.01.02'],
+                        ['Beban PPh 25', '6.4.01.03'],
+                        ['Beban PPh 29', '6.4.01.04'],
+                        ['Beban PPh Final', '6.4.01.05'],
+                        ['Beban Pajak Lainnya', '6.4.01.99'],
+                    ],
+                ],
             ],
             'PENDAPATAN_DAN_BEBAN_LAIN_LAIN' => [
                 'Pendapatan Lain-lain' => [
@@ -267,16 +283,6 @@ class AccountSeeder extends Seeder
                     ],
                     'Beban Lain-lain lainnya' => [
                         ['Beban Lain-lain lainnya', '7.2.99.99'],
-                    ],
-                ],
-                'Beban Pajak' => [
-                    'Beban Pajak' => [
-                        ['Beban PPh 21', '7.3.01.01'],
-                        ['Beban PPh 23', '7.3.01.02'],
-                        ['Beban PPh 25', '7.3.01.03'],
-                        ['Beban PPh 29', '7.3.01.04'],
-                        ['Beban PPh Final', '7.3.01.05'],
-                        ['Beban Pajak Lainnya', '7.3.01.99'],
                     ],
                 ],
             ],

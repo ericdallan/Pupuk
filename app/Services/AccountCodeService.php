@@ -30,13 +30,13 @@ class AccountCodeService
             $hierarki[$accountType][$accountSection] = ($hierarki[$accountType][$accountSection] ?? []);
 
             if ($accountSubsection) {
-                $hierarki[$accountType][$accountSection][$accountSubsection] = 
+                $hierarki[$accountType][$accountSection][$accountSubsection] =
                     ($hierarki[$accountType][$accountSection][$accountSubsection] ?? []);
-                
-                $hierarki[$accountType][$accountSection][$accountSubsection][] = 
+
+                $hierarki[$accountType][$accountSection][$accountSubsection][] =
                     $accountCode ? [$accountName, $accountCode] : $accountName;
             } else {
-                $hierarki[$accountType][$accountSection][] = 
+                $hierarki[$accountType][$accountSection][] =
                     $accountCode ? [$accountName, $accountCode] : $accountName;
             }
         }
@@ -225,6 +225,7 @@ class AccountCodeService
             'PENDAPATAN_USAHA' => [
                 'Pendapatan Penjualan Barang Dagangan' => '1',
                 'Pendapatan Penjualan Barang Jadi' => '2',
+                'Pendapatan Sewa' => '3',
             ],
             'HARGA_POKOK_PRODUKSI_DAN_PENJUALAN' => [
                 'Harga Pokok Pembelian Barang Dagangan' => '1',
@@ -313,6 +314,10 @@ class AccountCodeService
                     'Pendapatan Penjualan Barang Jadi' => '01',
                     'Diskon Penjualan Barang Dagangan' => '03',
                 ],
+                'Pendapatan Sewa' => [
+                    'Pendapatan Sewa' => '01',
+                    'Diskon Sewa' => '02',
+                ]
             ],
             'HARGA_POKOK_PRODUKSI_DAN_PENJUALAN' => [
                 'Harga Pokok Pembelian Barang Dagangan' => [

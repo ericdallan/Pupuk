@@ -26,8 +26,9 @@ class GeneralLedgerService
         $accountCategories = [
             'Pendapatan Penjualan Bahan Baku' => ['4.1.'],
             'Pendapatan Penjualan Barang Jadi' => ['4.2.'],
+            'Pendapatan Sewa' => ['4.3.'],
             'Harga Pokok Penjualan' => ['5.1.', '5.2.', '5.3.'],
-            'Beban Operasional' => ['6.1.', '6.2.', '6.3.', '7.3'],
+            'Beban Operasional' => ['6.1.', '6.2.', '6.3.', '6.4'],
             'Pendapatan Lain-lain' => ['7.1.', '7.2.'],
         ];
 
@@ -66,7 +67,12 @@ class GeneralLedgerService
                 foreach ($prefixes as $prefix) {
                     if (strpos($accountCode, $prefix) === 0) {
                         // Tentukan balance berdasarkan kategori
-                        $balance = in_array($category, ['Pendapatan Penjualan Bahan Baku', 'Pendapatan Penjualan Barang Jadi', 'Pendapatan Lain-lain'])
+                        $balance = in_array($category, [
+                            'Pendapatan Penjualan Bahan Baku',
+                            'Pendapatan Penjualan Barang Jadi',
+                            'Pendapatan Lain-lain',
+                            'Pendapatan Sewa'
+                        ])
                             ? $detail->pendapatan_balance
                             : $detail->beban_balance;
 
@@ -118,7 +124,8 @@ class GeneralLedgerService
         // Hitung komponen laba rugi
         $pendapatanPenjualanDagangan = $totals['Pendapatan Penjualan Bahan Baku'] ?? 0;
         $pendapatanPenjualanJadi = $totals['Pendapatan Penjualan Barang Jadi'] ?? 0;
-        $pendapatanPenjualan = $pendapatanPenjualanDagangan + $pendapatanPenjualanJadi;
+        $pendapatanSewa = $totals['Pendapatan Sewa'] ?? 0;
+        $pendapatanPenjualan = $pendapatanPenjualanDagangan + $pendapatanPenjualanJadi + $pendapatanSewa;
         $hpp = $totals['Harga Pokok Penjualan'] ?? 0;
         $totalBebanOperasional = $totals['Beban Operasional'] ?? 0;
         $totalPendapatanLain = $totals['Pendapatan Lain-lain'] ?? 0;
@@ -137,6 +144,7 @@ class GeneralLedgerService
             'pendapatanPenjualan' => $pendapatanPenjualan,
             'pendapatanPenjualanDagangan' => $pendapatanPenjualanDagangan,
             'pendapatanPenjualanJadi' => $pendapatanPenjualanJadi,
+            'pendapatanSewa' => $pendapatanSewa,
             'hpp' => $hpp,
             'labaKotor' => $labaKotor,
             'totalBebanOperasional' => $totalBebanOperasional,
@@ -440,8 +448,6 @@ class GeneralLedgerService
 
             $profitData = $this->calculateNetProfit($start, $end);
 
-            // Gunakan laba sebelum pajak sebagai laba bersih untuk balance sheet
-            // karena pajak penghasilan sudah dihitung otomatis di luar COA
             $labaBersih = $profitData['labaSebelumPajak'];
 
             if (isset($ekuitasData['Laba Rugi Ditahan'])) {
@@ -482,7 +488,7 @@ class GeneralLedgerService
                 'ekuitasData' => $ekuitasData,
                 'start_date' => $startDate,
                 'end_date' => $endDate,
-                'labaBersih' => $labaBersih, // Ini sekarang menggunakan labaSebelumPajak
+                'labaBersih' => $labaBersih,
             ];
         } catch (\Exception $e) {
             Log::error('Error preparing Balance Sheet data: ' . $e->getMessage());

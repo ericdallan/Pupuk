@@ -1,4 +1,5 @@
-<div class="modal fade" id="accountModal" data-bs-backdrop="static" tabindex="-1" aria-labelledby="accountModalLabel" aria-hidden="true">
+<div class="modal fade" id="accountModal" data-bs-backdrop="static" tabindex="-1" aria-labelledby="accountModalLabel"
+    aria-hidden="true">
     <div class="modal-dialog modal-l">
         <div class="modal-content">
             <div class="modal-header">
@@ -16,7 +17,8 @@
                             <option value="KEWAJIBAN">KEWAJIBAN</option>
                             <option value="EKUITAS">EKUITAS</option>
                             <option value="PENDAPATAN_USAHA">PENDAPATAN USAHA</option>
-                            <option value="HARGA_POKOK_PRODUKSI_DAN_PENJUALAN">HARGA POKOK PRODUKSI DAN PENJUALAN</option>
+                            <option value="HARGA_POKOK_PRODUKSI_DAN_PENJUALAN">HARGA POKOK PRODUKSI DAN PENJUALAN
+                            </option>
                             <option value="BEBAN_BEBAN_USAHA">BEBAN-BEBAN USAHA</option>
                             <option value="PENDAPATAN_DAN_BEBAN_LAIN_LAIN">PENDAPATAN DAN BEBAN LAIN-LAIN</option>
                         </select>
@@ -59,10 +61,14 @@
     const hierarkiAkun = {
         ASET: {
             'Aset Lancar': {
-                'Kas dan Setara Kas': ['Kas Tunai', 'Kas di Bank BSI', 'Kas di Bank Mandiri', 'Deposito <= 3', 'Setara Kas Lainnya'],
+                'Kas dan Setara Kas': ['Kas Tunai', 'Kas di Bank BSI', 'Kas di Bank Mandiri', 'Deposito <= 3',
+                    'Setara Kas Lainnya'
+                ],
                 'Piutang': ['Piutang Usaha', 'Piutang kepada Pegawai', 'Piutang Lainnya'],
                 'Penyisihan Piutang': ['Penyisihan Piutang Usaha Tak Tertagih'],
-                'Persediaan': ['Persediaan Barang Dagangan', 'Persediaan Bahan Baku', 'Persediaan Barang Dalam Proses', 'Persediaan Barang Jadi'],
+                'Persediaan': ['Persediaan Barang Dagangan', 'Persediaan Bahan Baku',
+                    'Persediaan Barang Dalam Proses', 'Persediaan Barang Jadi'
+                ],
                 'Pembayaran Dimuka': ['Sewa Dibayar Dimuka', 'Asuransi Dibayar Dimuka', 'PPh 25', 'PPN Masukan'],
                 'Aset Lancar Lainnya': ['Aset Lancar Lainnya']
             },
@@ -70,8 +76,13 @@
                 Investasi: ['Deposito > 3 bulan', 'Investasi Lainnya']
             },
             'Aset Tetap': {
-                'Aset Tetap': ['Tanah', 'Kendaraan', 'Peralatan dan Mesin', 'Meubelair', 'Gedung dan Bangunan', 'Konstruksi Dalam Pengerjaan'],
-                'Akumulasi Penyusutan Aset Tetap': ['Akumulasi Penyusutan Kendaraan', 'Akumulasi Penyusutan Peralatan dan Mesin', 'Akumulasi Penyusutan Meubelair', 'Akumulasi Penyusutan Gedung dan Bangunan']
+                'Aset Tetap': ['Tanah', 'Kendaraan', 'Peralatan dan Mesin', 'Meubelair', 'Gedung dan Bangunan',
+                    'Konstruksi Dalam Pengerjaan'
+                ],
+                'Akumulasi Penyusutan Aset Tetap': ['Akumulasi Penyusutan Kendaraan',
+                    'Akumulasi Penyusutan Peralatan dan Mesin', 'Akumulasi Penyusutan Meubelair',
+                    'Akumulasi Penyusutan Gedung dan Bangunan'
+                ]
             }
         },
         KEWAJIBAN: {
@@ -94,13 +105,14 @@
             'Ikhtisar Laba Rugi': ['Ikhtisar Laba Rugi']
         },
         PENDAPATAN_USAHA: {
-            'Pendapatan Penjualan Barang Dagangan': {
-                'Harga Pokok Penjualan Barang Dagangan': [],
-                'Diskon Penjualan Barang Dagangan': []
+            'Pendapatan Penjualan Bahan Baku': {
+                'Pendapatan Penjualan Bahan Baku': [],
             },
             'Pendapatan Penjualan Barang Jadi': {
                 'Pendapatan Penjualan Barang Jadi': [],
-                'Diskon Penjualan Barang Dagangan': [] // Perhatikan: Ini mungkin typo, seharusnya 'Diskon Penjualan Barang Jadi'
+            },
+            'Pendapatan Sewa': {
+                'Pendapatan Sewa': [],
             }
         },
         HARGA_POKOK_PRODUKSI_DAN_PENJUALAN: {
@@ -108,30 +120,56 @@
             'Harga Pokok Penjualan Barang Jadi': ['Harga Pokok Penjualan Barang Jadi'],
             'Harga Pokok Produksi': {
                 'Biaya Bahan Baku': ['Biaya Bahan Baku'],
-                'Beban Upah Langsung': ['Beban Upah dan Tunjangan Bag. Produksi', 'Beban Lembur, Insentif (Bonus) Bag. Produksi'],
-                'Biaya Overhead': ['Beban Pemeliharaan dan Perbaikan Peralatan Kantor', 'Beban Pemeliharaan dan Perbaikan Mesin', 'Beban Perlengkapan Produksi', 'Beban Listrik Pabrik']
+                'Beban Upah Langsung': ['Beban Upah dan Tunjangan Bag. Produksi',
+                    'Beban Lembur, Insentif (Bonus) Bag. Produksi'
+                ],
+                'Biaya Overhead': ['Beban Pemeliharaan dan Perbaikan Peralatan Kantor',
+                    'Beban Pemeliharaan dan Perbaikan Mesin', 'Beban Perlengkapan Produksi',
+                    'Beban Listrik Pabrik'
+                ]
             }
         },
         BEBAN_BEBAN_USAHA: {
             'Beban Administrasi dan Umum': {
-                'Beban Pegawai Bagian Administrasi Umum': ['Beban Gaji dan Tunjangan Bag. Adum', 'Beban Insentif (Bonus) Bag. Adum', 'Beban Seragam Pegawai Bag. Adum', 'Beban Pegawai Bag. Adum Lainnya'],
-                'Beban Perlengkapan': ['Beban Alat Tulis Kantor (ATK)', 'Beban Foto Copy dan Cetak', 'Beban Konsumsi', 'Beban Perlengkapan Lainnya'],
-                'Beban Pemeliharaan dan Perbaikan Peralatan Kantor': ['Beban Pemeliharaan dan Perbaikan Peralatan Kantor'],
+                'Beban Pegawai Bagian Administrasi Umum': ['Beban Gaji dan Tunjangan Bag. Adum',
+                    'Beban Insentif (Bonus) Bag. Adum', 'Beban Seragam Pegawai Bag. Adum',
+                    'Beban Pegawai Bag. Adum Lainnya'
+                ],
+                'Beban Perlengkapan': ['Beban Alat Tulis Kantor (ATK)', 'Beban Foto Copy dan Cetak',
+                    'Beban Konsumsi', 'Beban Perlengkapan Lainnya'
+                ],
+                'Beban Pemeliharaan dan Perbaikan Peralatan Kantor': [
+                    'Beban Pemeliharaan dan Perbaikan Peralatan Kantor'
+                ],
                 'Beban Utilitas': ['Beban Listrik Kantor', 'Beban Telepon/Internet', 'Beban Utilitas Lainnya'],
                 'Beban Sewa dan Asuransi': ['Beban Sewa', 'Beban Asuransi'],
                 'Beban Kebersihan dan Keamanan': ['Beban Kebersihan', 'Beban Keamanan'],
-                'Beban Penyisihan dan Penyusutan/Amortisasi': ['Beban Penyisihan Piutang Tak Tertagih', 'Beban Penyusutan Kendaraan', 'Beban Penyusutan Peralatan dan Mesin', 'Beban Penyusutan Meubelair', 'Beban Penyusutan Gedung dan Bangunan', 'Beban Amortisasi Aset tak berwujud'],
-                'Beban Administrasi dan Umum Lainnya': ['Beban BBM, Parkir, Toll', 'Beban Audit', 'Beban Perjalanan Dinas', 'Beban Transportasi', 'Beban Jamuan Tamu', 'Beban Administrasi dan Umum Lainnya']
+                'Beban Penyisihan dan Penyusutan/Amortisasi': ['Beban Penyisihan Piutang Tak Tertagih',
+                    'Beban Penyusutan Kendaraan', 'Beban Penyusutan Peralatan dan Mesin',
+                    'Beban Penyusutan Meubelair', 'Beban Penyusutan Gedung dan Bangunan',
+                    'Beban Amortisasi Aset tak berwujud'
+                ],
+                'Beban Administrasi dan Umum Lainnya': ['Beban BBM, Parkir, Toll', 'Beban Audit',
+                    'Beban Perjalanan Dinas', 'Beban Transportasi', 'Beban Jamuan Tamu',
+                    'Beban Administrasi dan Umum Lainnya'
+                ]
             },
             'Beban Operasional': {
-                'Beban Pegawai Bagian Operasional': ['Beban Gaji/Upah Bag. Operasional', 'Beban Uang Makan Bag. Operasional'],
+                'Beban Pegawai Bagian Operasional': ['Beban Gaji/Upah Bag. Operasional',
+                    'Beban Uang Makan Bag. Operasional'
+                ],
                 'Beban Pemeliharaan dan Perbaikan': ['Beban Perbaikan dan Renovasi'],
                 'Beban Operasional Lainnya': ['Beban Operasional Lainnya']
             },
             'Beban Pemasaran': {
-                'Beban Pegawai Bagian Pemasaran': ['Beban Gaji/Upah Bag. Pemasaran', 'Beban Insentif (Bonus) Bag. Pemasaran', 'Beban Seragam Pegawai Bag. Pemasaran'],
+                'Beban Pegawai Bagian Pemasaran': ['Beban Gaji/Upah Bag. Pemasaran',
+                    'Beban Insentif (Bonus) Bag. Pemasaran', 'Beban Seragam Pegawai Bag. Pemasaran'
+                ],
                 'Beban Pemasaran Lainnya': ['Beban Pemasaran Lainnya']
-            }
+            },
+            'Beban Pajak': ['Beban PPh 21', 'Beban PPh 23', 'Beban PPh 25', 'Beban PPh 29', 'Beban PPh Final',
+                'Beban Pajak Lainnya'
+            ]
         },
         PENDAPATAN_DAN_BEBAN_LAIN_LAIN: {
             'Pendapatan Lain-lain': {
@@ -145,7 +183,6 @@
                 'Beban Penjualan Aset Tetap': ['Kerugian Penjualan Aset Tetap'],
                 'Beban Lain-lain lainnya': ['Beban Lain-lain lainnya']
             },
-            'Beban Pajak': ['Beban PPh 21', 'Beban PPh 23', 'Beban PPh 25', 'Beban PPh 29', 'Beban PPh Final', 'Beban Pajak Lainnya']
         }
     };
 
@@ -178,7 +215,7 @@
                     option.textContent = namaAnakBagian;
                     anakBagianAkunSelect.appendChild(option);
                 });
-            } else if (typeof anakBagian === 'object') { // Tambahkan kondisi ini
+            } else if (typeof anakBagian === 'object') {
                 Object.keys(anakBagian).forEach(namaAnakBagian => {
                     const option = document.createElement('option');
                     option.value = namaAnakBagian;

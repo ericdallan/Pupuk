@@ -15,7 +15,7 @@ class DatabaseSeeder extends Seeder
             CompanySeeder::class,
             AccountSeeder::class,
             AdminSeeder::class,
-            VoucherSeeder::class,
+            // VoucherSeeder::class,
         ]);
     }
 }
