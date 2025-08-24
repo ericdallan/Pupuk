@@ -86,7 +86,8 @@ class ZakatService
 
             if ($selisih >= 85000000) {
                 $zakatWajibCara1 = true;
-                $zakatCara1 = ($selisih - 85000000) * 0.025;
+                // $zakatCara1 = ($selisih - 85000000) * 0.025; //menggunakan selisih di atas nisab 
+                $zakatCara1 = $selisih * 0.025; //menggunakan total selisih
             } else {
                 $zakatWajibCara1 = false;
                 $zakatCara1 = 0;
