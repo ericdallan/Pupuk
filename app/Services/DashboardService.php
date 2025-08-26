@@ -79,12 +79,12 @@ class DashboardService
                     $date = $startDate->copy()->addMonths($i);
                     Log::debug('Processing profit month', ['date' => $date->toDateString()]);
                     $profitData = Cache::remember("profit_{$date->year}_{$date->month}", 60, function () use ($date) {
-                        return $this->generalLedgerService->prepareIncomeStatementData([
-                            'year' => $date->year,
-                            'month' => $date->month,
-                        ]) ?: ['labaBersih' => 0];
+                        return $this->generalLedgerService->calculateNetProfit(
+                            Carbon::create($date->year, $date->month, 1)->startOfMonth(),
+                            Carbon::create($date->year, $date->month, 1)->endOfMonth()
+                        ) ?: ['labaSebelumPajak' => 0];
                     });
-                    $profitTrend[] = $profitData['labaBersih'] ?? 0;
+                    $profitTrend[] = $profitData['labaSebelumPajak'] ?? 0;
                     $profitLabels[] = $date->translatedFormat('M Y');
                 }
             } else {
@@ -94,12 +94,12 @@ class DashboardService
                     $date = $currentDate->copy()->addMonths($i);
                     Log::debug('Processing profit month', ['date' => $date->toDateString()]);
                     $profitData = Cache::remember("profit_{$date->year}_{$date->month}", 60, function () use ($date) {
-                        return $this->generalLedgerService->prepareIncomeStatementData([
-                            'year' => $date->year,
-                            'month' => $date->month,
-                        ]) ?: ['labaBersih' => 0];
+                        return $this->generalLedgerService->calculateNetProfit(
+                            Carbon::create($date->year, $date->month, 1)->startOfMonth(),
+                            Carbon::create($date->year, $date->month, 1)->endOfMonth()
+                        ) ?: ['labaSebelumPajak' => 0];
                     });
-                    $profitTrend[] = $profitData['labaBersih'] ?? 0;
+                    $profitTrend[] = $profitData['labaSebelumPajak'] ?? 0;
                     $profitLabels[] = $date->translatedFormat('M Y');
                 }
             }
