@@ -91,6 +91,7 @@
                 'Utang Pajak': ['PPN Keluaran', 'PPh 21', 'PPh 23', 'PPh 29'],
                 'Utang Gaji/Upah dan Tunjangan': ['Utang Gaji/Upah dan Tunjangan'],
                 'Utang Utilitas': ['Utang Listrik', 'Utang Telepon/Internet'],
+                'Pendapatan diterima di Muka': ['Uang muka dari Pelanggan'],
                 'Utang Jangka Pendek Lainnya': ['Utang Jangka Pendek Lainnya']
             },
             'Kewajiban Jangka Panjang': {

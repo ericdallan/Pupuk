@@ -84,6 +84,9 @@ class AccountSeeder extends Seeder
                         ['Utang Listrik', '2.1.04.01'],
                         ['Utang Telepon/Internet', '2.1.04.02'],
                     ],
+                    'Pendapatan diterima di Muka' => [
+                        ['Uang Muka dari Pelanggan', '2.1.05.01'],
+                    ],
                     'Utang Jangka Pendek Lainnya' => [
                         ['Utang Jangka Pendek Lainnya', '2.1.99.99'],
                     ],

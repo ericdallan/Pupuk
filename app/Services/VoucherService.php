@@ -1601,9 +1601,16 @@ class VoucherService
 
             $voucher->voucherDetails()->delete();
             foreach ($voucherDetailsData as $detail) {
+                if (empty($detail['account_name'])) {
+                    $account = ChartOfAccount::where('code', $detail['account_code'])->first();
+                    $accountName = $account ? $account->name : 'Unknown Account';
+                } else {
+                    $accountName = $detail['account_name'];
+                }
+
                 $voucher->voucherDetails()->create([
                     'account_code' => $detail['account_code'],
-                    'account_name' => $detail['account_name'],
+                    'account_name' => $accountName,
                     'debit' => floatval($detail['debit'] ?? 0),
                     'credit' => floatval($detail['credit'] ?? 0),
                 ]);

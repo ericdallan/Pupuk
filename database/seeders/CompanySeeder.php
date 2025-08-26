@@ -15,11 +15,11 @@ class CompanySeeder extends Seeder
     {
         DB::table('companies')->insert([
             [
-                'company_name' => 'PD. Sahudi',
+                'company_name' => 'Properti Indo',
                 'address' => 'Jl. Hanjawar Pacet Sukanagalih, Pacet Cipanas - Cianjur',
-                'phone' => 'Sukanagalih',
-                'email' => 'PdSahudi@gmail.com',
-                'director' => 'Akang',
+                'phone' => '0857824567890',
+                'email' => 'Propertindo@gmail.com',
+                'director' => 'Mr. John Doe',
                 'logo' => null, // 
                 'created_at' => now(),
                 'updated_at' => now(),

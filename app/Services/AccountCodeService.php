@@ -281,7 +281,8 @@ class AccountCodeService
                     'Utang Pajak' => '02',
                     'Utang Gaji/Upah dan Tunjangan' => '03',
                     'Utang Utilitas' => '04',
-                    'Utang Jangka Pendek Lainnya' => '09',
+                    'Pendapatan Diterima di Muka' => '05',
+                    'Utang Jangka Pendek Lainnya' => '99',
                 ],
                 'Kewajiban Jangka Panjang' => [
                     'Utang Ke Bank' => '01',
