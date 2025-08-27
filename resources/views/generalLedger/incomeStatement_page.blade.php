@@ -174,7 +174,13 @@
                     <td class="text-end">({{ number_format(abs($balance), 2, ',', '.') }})</td>
                 </tr>
             @endforeach
-
+            <tr>
+                <td></td>
+                <td class="fw-bolder">Laba Kotor</td>
+                <td class="text-end">
+                    {{ $labaKotor < 0 ? '(' . number_format(abs($labaKotor), 2, ',', '.') . ')' : number_format($labaKotor, 2, ',', '.') }}
+                </td>
+            </tr>
             <!-- Beban Operasional -->
             <tr class="expandable" data-category="bebanOperasional">
                 <td class="fw-bolder">Beban Operasional</td>
