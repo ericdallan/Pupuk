@@ -1133,7 +1133,7 @@
             if (voucherType === 'PJ' || voucherType === 'RPJ') {
                 stockData = [...(usedStocks || []), ...(stocks || [])];
             } else if (voucherType === 'PYB' || voucherType === 'PYK') {
-                stockData = [...(usedStocks || []), ...(stocks || []), ...(transferStocks || [])];
+                stockData = [...(usedStocks || []), ...(stocks || [])];
             } else if (voucherType === 'PH') {
                 stockData = stocks;
             } else if (voucherType === 'PK') {
@@ -1196,8 +1196,6 @@
                         }
                     } else if (voucherType === 'PYB' || voucherType === 'PYK') {
                         const stockSizes = sizesWithQuantity.filter(item => item.source === 'stocks');
-                        const transferStockSizes = sizesWithQuantity.filter(item => item.source ===
-                            'transfer_stocks');
                         const usedStockSizes = sizesWithQuantity.filter(item => item.source === 'used_stocks');
                         if (stockSizes.length > 0) {
                             const separator = document.createElement('option');
@@ -1211,22 +1209,6 @@
                                 option.value = item.size;
                                 option.textContent = `${item.size} (Stok: ${item.quantity})`;
                                 option.dataset.source = 'stocks';
-                                select.appendChild(option);
-                            });
-                        }
-
-                        if (transferStockSizes.length > 0) {
-                            const separator = document.createElement('option');
-                            separator.value = '';
-                            separator.textContent = '---- Barang Pemindahan ----';
-                            separator.disabled = true;
-                            select.appendChild(separator);
-
-                            transferStockSizes.forEach(item => {
-                                const option = document.createElement('option');
-                                option.value = item.size;
-                                option.textContent = `${item.size} (Stok: ${item.quantity})`;
-                                option.dataset.source = 'transfer_stocks';
                                 select.appendChild(option);
                             });
                         }
@@ -1327,7 +1309,7 @@
                 if (voucherType === 'PJ') {
                     stockData = [...(usedStocks || []), ...(stocks || [])];
                 } else if (voucherType === 'PYB' || voucherType === 'PYK') {
-                    stockData = [...(usedStocks || []), ...(stocks || []), ...(transferStocks || [])];
+                    stockData = [...(usedStocks || []), ...(stocks || [])];
                 }
 
                 const sizes = stockData
@@ -1391,7 +1373,7 @@
             if (voucherType === 'PJ' || voucherType === 'RPJ') {
                 stockData = [...(usedStocks || []), ...(stocks || [])];
             } else if (voucherType === 'PYB' || voucherType === 'PYK') {
-                stockData = [...(usedStocks || []), ...(stocks || []), ...(transferStocks || [])];
+                stockData = [...(usedStocks || []), ...(stocks || [])];
             } else if (voucherType === 'PH' || voucherType === 'PB' || voucherType === 'RPB') {
                 stockData = stocks || [];
             } else if (voucherType === 'PK') {
@@ -1462,10 +1444,6 @@
                     const stockItems = uniqueItems.filter(item =>
                         stockData.some(stock => stock.item === item && (stocks || []).includes(stock))
                     );
-                    const transferStockItems = uniqueItems.filter(item =>
-                        stockData.some(stock => stock.item === item && (transferStocks || []).includes(
-                            stock))
-                    );
                     const usedStockItems = uniqueItems.filter(item =>
                         stockData.some(stock => stock.item === item && (usedStocks || []).includes(stock))
                     );
@@ -1482,22 +1460,6 @@
                             option.value = item;
                             option.textContent = item;
                             option.dataset.source = 'stocks';
-                            select.appendChild(option);
-                        });
-                    }
-
-                    if (transferStockItems.length > 0) {
-                        const separator = document.createElement('option');
-                        separator.value = '';
-                        separator.textContent = '-- Barang Pemindahan --';
-                        separator.disabled = true;
-                        select.appendChild(separator);
-
-                        transferStockItems.forEach(item => {
-                            const option = document.createElement('option');
-                            option.value = item;
-                            option.textContent = item;
-                            option.dataset.source = 'transfer_stocks';
                             select.appendChild(option);
                         });
                     }

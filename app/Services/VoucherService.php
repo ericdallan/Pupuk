@@ -497,7 +497,7 @@ class VoucherService
             return;
         }
 
-        $modelPriorities = [UsedStock::class, TransferStock::class, Stock::class];
+        $modelPriorities = [UsedStock::class, Stock::class];
 
         $updated = false;
 

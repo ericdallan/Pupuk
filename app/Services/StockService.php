@@ -229,14 +229,14 @@ class StockService
             // Define incoming and outgoing voucher types based on table
             $incomingVoucherTypes = match ($tableName) {
                 'stocks' => ['PB', 'PYB', 'RPJ'],
-                'transfer_stocks' => ['PH', 'PYB'],
+                'transfer_stocks' => ['PH'],
                 'used_stocks' => ['PK', 'PB', 'PYB', 'RPJ'],
                 default => [],
             };
 
             $outgoingVoucherTypes = match ($tableName) {
                 'stocks' => ['PH', 'PJ', 'PYK', 'RPB'],
-                'transfer_stocks' => ['PK', 'PYK'],
+                'transfer_stocks' => ['PK'],
                 'used_stocks' => ['PJ', 'PYK'],
                 default => [],
             };
