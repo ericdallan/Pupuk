@@ -219,6 +219,7 @@ class ExportService
                 ['Keterangan' => 'Beban Operasional', 'Jumlah (Rp)' => -$periodData['totalBebanOperasional']],
                 ['Keterangan' => 'Laba Operasi', 'Jumlah (Rp)' => $periodData['labaOperasi']],
                 ['Keterangan' => 'Pendapatan Lain-lain', 'Jumlah (Rp)' => $periodData['totalPendapatanLain']],
+                ['Keterangan' => 'Laba Sebelum Pajak', 'Jumlah (Rp)' => $periodData['labaSebelumPajak']],
                 ['Keterangan' => 'Laba Bersih', 'Jumlah (Rp)' => $periodData['labaSebelumPajak']], // Laba Bersih = Laba Sebelum Pajak
             ]);
 
@@ -232,6 +233,7 @@ class ExportService
                 ['Keterangan' => 'Beban Operasional', 'Jumlah (Rp)' => -$cumulativeData['totalBebanOperasional']],
                 ['Keterangan' => 'Laba Operasi', 'Jumlah (Rp)' => $cumulativeData['labaOperasi']],
                 ['Keterangan' => 'Pendapatan Lain-lain', 'Jumlah (Rp)' => $cumulativeData['totalPendapatanLain']],
+                ['Keterangan' => 'Laba Sebelum Pajak', 'Jumlah (Rp)' => $cumulativeData['labaSebelumPajak']],
                 ['Keterangan' => 'Laba Bersih', 'Jumlah (Rp)' => $cumulativeData['labaSebelumPajak']], // Laba Bersih = Laba Sebelum Pajak
             ]);
 
