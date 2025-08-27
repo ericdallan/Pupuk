@@ -169,7 +169,7 @@ class ExportService
     }
 
     /**
-     * Prepare data for Income Statement export
+     * Prepare data for income statement
      *
      * @param array $data
      * @return array
@@ -219,9 +219,7 @@ class ExportService
                 ['Keterangan' => 'Beban Operasional', 'Jumlah (Rp)' => -$periodData['totalBebanOperasional']],
                 ['Keterangan' => 'Laba Operasi', 'Jumlah (Rp)' => $periodData['labaOperasi']],
                 ['Keterangan' => 'Pendapatan Lain-lain', 'Jumlah (Rp)' => $periodData['totalPendapatanLain']],
-                ['Keterangan' => 'Laba Sebelum Pajak', 'Jumlah (Rp)' => $periodData['labaSebelumPajak']],
-                ['Keterangan' => 'Pajak Penghasilan', 'Jumlah (Rp)' => -$periodData['bebanPajakPenghasilan']],
-                ['Keterangan' => 'Laba Bersih', 'Jumlah (Rp)' => $periodData['labaBersih']],
+                ['Keterangan' => 'Laba Bersih', 'Jumlah (Rp)' => $periodData['labaSebelumPajak']], // Laba Bersih = Laba Sebelum Pajak
             ]);
 
             // Format cumulativeData untuk output konsisten
@@ -234,9 +232,7 @@ class ExportService
                 ['Keterangan' => 'Beban Operasional', 'Jumlah (Rp)' => -$cumulativeData['totalBebanOperasional']],
                 ['Keterangan' => 'Laba Operasi', 'Jumlah (Rp)' => $cumulativeData['labaOperasi']],
                 ['Keterangan' => 'Pendapatan Lain-lain', 'Jumlah (Rp)' => $cumulativeData['totalPendapatanLain']],
-                ['Keterangan' => 'Laba Sebelum Pajak', 'Jumlah (Rp)' => $cumulativeData['labaSebelumPajak']],
-                ['Keterangan' => 'Pajak Penghasilan', 'Jumlah (Rp)' => -$cumulativeData['bebanPajakPenghasilan']],
-                ['Keterangan' => 'Laba Bersih', 'Jumlah (Rp)' => $cumulativeData['labaBersih']],
+                ['Keterangan' => 'Laba Bersih', 'Jumlah (Rp)' => $cumulativeData['labaSebelumPajak']], // Laba Bersih = Laba Sebelum Pajak
             ]);
 
             // Generate nama file
