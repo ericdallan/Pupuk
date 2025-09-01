@@ -10,6 +10,8 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
+use App\Models\Transactions;
+use App\Models\Voucher;
 
 class DashboardService
 {
@@ -45,6 +47,12 @@ class DashboardService
                 'stock_qty_chart_type' => 'nullable|in:bar,pie',
                 'stock_amount_limit' => 'nullable|integer|in:5,10',
                 'stock_amount_chart_type' => 'nullable|in:bar,pie',
+                'sales_month' => 'nullable|integer|between:1,12',
+                'sales_year' => 'nullable|integer|min:1900',
+                'sales_qty_limit' => 'nullable|integer|in:5,10',
+                'sales_qty_chart_type' => 'nullable|in:bar,pie',
+                'sales_profit_limit' => 'nullable|integer|in:5,10',
+                'sales_profit_chart_type' => 'nullable|in:bar,pie',
             ]);
 
             if ($validator->fails()) {
@@ -65,6 +73,17 @@ class DashboardService
             $stockQtyEndDate = $stockQtyStartDate->copy()->endOfMonth();
             $stockAmountStartDate = Carbon::create($stockAmountYear, $stockAmountMonth, 1)->startOfMonth();
             $stockAmountEndDate = $stockAmountStartDate->copy()->endOfMonth();
+
+            // Set default for sales charts
+            $salesMonth = $params['sales_month'] ?? Carbon::now()->month;
+            $salesYear = $params['sales_year'] ?? Carbon::now()->year;
+            $salesQtyLimit = $params['sales_qty_limit'] ?? 5;
+            $salesQtyChartType = $params['sales_qty_chart_type'] ?? 'bar';
+            $salesProfitLimit = $params['sales_profit_limit'] ?? 5;
+            $salesProfitChartType = $params['sales_profit_chart_type'] ?? 'bar';
+
+            $salesStartDate = Carbon::create($salesYear, $salesMonth, 1)->startOfMonth();
+            $salesEndDate = $salesStartDate->copy()->endOfMonth();
 
             // Get monthly profit trend
             $profitTrend = [];
@@ -208,6 +227,51 @@ class DashboardService
                 return $result;
             });
 
+            // Sales Data for Top/Bottom Charts
+            $salesData = Cache::remember("sales_data_{$salesStartDate->format('Y-m-d')}_{$salesEndDate->format('Y-m-d')}", 60, function () use ($salesStartDate, $salesEndDate) {
+                $transactions = Transactions::join('vouchers', 'transactions.voucher_id', '=', 'vouchers.id')
+                    ->whereBetween('vouchers.voucher_date', [$salesStartDate, $salesEndDate])
+                    ->where('vouchers.voucher_type', 'PJ')  // Voucher type for sales transactions
+                    ->where('transactions.quantity', '>', 0)  // Positive quantity for sales
+                    ->where('transactions.description', 'NOT LIKE', 'HPP %')  // Exclude HPP transactions
+                    ->selectRaw('description, size, SUM(quantity) as total_qty, SUM(nominal) as total_nominal')
+                    ->groupBy('description', 'size')
+                    ->get();
+
+
+                $items = collect();
+                foreach ($transactions as $item) {
+                    $hpp = $this->stockService->getAverageHPP($item->description, $item->size, $salesStartDate, $salesEndDate) ?? 0;
+                    $profit = $item->total_nominal - ($hpp * $item->total_qty);
+                    $items->push([
+                        'label' => $item->description . ($item->size ? ' (' . $item->size . ')' : ''),
+                        'qty' => $item->total_qty,
+                        'profit' => $profit,
+                    ]);
+                }
+                return $items;
+            });
+
+            // Top Selling by Qty
+            $topSellingQty = $salesData->isEmpty() ? collect(['No Sales Data' => 0]) : $salesData->sortByDesc('qty')->take(10)->mapWithKeys(function ($item) {
+                return [$item['label'] => $item['qty']];
+            });
+
+            // Bottom Selling by Qty
+            $bottomSellingQty = $salesData->isEmpty() ? collect(['No Sales Data' => 0]) : $salesData->sortBy('qty')->take(10)->mapWithKeys(function ($item) {
+                return [$item['label'] => $item['qty']];
+            });
+
+            // Top Profitable
+            $topProfitable = $salesData->isEmpty() ? collect(['No Sales Data' => 0]) : $salesData->sortByDesc('profit')->take(10)->mapWithKeys(function ($item) {
+                return [$item['label'] => $item['profit']];
+            });
+
+            // Bottom Profitable
+            $bottomProfitable = $salesData->isEmpty() ? collect(['No Sales Data' => 0]) : $salesData->sortBy('profit')->take(10)->mapWithKeys(function ($item) {
+                return [$item['label'] => $item['profit']];
+            });
+
             // Format data for visualization
             return [
                 'profit_trend' => [
@@ -226,6 +290,22 @@ class DashboardService
                     'labels' => $stockCompositionAmount->keys()->toArray(),
                     'data' => $stockCompositionAmount->values()->toArray(),
                 ],
+                'top_selling_qty' => [
+                    'labels' => $topSellingQty->keys()->toArray(),
+                    'data' => $topSellingQty->values()->toArray(),
+                ],
+                'bottom_selling_qty' => [
+                    'labels' => $bottomSellingQty->keys()->toArray(),
+                    'data' => $bottomSellingQty->values()->toArray(),
+                ],
+                'top_profitable' => [
+                    'labels' => $topProfitable->keys()->toArray(),
+                    'data' => $topProfitable->values()->toArray(),
+                ],
+                'bottom_profitable' => [
+                    'labels' => $bottomProfitable->keys()->toArray(),
+                    'data' => $bottomProfitable->values()->toArray(),
+                ],
                 'profit_trend_period' => $profitTrendPeriod,
                 'profit_trend_year' => $profitTrendYear,
                 'sales_trend_period' => $salesTrendPeriod,
@@ -238,6 +318,12 @@ class DashboardService
                 'stock_qty_chart_type' => $stockQtyChartType,
                 'stock_amount_limit' => $stockAmountLimit,
                 'stock_amount_chart_type' => $stockAmountChartType,
+                'sales_month' => $salesMonth,
+                'sales_year' => $salesYear,
+                'sales_qty_limit' => $salesQtyLimit,
+                'sales_qty_chart_type' => $salesQtyChartType,
+                'sales_profit_limit' => $salesProfitLimit,
+                'sales_profit_chart_type' => $salesProfitChartType,
             ];
         } catch (\Exception $e) {
             Log::error('Error fetching dashboard data: ' . $e->getMessage());
@@ -261,5 +347,6 @@ class DashboardService
         Cache::forget("sales_{$year}_{$month}");
         Cache::forget("stock_composition_qty_{$startDate->format('Y-m-d')}_{$endDate->format('Y-m-d')}");
         Cache::forget("stock_composition_amount_{$startDate->format('Y-m-d')}_{$endDate->format('Y-m-d')}");
+        Cache::forget("sales_data_{$startDate->format('Y-m-d')}_{$endDate->format('Y-m-d')}");
     }
 }

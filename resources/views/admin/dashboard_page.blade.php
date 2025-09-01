@@ -83,6 +83,15 @@
                                 value="{{ $dashboardData['stock_amount_limit'] }}">
                             <input type="hidden" name="stock_amount_chart_type"
                                 value="{{ $dashboardData['stock_amount_chart_type'] }}">
+                            <input type="hidden" name="sales_month" value="{{ $dashboardData['sales_month'] }}">
+                            <input type="hidden" name="sales_year" value="{{ $dashboardData['sales_year'] }}">
+                            <input type="hidden" name="sales_qty_limit" value="{{ $dashboardData['sales_qty_limit'] }}">
+                            <input type="hidden" name="sales_qty_chart_type"
+                                value="{{ $dashboardData['sales_qty_chart_type'] }}">
+                            <input type="hidden" name="sales_profit_limit"
+                                value="{{ $dashboardData['sales_profit_limit'] }}">
+                            <input type="hidden" name="sales_profit_chart_type"
+                                value="{{ $dashboardData['sales_profit_chart_type'] }}">
                         </form>
                         <canvas id="profitTrendChart" height="300"></canvas>
                     </div>
@@ -99,8 +108,8 @@
                             <div class="row align-items-end">
                                 <div class="col-md-4 col-sm-6 mb-3">
                                     <label for="sales_trend_period" class="form-label fw-bold">Periode</label>
-                                    <select name="sales_trend_period" id="sales_trend_period" class="form-select rounded-3"
-                                        onchange="toggleSalesTrendYear(this)" required
+                                    <select name="sales_trend_period" id="sales_trend_period"
+                                        class="form-select rounded-3" onchange="toggleSalesTrendYear(this)" required
                                         aria-label="Pilih periode tren penjualan">
                                         <option value="last_12_months"
                                             {{ $dashboardData['sales_trend_period'] == 'last_12_months' ? 'selected' : '' }}>
@@ -149,6 +158,16 @@
                                 value="{{ $dashboardData['stock_amount_limit'] }}">
                             <input type="hidden" name="stock_amount_chart_type"
                                 value="{{ $dashboardData['stock_amount_chart_type'] }}">
+                            <input type="hidden" name="sales_month" value="{{ $dashboardData['sales_month'] }}">
+                            <input type="hidden" name="sales_year" value="{{ $dashboardData['sales_year'] }}">
+                            <input type="hidden" name="sales_qty_limit"
+                                value="{{ $dashboardData['sales_qty_limit'] }}">
+                            <input type="hidden" name="sales_qty_chart_type"
+                                value="{{ $dashboardData['sales_qty_chart_type'] }}">
+                            <input type="hidden" name="sales_profit_limit"
+                                value="{{ $dashboardData['sales_profit_limit'] }}">
+                            <input type="hidden" name="sales_profit_chart_type"
+                                value="{{ $dashboardData['sales_profit_chart_type'] }}">
                         </form>
                         <canvas id="salesTrendChart" height="300"></canvas>
                     </div>
@@ -236,6 +255,16 @@
                                 value="{{ $dashboardData['stock_amount_limit'] }}">
                             <input type="hidden" name="stock_amount_chart_type"
                                 value="{{ $dashboardData['stock_amount_chart_type'] }}">
+                            <input type="hidden" name="sales_month" value="{{ $dashboardData['sales_month'] }}">
+                            <input type="hidden" name="sales_year" value="{{ $dashboardData['sales_year'] }}">
+                            <input type="hidden" name="sales_qty_limit"
+                                value="{{ $dashboardData['sales_qty_limit'] }}">
+                            <input type="hidden" name="sales_qty_chart_type"
+                                value="{{ $dashboardData['sales_qty_chart_type'] }}">
+                            <input type="hidden" name="sales_profit_limit"
+                                value="{{ $dashboardData['sales_profit_limit'] }}">
+                            <input type="hidden" name="sales_profit_chart_type"
+                                value="{{ $dashboardData['sales_profit_chart_type'] }}">
                         </form>
                         @if (empty($dashboardData['stock_composition_qty']['labels']) ||
                                 $dashboardData['stock_composition_qty']['labels'][0] == 'No Stock Data')
@@ -330,12 +359,441 @@
                                 value="{{ $dashboardData['stock_qty_limit'] }}">
                             <input type="hidden" name="stock_qty_chart_type"
                                 value="{{ $dashboardData['stock_qty_chart_type'] }}">
+                            <input type="hidden" name="sales_month" value="{{ $dashboardData['sales_month'] }}">
+                            <input type="hidden" name="sales_year" value="{{ $dashboardData['sales_year'] }}">
+                            <input type="hidden" name="sales_qty_limit"
+                                value="{{ $dashboardData['sales_qty_limit'] }}">
+                            <input type="hidden" name="sales_qty_chart_type"
+                                value="{{ $dashboardData['sales_qty_chart_type'] }}">
+                            <input type="hidden" name="sales_profit_limit"
+                                value="{{ $dashboardData['sales_profit_limit'] }}">
+                            <input type="hidden" name="sales_profit_chart_type"
+                                value="{{ $dashboardData['sales_profit_chart_type'] }}">
                         </form>
                         @if (empty($dashboardData['stock_composition_amount']['labels']) ||
                                 $dashboardData['stock_composition_amount']['labels'][0] == 'No Stock Data')
                             <p class="text-muted text-center">Tidak ada data stok untuk periode ini.</p>
                         @else
                             <canvas id="stockCompositionAmountChart" height="200"></canvas>
+                        @endif
+                    </div>
+                </div>
+            </div>
+            <!-- Row 3, Column 1: Top Selling Items by Quantity -->
+            <div class="col-md-6 mb-4" hidden>
+                <div class="card shadow-sm chart-container">
+                    <div class="card-body">
+                        <h3 class="card-title">Penjualan Terbanyak (Kuantitas)</h3>
+                        <form action="{{ route('dashboard_page') }}" method="GET" class="mb-3">
+                            <div class="row align-items-end">
+                                <div class="col-md-4 col-sm-6 mb-3">
+                                    <label for="sales_month" class="form-label fw-bold">Bulan</label>
+                                    <select name="sales_month" id="sales_month" class="form-select rounded-3" required
+                                        aria-label="Pilih bulan untuk penjualan kuantitas">
+                                        @for ($i = 1; $i <= 12; $i++)
+                                            <option value="{{ $i }}"
+                                                {{ $dashboardData['sales_month'] == $i ? 'selected' : '' }}>
+                                                {{ \Carbon\Carbon::create()->month($i)->translatedFormat('F') }}
+                                            </option>
+                                        @endfor
+                                    </select>
+                                </div>
+                                <div class="col-md-4 col-sm-6 mb-3">
+                                    <label for="sales_year" class="form-label fw-bold">Tahun</label>
+                                    <select name="sales_year" id="sales_year" class="form-select rounded-3" required
+                                        aria-label="Pilih tahun untuk penjualan kuantitas">
+                                        @for ($i = \Carbon\Carbon::now()->year; $i >= \Carbon\Carbon::now()->year - 5; $i--)
+                                            <option value="{{ $i }}"
+                                                {{ $dashboardData['sales_year'] == $i ? 'selected' : '' }}>
+                                                {{ $i }}
+                                            </option>
+                                        @endfor
+                                    </select>
+                                </div>
+                                <div class="col-md-4 col-sm-12 mb-3">
+                                    <button type="submit" class="btn btn-primary px-4 rounded-3">Filter</button>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 col-sm-12">
+                                    <label for="sales_qty_limit" class="form-label fw-bold">Tampilkan</label>
+                                    <select id="sales_qty_limit" class="form-select rounded-3"
+                                        onchange="toggleSalesQtyChartType()"
+                                        aria-label="Pilih jumlah item untuk ditampilkan">
+                                        <option value="5"
+                                            {{ $dashboardData['sales_qty_limit'] == 5 ? 'selected' : '' }}>Top 5</option>
+                                        <option value="10"
+                                            {{ $dashboardData['sales_qty_limit'] == 10 ? 'selected' : '' }}>Top 10
+                                        </option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6 col-sm-12">
+                                    <label for="sales_qty_chart_type" class="form-label fw-bold">Tipe Grafik</label>
+                                    <select id="sales_qty_chart_type" class="form-select rounded-3"
+                                        onchange="toggleSalesQtyChartType()"
+                                        aria-label="Pilih tipe grafik penjualan kuantitas">
+                                        <option value="bar"
+                                            {{ $dashboardData['sales_qty_chart_type'] == 'bar' ? 'selected' : '' }}>Bar
+                                        </option>
+                                        <option value="pie"
+                                            {{ $dashboardData['sales_qty_chart_type'] == 'pie' ? 'selected' : '' }}>Pie
+                                        </option>
+                                    </select>
+                                </div>
+                            </div>
+                            <!-- Hidden inputs untuk mempertahankan filter lain -->
+                            <input type="hidden" name="profit_trend_period"
+                                value="{{ $dashboardData['profit_trend_period'] }}">
+                            @if ($dashboardData['profit_trend_period'] == 'yearly')
+                                <input type="hidden" name="profit_trend_year"
+                                    value="{{ $dashboardData['profit_trend_year'] }}">
+                            @endif
+                            <input type="hidden" name="sales_trend_period"
+                                value="{{ $dashboardData['sales_trend_period'] }}">
+                            @if ($dashboardData['sales_trend_period'] == 'yearly')
+                                <input type="hidden" name="sales_trend_year"
+                                    value="{{ $dashboardData['sales_trend_year'] }}">
+                            @endif
+                            <input type="hidden" name="stock_qty_month"
+                                value="{{ $dashboardData['stock_qty_month'] }}">
+                            <input type="hidden" name="stock_qty_year" value="{{ $dashboardData['stock_qty_year'] }}">
+                            <input type="hidden" name="stock_qty_limit"
+                                value="{{ $dashboardData['stock_qty_limit'] }}">
+                            <input type="hidden" name="stock_qty_chart_type"
+                                value="{{ $dashboardData['stock_qty_chart_type'] }}">
+                            <input type="hidden" name="stock_amount_month"
+                                value="{{ $dashboardData['stock_amount_month'] }}">
+                            <input type="hidden" name="stock_amount_year"
+                                value="{{ $dashboardData['stock_amount_year'] }}">
+                            <input type="hidden" name="stock_amount_limit"
+                                value="{{ $dashboardData['stock_amount_limit'] }}">
+                            <input type="hidden" name="stock_amount_chart_type"
+                                value="{{ $dashboardData['stock_amount_chart_type'] }}">
+                            <input type="hidden" name="sales_profit_limit"
+                                value="{{ $dashboardData['sales_profit_limit'] }}">
+                            <input type="hidden" name="sales_profit_chart_type"
+                                value="{{ $dashboardData['sales_profit_chart_type'] }}">
+                        </form>
+                        @if (empty($dashboardData['top_selling_qty']['labels']) ||
+                                $dashboardData['top_selling_qty']['labels'][0] == 'No Sales Data')
+                            <p class="text-muted text-center">Tidak ada data penjualan untuk periode ini.</p>
+                        @else
+                            <canvas id="topSellingQtyChart" height="200"></canvas>
+                        @endif
+                    </div>
+                </div>
+            </div>
+            <!-- Row 3, Column 2: Top Profitable Items -->
+            <div class="col-md-6 mb-4" hidden>
+                <div class="card shadow-sm chart-container">
+                    <div class="card-body">
+                        <h3 class="card-title">Penjualan Paling Untung</h3>
+                        <form action="{{ route('dashboard_page') }}" method="GET" class="mb-3">
+                            <div class="row align-items-end">
+                                <div class="col-md-4 col-sm-6 mb-3">
+                                    <label for="sales_month" class="form-label fw-bold">Bulan</label>
+                                    <select name="sales_month" id="sales_month" class="form-select rounded-3" required
+                                        aria-label="Pilih bulan untuk penjualan untung">
+                                        @for ($i = 1; $i <= 12; $i++)
+                                            <option value="{{ $i }}"
+                                                {{ $dashboardData['sales_month'] == $i ? 'selected' : '' }}>
+                                                {{ \Carbon\Carbon::create()->month($i)->translatedFormat('F') }}
+                                            </option>
+                                        @endfor
+                                    </select>
+                                </div>
+                                <div class="col-md-4 col-sm-6 mb-3">
+                                    <label for="sales_year" class="form-label fw-bold">Tahun</label>
+                                    <select name="sales_year" id="sales_year" class="form-select rounded-3" required
+                                        aria-label="Pilih tahun untuk penjualan untung">
+                                        @for ($i = \Carbon\Carbon::now()->year; $i >= \Carbon\Carbon::now()->year - 5; $i--)
+                                            <option value="{{ $i }}"
+                                                {{ $dashboardData['sales_year'] == $i ? 'selected' : '' }}>
+                                                {{ $i }}
+                                            </option>
+                                        @endfor
+                                    </select>
+                                </div>
+                                <div class="col-md-4 col-sm-12 mb-3">
+                                    <button type="submit" class="btn btn-primary px-4 rounded-3">Filter</button>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 col-sm-12">
+                                    <label for="sales_profit_limit" class="form-label fw-bold">Tampilkan</label>
+                                    <select id="sales_profit_limit" class="form-select rounded-3"
+                                        onchange="toggleSalesProfitChartType()"
+                                        aria-label="Pilih jumlah item untuk ditampilkan">
+                                        <option value="5"
+                                            {{ $dashboardData['sales_profit_limit'] == 5 ? 'selected' : '' }}>Top 5
+                                        </option>
+                                        <option value="10"
+                                            {{ $dashboardData['sales_profit_limit'] == 10 ? 'selected' : '' }}>Top 10
+                                        </option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6 col-sm-12">
+                                    <label for="sales_profit_chart_type" class="form-label fw-bold">Tipe Grafik</label>
+                                    <select id="sales_profit_chart_type" class="form-select rounded-3"
+                                        onchange="toggleSalesProfitChartType()"
+                                        aria-label="Pilih tipe grafik penjualan untung">
+                                        <option value="bar"
+                                            {{ $dashboardData['sales_profit_chart_type'] == 'bar' ? 'selected' : '' }}>Bar
+                                        </option>
+                                        <option value="pie"
+                                            {{ $dashboardData['sales_profit_chart_type'] == 'pie' ? 'selected' : '' }}>Pie
+                                        </option>
+                                    </select>
+                                </div>
+                            </div>
+                            <!-- Hidden inputs untuk mempertahankan filter lain -->
+                            <input type="hidden" name="profit_trend_period"
+                                value="{{ $dashboardData['profit_trend_period'] }}">
+                            @if ($dashboardData['profit_trend_period'] == 'yearly')
+                                <input type="hidden" name="profit_trend_year"
+                                    value="{{ $dashboardData['profit_trend_year'] }}">
+                            @endif
+                            <input type="hidden" name="sales_trend_period"
+                                value="{{ $dashboardData['sales_trend_period'] }}">
+                            @if ($dashboardData['sales_trend_period'] == 'yearly')
+                                <input type="hidden" name="sales_trend_year"
+                                    value="{{ $dashboardData['sales_trend_year'] }}">
+                            @endif
+                            <input type="hidden" name="stock_qty_month"
+                                value="{{ $dashboardData['stock_qty_month'] }}">
+                            <input type="hidden" name="stock_qty_year" value="{{ $dashboardData['stock_qty_year'] }}">
+                            <input type="hidden" name="stock_qty_limit"
+                                value="{{ $dashboardData['stock_qty_limit'] }}">
+                            <input type="hidden" name="stock_qty_chart_type"
+                                value="{{ $dashboardData['stock_qty_chart_type'] }}">
+                            <input type="hidden" name="stock_amount_month"
+                                value="{{ $dashboardData['stock_amount_month'] }}">
+                            <input type="hidden" name="stock_amount_year"
+                                value="{{ $dashboardData['stock_amount_year'] }}">
+                            <input type="hidden" name="stock_amount_limit"
+                                value="{{ $dashboardData['stock_amount_limit'] }}">
+                            <input type="hidden" name="stock_amount_chart_type"
+                                value="{{ $dashboardData['stock_amount_chart_type'] }}">
+                            <input type="hidden" name="sales_qty_limit"
+                                value="{{ $dashboardData['sales_qty_limit'] }}">
+                            <input type="hidden" name="sales_qty_chart_type"
+                                value="{{ $dashboardData['sales_qty_chart_type'] }}">
+                        </form>
+                        @if (empty($dashboardData['top_profitable']['labels']) ||
+                                $dashboardData['top_profitable']['labels'][0] == 'No Sales Data')
+                            <p class="text-muted text-center">Tidak ada data penjualan untuk periode ini.</p>
+                        @else
+                            <canvas id="topProfitableChart" height="200"></canvas>
+                        @endif
+                    </div>
+                </div>
+            </div>
+            <!-- Row 4, Column 1: Bottom Selling Items by Quantity -->
+            <div class="col-md-6 mb-4" hidden>
+                <div class="card shadow-sm chart-container">
+                    <div class="card-body">
+                        <h3 class="card-title">Penjualan Tersedikit (Kuantitas)</h3>
+                        <form action="{{ route('dashboard_page') }}" method="GET" class="mb-3">
+                            <div class="row align-items-end">
+                                <div class="col-md-4 col-sm-6 mb-3">
+                                    <label for="sales_month" class="form-label fw-bold">Bulan</label>
+                                    <select name="sales_month" id="sales_month" class="form-select rounded-3" required
+                                        aria-label="Pilih bulan untuk penjualan kuantitas tersedikit">
+                                        @for ($i = 1; $i <= 12; $i++)
+                                            <option value="{{ $i }}"
+                                                {{ $dashboardData['sales_month'] == $i ? 'selected' : '' }}>
+                                                {{ \Carbon\Carbon::create()->month($i)->translatedFormat('F') }}
+                                            </option>
+                                        @endfor
+                                    </select>
+                                </div>
+                                <div class="col-md-4 col-sm-6 mb-3">
+                                    <label for="sales_year" class="form-label fw-bold">Tahun</label>
+                                    <select name="sales_year" id="sales_year" class="form-select rounded-3" required
+                                        aria-label="Pilih tahun untuk penjualan kuantitas tersedikit">
+                                        @for ($i = \Carbon\Carbon::now()->year; $i >= \Carbon\Carbon::now()->year - 5; $i--)
+                                            <option value="{{ $i }}"
+                                                {{ $dashboardData['sales_year'] == $i ? 'selected' : '' }}>
+                                                {{ $i }}
+                                            </option>
+                                        @endfor
+                                    </select>
+                                </div>
+                                <div class="col-md-4 col-sm-12 mb-3">
+                                    <button type="submit" class="btn btn-primary px-4 rounded-3">Filter</button>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 col-sm-12">
+                                    <label for="sales_qty_limit" class="form-label fw-bold">Tampilkan</label>
+                                    <select id="sales_qty_limit" class="form-select rounded-3"
+                                        onchange="toggleBottomSalesQtyChartType()"
+                                        aria-label="Pilih jumlah item untuk ditampilkan">
+                                        <option value="5"
+                                            {{ $dashboardData['sales_qty_limit'] == 5 ? 'selected' : '' }}>Bottom 5
+                                        </option>
+                                        <option value="10"
+                                            {{ $dashboardData['sales_qty_limit'] == 10 ? 'selected' : '' }}>Bottom 10
+                                        </option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6 col-sm-12">
+                                    <label for="sales_qty_chart_type" class="form-label fw-bold">Tipe Grafik</label>
+                                    <select id="sales_qty_chart_type" class="form-select rounded-3"
+                                        onchange="toggleBottomSalesQtyChartType()"
+                                        aria-label="Pilih tipe grafik penjualan kuantitas tersedikit">
+                                        <option value="bar"
+                                            {{ $dashboardData['sales_qty_chart_type'] == 'bar' ? 'selected' : '' }}>Bar
+                                        </option>
+                                        <option value="pie"
+                                            {{ $dashboardData['sales_qty_chart_type'] == 'pie' ? 'selected' : '' }}>Pie
+                                        </option>
+                                    </select>
+                                </div>
+                            </div>
+                            <!-- Hidden inputs untuk mempertahankan filter lain -->
+                            <input type="hidden" name="profit_trend_period"
+                                value="{{ $dashboardData['profit_trend_period'] }}">
+                            @if ($dashboardData['profit_trend_period'] == 'yearly')
+                                <input type="hidden" name="profit_trend_year"
+                                    value="{{ $dashboardData['profit_trend_year'] }}">
+                            @endif
+                            <input type="hidden" name="sales_trend_period"
+                                value="{{ $dashboardData['sales_trend_period'] }}">
+                            @if ($dashboardData['sales_trend_period'] == 'yearly')
+                                <input type="hidden" name="sales_trend_year"
+                                    value="{{ $dashboardData['sales_trend_year'] }}">
+                            @endif
+                            <input type="hidden" name="stock_qty_month"
+                                value="{{ $dashboardData['stock_qty_month'] }}">
+                            <input type="hidden" name="stock_qty_year" value="{{ $dashboardData['stock_qty_year'] }}">
+                            <input type="hidden" name="stock_qty_limit"
+                                value="{{ $dashboardData['stock_qty_limit'] }}">
+                            <input type="hidden" name="stock_qty_chart_type"
+                                value="{{ $dashboardData['stock_qty_chart_type'] }}">
+                            <input type="hidden" name="stock_amount_month"
+                                value="{{ $dashboardData['stock_amount_month'] }}">
+                            <input type="hidden" name="stock_amount_year"
+                                value="{{ $dashboardData['stock_amount_year'] }}">
+                            <input type="hidden" name="stock_amount_limit"
+                                value="{{ $dashboardData['stock_amount_limit'] }}">
+                            <input type="hidden" name="stock_amount_chart_type"
+                                value="{{ $dashboardData['stock_amount_chart_type'] }}">
+                            <input type="hidden" name="sales_profit_limit"
+                                value="{{ $dashboardData['sales_profit_limit'] }}">
+                            <input type="hidden" name="sales_profit_chart_type"
+                                value="{{ $dashboardData['sales_profit_chart_type'] }}">
+                        </form>
+                        @if (empty($dashboardData['bottom_selling_qty']['labels']) ||
+                                $dashboardData['bottom_selling_qty']['labels'][0] == 'No Sales Data')
+                            <p class="text-muted text-center">Tidak ada data penjualan untuk periode ini.</p>
+                        @else
+                            <canvas id="bottomSellingQtyChart" height="200"></canvas>
+                        @endif
+                    </div>
+                </div>
+            </div>
+            <!-- Row 4, Column 2: Bottom Profitable Items -->
+            <div class="col-md-6 mb-4" hidden>
+                <div class="card shadow-sm chart-container">
+                    <div class="card-body">
+                        <h3 class="card-title">Penjualan Untung Terendah</h3>
+                        <form action="{{ route('dashboard_page') }}" method="GET" class="mb-3">
+                            <div class="row align-items-end">
+                                <div class="col-md-4 col-sm-6 mb-3">
+                                    <label for="sales_month" class="form-label fw-bold">Bulan</label>
+                                    <select name="sales_month" id="sales_month" class="form-select rounded-3" required
+                                        aria-label="Pilih bulan untuk penjualan untung terendah">
+                                        @for ($i = 1; $i <= 12; $i++)
+                                            <option value="{{ $i }}"
+                                                {{ $dashboardData['sales_month'] == $i ? 'selected' : '' }}>
+                                                {{ \Carbon\Carbon::create()->month($i)->translatedFormat('F') }}
+                                            </option>
+                                        @endfor
+                                    </select>
+                                </div>
+                                <div class="col-md-4 col-sm-6 mb-3">
+                                    <label for="sales_year" class="form-label fw-bold">Tahun</label>
+                                    <select name="sales_year" id="sales_year" class="form-select rounded-3" required
+                                        aria-label="Pilih tahun untuk penjualan untung terendah">
+                                        @for ($i = \Carbon\Carbon::now()->year; $i >= \Carbon\Carbon::now()->year - 5; $i--)
+                                            <option value="{{ $i }}"
+                                                {{ $dashboardData['sales_year'] == $i ? 'selected' : '' }}>
+                                                {{ $i }}
+                                            </option>
+                                        @endfor
+                                    </select>
+                                </div>
+                                <div class="col-md-4 col-sm-12 mb-3">
+                                    <button type="submit" class="btn btn-primary px-4 rounded-3">Filter</button>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 col-sm-12">
+                                    <label for="sales_profit_limit" class="form-label fw-bold">Tampilkan</label>
+                                    <select id="sales_profit_limit" class="form-select rounded-3"
+                                        onchange="toggleBottomSalesProfitChartType()"
+                                        aria-label="Pilih jumlah item untuk ditampilkan">
+                                        <option value="5"
+                                            {{ $dashboardData['sales_profit_limit'] == 5 ? 'selected' : '' }}>Bottom 5
+                                        </option>
+                                        <option value="10"
+                                            {{ $dashboardData['sales_profit_limit'] == 10 ? 'selected' : '' }}>Bottom 10
+                                        </option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6 col-sm-12">
+                                    <label for="sales_profit_chart_type" class="form-label fw-bold">Tipe Grafik</label>
+                                    <select id="sales_profit_chart_type" class="form-select rounded-3"
+                                        onchange="toggleBottomSalesProfitChartType()"
+                                        aria-label="Pilih tipe grafik penjualan untung terendah">
+                                        <option value="bar"
+                                            {{ $dashboardData['sales_profit_chart_type'] == 'bar' ? 'selected' : '' }}>Bar
+                                        </option>
+                                        <option value="pie"
+                                            {{ $dashboardData['sales_profit_chart_type'] == 'pie' ? 'selected' : '' }}>Pie
+                                        </option>
+                                    </select>
+                                </div>
+                            </div>
+                            <!-- Hidden inputs untuk mempertahankan filter lain -->
+                            <input type="hidden" name="profit_trend_period"
+                                value="{{ $dashboardData['profit_trend_period'] }}">
+                            @if ($dashboardData['profit_trend_period'] == 'yearly')
+                                <input type="hidden" name="profit_trend_year"
+                                    value="{{ $dashboardData['profit_trend_year'] }}">
+                            @endif
+                            <input type="hidden" name="sales_trend_period"
+                                value="{{ $dashboardData['sales_trend_period'] }}">
+                            @if ($dashboardData['sales_trend_period'] == 'yearly')
+                                <input type="hidden" name="sales_trend_year"
+                                    value="{{ $dashboardData['sales_trend_year'] }}">
+                            @endif
+                            <input type="hidden" name="stock_qty_month"
+                                value="{{ $dashboardData['stock_qty_month'] }}">
+                            <input type="hidden" name="stock_qty_year" value="{{ $dashboardData['stock_qty_year'] }}">
+                            <input type="hidden" name="stock_qty_limit"
+                                value="{{ $dashboardData['stock_qty_limit'] }}">
+                            <input type="hidden" name="stock_qty_chart_type"
+                                value="{{ $dashboardData['stock_qty_chart_type'] }}">
+                            <input type="hidden" name="stock_amount_month"
+                                value="{{ $dashboardData['stock_amount_month'] }}">
+                            <input type="hidden" name="stock_amount_year"
+                                value="{{ $dashboardData['stock_amount_year'] }}">
+                            <input type="hidden" name="stock_amount_limit"
+                                value="{{ $dashboardData['stock_amount_limit'] }}">
+                            <input type="hidden" name="stock_amount_chart_type"
+                                value="{{ $dashboardData['stock_amount_chart_type'] }}">
+                            <input type="hidden" name="sales_qty_limit"
+                                value="{{ $dashboardData['sales_qty_limit'] }}">
+                            <input type="hidden" name="sales_qty_chart_type"
+                                value="{{ $dashboardData['sales_qty_chart_type'] }}">
+                        </form>
+                        @if (empty($dashboardData['bottom_profitable']['labels']) ||
+                                $dashboardData['bottom_profitable']['labels'][0] == 'No Sales Data')
+                            <p class="text-muted text-center">Tidak ada data penjualan untuk periode ini.</p>
+                        @else
+                            <canvas id="bottomProfitableChart" height="200"></canvas>
                         @endif
                     </div>
                 </div>
@@ -488,6 +946,306 @@
                                     title: {
                                         display: true,
                                         text: 'Nominal (IDR)'
+                                    },
+                                    beginAtZero: true
+                                }
+                            } : {},
+                            plugins: {
+                                legend: {
+                                    display: chartType === 'pie'
+                                },
+                                afterDraw: function(chart) {
+                                    if (chartType === 'pie') {
+                                        const ctx = chart.ctx;
+                                        const width = chart.width;
+                                        const height = chart.height;
+                                        const centerX = width / 2;
+                                        const centerY = height / 2;
+                                        const total = data.reduce((acc, val) => acc + val, 0);
+                                        ctx.save();
+                                        ctx.textAlign = 'center';
+                                        ctx.textBaseline = 'middle';
+                                        ctx.font = 'bold 16px Arial';
+                                        ctx.fillStyle = '#000000';
+                                        ctx.fillText(
+                                            `Total: ${new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(total)}`,
+                                            centerX, centerY);
+                                        ctx.restore();
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+            };
+
+            // Top Selling by Quantity Chart
+            let topSellingQtyChart = null;
+            window.toggleSalesQtyChartType = function() {
+                if (topSellingQtyChart) {
+                    topSellingQtyChart.destroy();
+                }
+                const chartType = document.getElementById('sales_qty_chart_type').value;
+                const limit = parseInt(document.getElementById('sales_qty_limit').value);
+                const labels = @json($dashboardData['top_selling_qty']['labels']).slice(0, limit) || [];
+                const data = @json($dashboardData['top_selling_qty']['data']).slice(0, limit) || [];
+                const topSellingQtyCtx = document.getElementById('topSellingQtyChart')?.getContext('2d');
+                if (topSellingQtyCtx) {
+                    topSellingQtyChart = new Chart(topSellingQtyCtx, {
+                        type: chartType,
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                label: 'Kuantitas Penjualan',
+                                data: data,
+                                backgroundColor: ['#4CAF50', '#2196F3', '#FF9800', '#F44336',
+                                    '#9C27B0', '#FFEB3B', '#795548', '#607D8B', '#E91E63',
+                                    '#3F51B5'
+                                ],
+                                borderColor: ['#388E3C', '#1976D2', '#F57C00', '#D32F2F',
+                                    '#7B1FA2', '#FBC02D', '#5D4037', '#455A64', '#C2185B',
+                                    '#303F9F'
+                                ],
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            scales: chartType === 'bar' ? {
+                                x: {
+                                    title: {
+                                        display: true,
+                                        text: 'Item'
+                                    }
+                                },
+                                y: {
+                                    title: {
+                                        display: true,
+                                        text: 'Kuantitas'
+                                    },
+                                    beginAtZero: true
+                                }
+                            } : {},
+                            plugins: {
+                                legend: {
+                                    display: chartType === 'pie'
+                                },
+                                afterDraw: function(chart) {
+                                    if (chartType === 'pie') {
+                                        const ctx = chart.ctx;
+                                        const width = chart.width;
+                                        const height = chart.height;
+                                        const centerX = width / 2;
+                                        const centerY = height / 2;
+                                        const total = data.reduce((acc, val) => acc + val, 0);
+                                        ctx.save();
+                                        ctx.textAlign = 'center';
+                                        ctx.textBaseline = 'middle';
+                                        ctx.font = 'bold 16px Arial';
+                                        ctx.fillStyle = '#000000';
+                                        ctx.fillText(`Total: ${total} Items`, centerX, centerY);
+                                        ctx.restore();
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+            };
+
+            // Top Profitable Chart
+            let topProfitableChart = null;
+            window.toggleSalesProfitChartType = function() {
+                if (topProfitableChart) {
+                    topProfitableChart.destroy();
+                }
+                const chartType = document.getElementById('sales_profit_chart_type').value;
+                const limit = parseInt(document.getElementById('sales_profit_limit').value);
+                const labels = @json($dashboardData['top_profitable']['labels']).slice(0, limit) || [];
+                const data = @json($dashboardData['top_profitable']['data']).slice(0, limit) || [];
+                const topProfitableCtx = document.getElementById('topProfitableChart')?.getContext('2d');
+                if (topProfitableCtx) {
+                    topProfitableChart = new Chart(topProfitableCtx, {
+                        type: chartType,
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                label: 'Untung Penjualan (IDR)',
+                                data: data,
+                                backgroundColor: ['#4CAF50', '#2196F3', '#FF9800', '#F44336',
+                                    '#9C27B0', '#FFEB3B', '#795548', '#607D8B', '#E91E63',
+                                    '#3F51B5'
+                                ],
+                                borderColor: ['#388E3C', '#1976D2', '#F57C00', '#D32F2F',
+                                    '#7B1FA2', '#FBC02D', '#5D4037', '#455A64', '#C2185B',
+                                    '#303F9F'
+                                ],
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            scales: chartType === 'bar' ? {
+                                x: {
+                                    title: {
+                                        display: true,
+                                        text: 'Item'
+                                    }
+                                },
+                                y: {
+                                    title: {
+                                        display: true,
+                                        text: 'Untung (IDR)'
+                                    },
+                                    beginAtZero: true
+                                }
+                            } : {},
+                            plugins: {
+                                legend: {
+                                    display: chartType === 'pie'
+                                },
+                                afterDraw: function(chart) {
+                                    if (chartType === 'pie') {
+                                        const ctx = chart.ctx;
+                                        const width = chart.width;
+                                        const height = chart.height;
+                                        const centerX = width / 2;
+                                        const centerY = height / 2;
+                                        const total = data.reduce((acc, val) => acc + val, 0);
+                                        ctx.save();
+                                        ctx.textAlign = 'center';
+                                        ctx.textBaseline = 'middle';
+                                        ctx.font = 'bold 16px Arial';
+                                        ctx.fillStyle = '#000000';
+                                        ctx.fillText(
+                                            `Total: ${new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(total)}`,
+                                            centerX, centerY);
+                                        ctx.restore();
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+            };
+
+            // Bottom Selling by Quantity Chart
+            let bottomSellingQtyChart = null;
+            window.toggleBottomSalesQtyChartType = function() {
+                if (bottomSellingQtyChart) {
+                    bottomSellingQtyChart.destroy();
+                }
+                const chartType = document.getElementById('sales_qty_chart_type').value;
+                const limit = parseInt(document.getElementById('sales_qty_limit').value);
+                const labels = @json($dashboardData['bottom_selling_qty']['labels']).slice(0, limit) || [];
+                const data = @json($dashboardData['bottom_selling_qty']['data']).slice(0, limit) || [];
+                const bottomSellingQtyCtx = document.getElementById('bottomSellingQtyChart')?.getContext('2d');
+                if (bottomSellingQtyCtx) {
+                    bottomSellingQtyChart = new Chart(bottomSellingQtyCtx, {
+                        type: chartType,
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                label: 'Kuantitas Penjualan',
+                                data: data,
+                                backgroundColor: ['#F44336', '#FF9800', '#2196F3', '#4CAF50',
+                                    '#9C27B0', '#FFEB3B', '#795548', '#607D8B', '#E91E63',
+                                    '#3F51B5'
+                                ],
+                                borderColor: ['#D32F2F', '#F57C00', '#1976D2', '#388E3C',
+                                    '#7B1FA2', '#FBC02D', '#5D4037', '#455A64', '#C2185B',
+                                    '#303F9F'
+                                ],
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            scales: chartType === 'bar' ? {
+                                x: {
+                                    title: {
+                                        display: true,
+                                        text: 'Item'
+                                    }
+                                },
+                                y: {
+                                    title: {
+                                        display: true,
+                                        text: 'Kuantitas'
+                                    },
+                                    beginAtZero: true
+                                }
+                            } : {},
+                            plugins: {
+                                legend: {
+                                    display: chartType === 'pie'
+                                },
+                                afterDraw: function(chart) {
+                                    if (chartType === 'pie') {
+                                        const ctx = chart.ctx;
+                                        const width = chart.width;
+                                        const height = chart.height;
+                                        const centerX = width / 2;
+                                        const centerY = height / 2;
+                                        const total = data.reduce((acc, val) => acc + val, 0);
+                                        ctx.save();
+                                        ctx.textAlign = 'center';
+                                        ctx.textBaseline = 'middle';
+                                        ctx.font = 'bold 16px Arial';
+                                        ctx.fillStyle = '#000000';
+                                        ctx.fillText(`Total: ${total} Items`, centerX, centerY);
+                                        ctx.restore();
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+            };
+
+            // Bottom Profitable Chart
+            let bottomProfitableChart = null;
+            window.toggleBottomSalesProfitChartType = function() {
+                if (bottomProfitableChart) {
+                    bottomProfitableChart.destroy();
+                }
+                const chartType = document.getElementById('sales_profit_chart_type').value;
+                const limit = parseInt(document.getElementById('sales_profit_limit').value);
+                const labels = @json($dashboardData['bottom_profitable']['labels']).slice(0, limit) || [];
+                const data = @json($dashboardData['bottom_profitable']['data']).slice(0, limit) || [];
+                const bottomProfitableCtx = document.getElementById('bottomProfitableChart')?.getContext('2d');
+                if (bottomProfitableCtx) {
+                    bottomProfitableChart = new Chart(bottomProfitableCtx, {
+                        type: chartType,
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                label: 'Untung Penjualan (IDR)',
+                                data: data,
+                                backgroundColor: ['#F44336', '#FF9800', '#2196F3', '#4CAF50',
+                                    '#9C27B0', '#FFEB3B', '#795548', '#607D8B', '#E91E63',
+                                    '#3F51B5'
+                                ],
+                                borderColor: ['#D32F2F', '#F57C00', '#1976D2', '#388E3C',
+                                    '#7B1FA2', '#FBC02D', '#5D4037', '#455A64', '#C2185B',
+                                    '#303F9F'
+                                ],
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            scales: chartType === 'bar' ? {
+                                x: {
+                                    title: {
+                                        display: true,
+                                        text: 'Item'
+                                    }
+                                },
+                                y: {
+                                    title: {
+                                        display: true,
+                                        text: 'Untung (IDR)'
                                     },
                                     beginAtZero: true
                                 }
@@ -703,7 +1461,7 @@
                 });
             }
 
-            // Initialize Stock Charts
+            // Initialize Charts
             @if (
                 !empty($dashboardData['stock_composition_qty']['labels']) &&
                     $dashboardData['stock_composition_qty']['labels'][0] != 'No Stock Data')
@@ -713,6 +1471,26 @@
                 !empty($dashboardData['stock_composition_amount']['labels']) &&
                     $dashboardData['stock_composition_amount']['labels'][0] != 'No Stock Data')
                 toggleStockAmountChartType();
+            @endif
+            @if (
+                !empty($dashboardData['top_selling_qty']['labels']) &&
+                    $dashboardData['top_selling_qty']['labels'][0] != 'No Sales Data')
+                toggleSalesQtyChartType();
+            @endif
+            @if (
+                !empty($dashboardData['top_profitable']['labels']) &&
+                    $dashboardData['top_profitable']['labels'][0] != 'No Sales Data')
+                toggleSalesProfitChartType();
+            @endif
+            @if (
+                !empty($dashboardData['bottom_selling_qty']['labels']) &&
+                    $dashboardData['bottom_selling_qty']['labels'][0] != 'No Sales Data')
+                toggleBottomSalesQtyChartType();
+            @endif
+            @if (
+                !empty($dashboardData['bottom_profitable']['labels']) &&
+                    $dashboardData['bottom_profitable']['labels'][0] != 'No Sales Data')
+                toggleBottomSalesProfitChartType();
             @endif
         });
     </script>

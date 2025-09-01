@@ -398,6 +398,45 @@ class StockService
 
         return $stockMap;
     }
+
+    /**
+     * Calculate the average HPP for a given item and size within a date range
+     *
+     * @param string $item
+     * @param string|null $size
+     * @param Carbon $startDate
+     * @param Carbon $endDate
+     * @return float|null
+     */
+    public function getAverageHPP(string $item, ?string $size, Carbon $startDate, Carbon $endDate): ?float
+    {
+        try {
+            // Ensure dates are properly formatted
+            $startDate = $startDate->startOfDay();
+            $endDate = $endDate->endOfDay();
+
+            // Query transactions to calculate average HPP
+            $averageHpp = DB::table('transactions')
+                ->join('vouchers', 'transactions.voucher_id', '=', 'vouchers.id')
+                ->where('transactions.description', $item)
+                ->where('transactions.size', $size ?? '')
+                ->whereIn('vouchers.voucher_type', ['PB']) // Relevant voucher types for HPP
+                ->whereBetween('transactions.created_at', [$startDate, $endDate])
+                ->where('transactions.description', 'NOT LIKE', 'HPP %')
+                ->avg('transactions.nominal');
+
+            // Return the average HPP, or null if no data is found
+            return $averageHpp ? round(floatval($averageHpp), 2) : null;
+        } catch (\Exception $e) {
+            Log::error('Error calculating average HPP: ' . $e->getMessage(), [
+                'item' => $item,
+                'size' => $size,
+                'start_date' => $startDate->toDateString(),
+                'end_date' => $endDate->toDateString(),
+            ]);
+            return null;
+        }
+    }
     /**
      * Fetch opening balances
      */

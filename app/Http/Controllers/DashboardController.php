@@ -41,6 +41,12 @@ class DashboardController extends BaseController
                 'stock_qty_chart_type',
                 'stock_amount_limit',
                 'stock_amount_chart_type',
+                'sales_month',
+                'sales_year',
+                'sales_qty_limit',
+                'sales_qty_chart_type',
+                'sales_profit_limit',
+                'sales_profit_chart_type',
             ]);
 
             // Validasi parameter
@@ -57,6 +63,12 @@ class DashboardController extends BaseController
                 'stock_qty_chart_type' => 'nullable|in:bar,pie',
                 'stock_amount_limit' => 'nullable|integer|in:5,10',
                 'stock_amount_chart_type' => 'nullable|in:bar,pie',
+                'sales_month' => 'nullable|integer|between:1,12',
+                'sales_year' => 'nullable|integer|min:1900',
+                'sales_qty_limit' => 'nullable|integer|in:5,10',
+                'sales_qty_chart_type' => 'nullable|in:bar,pie',
+                'sales_profit_limit' => 'nullable|integer|in:5,10',
+                'sales_profit_chart_type' => 'nullable|in:bar,pie',
             ]);
 
             // Ambil data dashboard dari service
