@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\VoucherDetails;
+use App\Models\ChartOfAccount;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Collection;
@@ -267,21 +268,76 @@ class ExportService
      */
     public function prepareTrialBalanceData(array $data): array
     {
-        $month = $data['month'] ?? now()->month;
-        $year = $data['year'] ?? now()->year;
+        try {
+            $year = $data['year'] ?? date('Y');
+            $month = $data['month'] ?? date('m');
 
-        $accountBalances = $this->getAccountBalances($month, $year);
-        $accountNames = $this->getAccountNames();
+            if (!is_numeric($year) || !is_numeric($month) || $month < 1 || $month > 12) {
+                throw new \Exception('Invalid year or month');
+            }
 
-        $filename = 'neraca_saldo_' . date('Y-m') . '.xlsx';
+            $startDate = Carbon::create($year, $month, 1)->startOfMonth();
+            $endDate = Carbon::create($year, $month, 1)->endOfMonth();
 
-        return [
-            'month' => $month,
-            'year' => $year,
-            'accountBalances' => $accountBalances,
-            'accountNames' => $accountNames,
-            'filename' => $filename,
-        ];
+            $accountCodesMap = [
+                'Piutang Usaha' => '1.1.03.01',
+                'Utang Usaha' => '2.1.01.01',
+            ];
+
+            $voucherDetails = VoucherDetails::with('voucher')
+                ->whereHas('voucher', function ($query) use ($startDate, $endDate) {
+                    $query->whereBetween('voucher_date', [$startDate, $endDate]);
+                })
+                ->get();
+
+            $accountBalances = [];
+
+            foreach ($voucherDetails as $detail) {
+                $accountCode = $detail->account_code;
+
+                foreach ($accountCodesMap as $accountName => $prefix) {
+                    if (strpos($accountCode, $prefix . '.') === 0) {
+                        $accountCode = $prefix;
+                        break;
+                    }
+                }
+
+                if (!isset($accountBalances[$accountCode])) {
+                    $accountBalances[$accountCode] = 0;
+                }
+
+                $accountBalances[$accountCode] += $detail->debit - $detail->credit;
+            }
+
+            $accountNames = ChartOfAccount::whereIn('account_code', array_keys($accountBalances))
+                ->pluck('account_name', 'account_code')
+                ->toArray();
+
+            foreach ($accountCodesMap as $accountName => $accountCode) {
+                if (isset($accountBalances[$accountCode])) {
+                    $accountNames[$accountCode] = $accountName;
+                }
+            }
+
+            ksort($accountBalances);
+
+            // Keep as array instead of converting to Collection
+            // $accountBalances = collect($accountBalances); // Remove this line
+
+            // Add filename for export functionality
+            $filename = 'neraca_saldo_' . $year . '-' . str_pad($month, 2, '0', STR_PAD_LEFT) . '.xlsx';
+
+            return [
+                'month' => $month,
+                'year' => $year,
+                'accountBalances' => $accountBalances, // Now returns array
+                'accountNames' => $accountNames,
+                'filename' => $filename,
+            ];
+        } catch (\Exception $e) {
+            Log::error('Error preparing Trial Balance data: ' . $e->getMessage());
+            throw $e;
+        }
     }
 
     /**
