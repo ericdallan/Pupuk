@@ -99,7 +99,8 @@
                             </div>
                             <label for="voucherDate" class="col-sm-2 col-form-label">Tanggal:</label>
                             <div class="col-sm-2">
-                                <input type="date" class="form-control" id="voucherDate" name="voucher_date">
+                                <input type="date" class="form-control" id="voucherDate" name="voucher_date"
+                                    required>
                             </div>
                             <div class="col-sm-2">
                                 <input type="text" class="form-control" id="voucherDay" name="voucher_day"
@@ -144,12 +145,12 @@
                             <div class="col-sm-9">
                                 <div class="form-check form-check-inline">
                                     <input class="form-check-input" type="radio" id="useInvoiceYes"
-                                        name="use_invoice" value="yes">
+                                        name="use_invoice" value="yes" required>
                                     <label class="form-check-label" for="useInvoiceYes">Ya</label>
                                 </div>
                                 <div class="form-check form-check-inline">
                                     <input class="form-check-input" type="radio" type="radio" id="useInvoiceNo"
-                                        name="use_invoice" value="no">
+                                        name="use_invoice" value="no" required>
                                     <label class="form-check-label" for="useInvoiceNo">Tidak</label>
                                 </div>
                             </div>
@@ -549,7 +550,7 @@
             const select = document.createElement('select');
             select.className = 'form-control';
             select.id = 'recipe';
-            select.name = 'recipe_id'; // Changed from 'recipe' to 'recipe_id'
+            select.name = 'recipe_id';
 
             const defaultOption = document.createElement('option');
             defaultOption.value = '';
@@ -2707,14 +2708,14 @@
             document.getElementById('dueDate').value = today;
         }
 
-        function setTodayVoucherDate() {
-            const today = new Date();
-            const year = today.getFullYear();
-            const month = String(today.getMonth() + 1).padStart(2, '0');
-            const day = String(today.getDate()).padStart(2, '0');
-            document.getElementById('voucherDate').value = `${year}-${month}-${day}`;
-            updateVoucherDay();
-        }
+        // function setTodayVoucherDate() {
+        //     const today = new Date();
+        //     const year = today.getFullYear();
+        //     const month = String(today.getMonth() + 1).padStart(2, '0');
+        //     const day = String(today.getDate()).padStart(2, '0');
+        //     document.getElementById('voucherDate').value = `${year}-${month}-${day}`;
+        //     updateVoucherDay();
+        // }
         // Initialize
         updateRecipeField();
         attachTransactionInputListeners();
@@ -2725,7 +2726,7 @@
             attachVoucherDetailRowEventListeners(initialVoucherDetailRow, 0);
         }
         updateAllCalculationsAndValidations();
-        setTodayVoucherDate();
+        // setTodayVoucherDate();
         updateInvoiceAndStoreFields();
         updateAccountCodeDatalist();
         updateVoucherTypeOptions();

@@ -21,6 +21,28 @@
         .loading-spinner.active {
             display: block;
         }
+
+        .table-responsive {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .table thead {
+            position: sticky;
+            top: 0;
+            z-index: 1;
+            background-color: #343a40;
+            color: #fff;
+        }
+
+        .table thead th {
+            border-bottom: 2px solid #dee2e6;
+        }
+
+        .highlight {
+            background-color: yellow;
+            font-weight: bold;
+        }
     </style>
 
     @if (session('success'))
@@ -101,11 +123,20 @@
             </div>
         </div>
 
+        <!-- Global Search Filter -->
+        <div class="mb-4">
+            <div class="input-group">
+                <input type="text" id="globalSearch" class="form-control" placeholder="Cari nama barang atau ukuran...">
+                <button class="btn btn-outline-secondary" type="button" id="clearSearch">Clear</button>
+            </div>
+            <small id="searchCount" class="form-text text-muted mt-2"></small>
+        </div>
+
         <!-- Tables Section -->
         <div class="table-container">
             <!-- Stocks Table -->
-            <div class="table-section" data-table="stocks">
-                <h3>Stok</h3>
+            <div class="table-section mb-4" data-table="stocks">
+                <h3>Stok Bahan Baku</h3>
                 <div class="table-responsive">
                     <table class="table table-striped table-bordered table-hover text-center">
                         <thead class="table-dark">
@@ -135,17 +166,22 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @php $itemCount = 1; @endphp
+                            @php
+                                $itemCount = 1;
+                                $currentItem = '';
+                            @endphp
                             @if (is_array($stockData) && !empty($stockData))
                                 @foreach ($stockData as $item => $sizes)
                                     @foreach ($sizes as $index => $stock)
-                                        <tr>
+                                        <tr data-item="{{ htmlspecialchars($stock->item ?? 'Unknown Item') }}"
+                                            data-size="{{ htmlspecialchars($stock->size ?? 'Unknown Size') }}">
                                             @if ($index === 0)
                                                 <td rowspan="{{ count($sizes) }}">{{ $itemCount++ }}</td>
-                                                <td rowspan="{{ count($sizes) }}">
+                                                <td rowspan="{{ count($sizes) }}" class="item-name">
                                                     {{ htmlspecialchars($stock->item ?? 'Unknown Item') }}</td>
                                             @endif
-                                            <td>{{ htmlspecialchars($stock->size ?? 'Unknown Size') }}</td>
+                                            <td class="item-size">{{ htmlspecialchars($stock->size ?? 'Unknown Size') }}
+                                            </td>
                                             <td>{{ $stock->opening_qty ?? 0 }}</td>
                                             <td>Rp. {{ number_format($stock->opening_hpp ?? 0, 2, ',', '.') }}</td>
                                             <td>{{ $stock->incoming_qty ?? 0 }}</td>
@@ -182,7 +218,7 @@
             </div>
 
             <!-- Transfer Stocks Table -->
-            <div class="table-section" data-table="transfer_stocks">
+            <div class="table-section mb-4" data-table="transfer_stocks">
                 <h3>Stok Pemindahan</h3>
                 <div class="table-responsive">
                     <table class="table table-striped table-bordered table-hover text-center">
@@ -217,13 +253,15 @@
                             @if (is_array($transferStockData) && !empty($transferStockData))
                                 @foreach ($transferStockData as $item => $sizes)
                                     @foreach ($sizes as $index => $stock)
-                                        <tr>
+                                        <tr data-item="{{ htmlspecialchars($stock->item ?? 'Unknown Item') }}"
+                                            data-size="{{ htmlspecialchars($stock->size ?? 'Unknown Size') }}">
                                             @if ($index === 0)
                                                 <td rowspan="{{ count($sizes) }}">{{ $itemCount++ }}</td>
-                                                <td rowspan="{{ count($sizes) }}">
+                                                <td rowspan="{{ count($sizes) }}" class="item-name">
                                                     {{ htmlspecialchars($stock->item ?? 'Unknown Item') }}</td>
                                             @endif
-                                            <td>{{ htmlspecialchars($stock->size ?? 'Unknown Size') }}</td>
+                                            <td class="item-size">{{ htmlspecialchars($stock->size ?? 'Unknown Size') }}
+                                            </td>
                                             <td>{{ $stock->opening_qty ?? 0 }}</td>
                                             <td>Rp. {{ number_format($stock->opening_hpp ?? 0, 2, ',', '.') }}</td>
                                             <td>{{ $stock->incoming_qty ?? 0 }}</td>
@@ -260,7 +298,7 @@
             </div>
 
             <!-- Used Stocks Table -->
-            <div class="table-section" data-table="used_stocks">
+            <div class="table-section mb-4" data-table="used_stocks">
                 <h3>Stok Barang Jadi</h3>
                 <div class="table-responsive">
                     <table class="table table-striped table-bordered table-hover text-center">
@@ -295,13 +333,15 @@
                             @if (is_array($usedStockData) && !empty($usedStockData))
                                 @foreach ($usedStockData as $item => $sizes)
                                     @foreach ($sizes as $index => $stock)
-                                        <tr>
+                                        <tr data-item="{{ htmlspecialchars($stock->item ?? 'Unknown Item') }}"
+                                            data-size="{{ htmlspecialchars($stock->size ?? 'Unknown Size') }}">
                                             @if ($index === 0)
                                                 <td rowspan="{{ count($sizes) }}">{{ $itemCount++ }}</td>
-                                                <td rowspan="{{ count($sizes) }}">
+                                                <td rowspan="{{ count($sizes) }}" class="item-name">
                                                     {{ htmlspecialchars($stock->item ?? 'Unknown Item') }}</td>
                                             @endif
-                                            <td>{{ htmlspecialchars($stock->size ?? 'Unknown Size') }}</td>
+                                            <td class="item-size">{{ htmlspecialchars($stock->size ?? 'Unknown Size') }}
+                                            </td>
                                             <td>{{ $stock->opening_qty ?? 0 }}</td>
                                             <td>Rp. {{ number_format($stock->opening_hpp ?? 0, 2, ',', '.') }}</td>
                                             <td>{{ $stock->incoming_qty ?? 0 }}</td>
@@ -657,6 +697,9 @@
             const tableFilterInput = document.getElementById('table_filter');
             const dropdownButton = document.getElementById('tableFilterDropdown');
             const tableSections = document.querySelectorAll('.table-section');
+            const globalSearch = document.getElementById('globalSearch');
+            const clearSearch = document.getElementById('clearSearch');
+            const searchCount = document.getElementById('searchCount');
 
             // Table visibility function
             function updateTableVisibility(filter) {
@@ -664,6 +707,7 @@
                     section.classList.toggle('hidden', filter !== 'all' && filter !== section.dataset
                         .table);
                 });
+                applyGlobalFilter(); // Re-apply filter after visibility change
             }
 
             // Initialize table visibility
@@ -685,6 +729,101 @@
                     dropdownButton.textContent = this.textContent;
                     updateTableVisibility(filterValue);
                 });
+            });
+
+            // Global Filter Function
+            function applyGlobalFilter() {
+                const searchValue = globalSearch.value.trim().toLowerCase();
+                let totalVisibleItems = 0;
+                let currentItem = '';
+                let itemRows = [];
+                let itemMatches = false;
+
+                // Clear existing highlights
+                document.querySelectorAll('.highlight').forEach(el => {
+                    el.replaceWith(el.textContent);
+                });
+
+                tableSections.forEach(section => {
+                    if (section.classList.contains('hidden')) return;
+                    const rows = section.querySelectorAll('tbody tr');
+                    rows.forEach(row => {
+                        if (row.querySelector('td[colspan]')) return; // Skip no-data rows
+
+                        const item = row.dataset.item.toLowerCase();
+                        const size = row.dataset.size.toLowerCase();
+
+                        // Check if new item group
+                        if (item !== currentItem) {
+                            // Process previous group
+                            if (itemRows.length > 0) {
+                                if (itemMatches) {
+                                    itemRows.forEach(r => {
+                                        r.style.display = '';
+                                        totalVisibleItems++;
+                                    });
+                                } else {
+                                    itemRows.forEach(r => r.style.display = 'none');
+                                }
+                            }
+                            // Reset for new group
+                            currentItem = item;
+                            itemRows = [];
+                            itemMatches = false;
+                        }
+
+                        itemRows.push(row);
+
+                        // Check match for this row
+                        const matchesItem = item.includes(searchValue);
+                        const matchesSize = size.includes(searchValue);
+                        if (matchesItem || matchesSize) {
+                            itemMatches = true;
+                            // Highlight
+                            if (searchValue) {
+                                if (matchesItem) {
+                                    const nameTd = row.closest('tbody').querySelector(
+                                        `td.item-name[data-original-text="${row.dataset.item}"]`
+                                        ) || row.querySelector('.item-name');
+                                    if (nameTd) {
+                                        nameTd.innerHTML = nameTd.textContent.replace(new RegExp(
+                                                searchValue, 'gi'), match =>
+                                            `<span class="highlight">${match}</span>`);
+                                    }
+                                }
+                                if (matchesSize) {
+                                    const sizeTd = row.querySelector('.item-size');
+                                    if (sizeTd) {
+                                        sizeTd.innerHTML = sizeTd.textContent.replace(new RegExp(
+                                                searchValue, 'gi'), match =>
+                                            `<span class="highlight">${match}</span>`);
+                                    }
+                                }
+                            }
+                        }
+                    });
+
+                    // Process last group
+                    if (itemRows.length > 0) {
+                        if (itemMatches) {
+                            itemRows.forEach(r => {
+                                r.style.display = '';
+                                totalVisibleItems++;
+                            });
+                        } else {
+                            itemRows.forEach(r => r.style.display = 'none');
+                        }
+                    }
+                });
+
+                searchCount.textContent = searchValue ? `${totalVisibleItems} item ditemukan` : '';
+            }
+
+            // Event listeners for global search
+            globalSearch.addEventListener('keyup', applyGlobalFilter);
+            clearSearch.addEventListener('click', () => {
+                globalSearch.value = '';
+                applyGlobalFilter();
             });
 
             // Modal filter logic for client-side filtering
