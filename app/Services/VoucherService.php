@@ -63,6 +63,9 @@ class VoucherService
             $query->whereYear('voucher_date', $request->year);
         }
 
+        // Add sorting by created_at in descending order to show latest vouchers first
+        $query->orderBy('created_at', 'desc');
+
         $vouchers = $query->with(['invoices', 'invoice_payments', 'transactions'])
             ->paginate(10)
             ->appends($request->query());
@@ -71,11 +74,11 @@ class VoucherService
             ->select('t1.description as item', 't1.voucher_id', 't1.created_at')
             ->from('transactions as t1')
             ->join(DB::raw('(
-                SELECT description, MIN(created_at) as min_created_at
-                FROM transactions
-                WHERE description NOT LIKE "HPP %"
-                GROUP BY description
-            ) as t2'), function ($join) {
+            SELECT description, MIN(created_at) as min_created_at
+            FROM transactions
+            WHERE description NOT LIKE "HPP %"
+            GROUP BY description
+        ) as t2'), function ($join) {
                 $join->on('t1.description', '=', 't2.description')
                     ->whereColumn('t1.created_at', 't2.min_created_at');
             })
