@@ -1123,7 +1123,7 @@ class VoucherService
         if ($voucher->voucher_type === 'PJ' || $voucher->voucher_type === 'RPJ') {
             // Fetch historical purchase transactions for PJ vouchers
             $historicalTransactions = Transactions::whereHas('voucher', function ($query) use ($voucher) {
-                $query->where('voucher_type', 'PB')
+                $query->whereIn('voucher_type', ['PB', 'PK'])
                     ->where('created_at', '<', $voucher->created_at);
             })
                 ->whereNotNull('description')

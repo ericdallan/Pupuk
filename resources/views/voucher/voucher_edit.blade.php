@@ -2388,7 +2388,7 @@
             // --- Initialize Existing HPP Rows ---
             function initializeHppRows() {
                 const voucherType = voucherTypeSelect.value;
-                if (voucherType !== 'PJ' || voucherType !== 'PJ') return;
+                if (voucherType !== 'PJ' || voucherType !== 'RPJ') return;
 
                 const existingTransactions = @json($voucher->transactions) || [];
                 const currentCreatedAt = @json($voucherCreatedAt) || new Date().toISOString();
