@@ -9,6 +9,7 @@ use Carbon\Carbon;
 use App\Exports\StockExport;
 use App\Exports\StockImportTemplate;
 use App\Imports\StockImport;
+use App\Models\Recipes;
 use Maatwebsite\Excel\Facades\Excel;
 use Barryvdh\DomPDF\Facade\Pdf;
 
@@ -95,6 +96,17 @@ class StockController extends Controller
                 'quantity.*' => 'required|integer|min:1',
                 'nominal.*' => 'required|numeric|min:0',
             ]);
+
+            // Pengecekan duplikasi product_name dan product_size (case-insensitive)
+            $existingRecipe = Recipes::whereRaw('LOWER(product_name) = ?', [strtolower($validated['product_name'])])
+                ->whereRaw('LOWER(size) = ?', [strtolower($validated['product_size'])])
+                ->first();
+
+            if ($existingRecipe) {
+                return redirect()->back()->withErrors([
+                    'product_name' => 'Kombinasi nama produk dan ukuran sudah ada. Produk "' . $existingRecipe->product_name . '" dengan ukuran "' . $existingRecipe->size . '" sudah terdaftar.'
+                ])->withInput();
+            }
 
             Log::debug('Store Recipe Input:', [
                 'product_name' => $validated['product_name'],

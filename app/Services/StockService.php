@@ -477,6 +477,15 @@ class StockService
      */
     public function storeRecipe(string $productName, array $transferStockIds, array $quantities, string $productSize): void
     {
+        // Pengecekan duplikasi product_name dan product_size (case-insensitive) di service layer
+        $existingRecipe = Recipes::whereRaw('LOWER(product_name) = ?', [strtolower($productName)])
+            ->whereRaw('LOWER(size) = ?', [strtolower($productSize)])
+            ->first();
+
+        if ($existingRecipe) {
+            throw new \Exception("Kombinasi nama produk dan ukuran sudah ada. Produk \"{$existingRecipe->product_name}\" dengan ukuran \"{$existingRecipe->size}\" sudah terdaftar.");
+        }
+
         // Validate input
         foreach ($transferStockIds as $index => $stockId) {
             $transferStock = TransferStock::find($stockId);

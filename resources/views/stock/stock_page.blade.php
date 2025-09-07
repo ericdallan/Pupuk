@@ -43,6 +43,39 @@
             background-color: yellow;
             font-weight: bold;
         }
+
+        .recipe-highlight {
+            background-color: yellow;
+            font-weight: bold;
+        }
+
+        #recipeTable .table-responsive {
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .ingredients-table {
+            margin-bottom: 0 !important;
+            font-size: 0.85em;
+        }
+
+        .recipe-row.hidden {
+            display: none;
+        }
+
+        #recipeSearchCount {
+            font-size: 0.875rem;
+            color: #6c757d;
+        }
+
+        .no-results-message {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 0.375rem;
+            padding: 1rem;
+            text-align: center;
+            color: #6c757d;
+        }
     </style>
 
     @if (session('success'))
@@ -385,8 +418,19 @@
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
+                        <!-- Search Input for Recipe Modal -->
+                        <div class="mb-4">
+                            <div class="input-group">
+                                <input type="text" id="recipeGlobalSearch" class="form-control"
+                                    placeholder="Cari nama produk, ukuran, atau bahan baku...">
+                                <button class="btn btn-outline-secondary" type="button"
+                                    id="clearRecipeSearch">Clear</button>
+                            </div>
+                            <small id="recipeSearchCount" class="form-text text-muted mt-2"></small>
+                        </div>
+
                         <div class="table-responsive">
-                            <table class="table table-striped table-bordered table-hover text-center">
+                            <table class="table table-striped table-bordered table-hover text-center" id="recipeTable">
                                 <thead class="table-dark">
                                     <tr>
                                         <th>No</th>
@@ -403,17 +447,23 @@
 
                                     @if (!empty($recipes))
                                         @foreach ($recipes as $recipe)
-                                            <tr>
+                                            <tr class="recipe-row"
+                                                data-product-name="{{ strtolower(htmlspecialchars($recipe->product_name ?? 'Unknown Product')) }}"
+                                                data-product-size="{{ strtolower(htmlspecialchars($recipe->size ?? 'Unknown Size')) }}"
+                                                data-ingredients="{{ strtolower(implode(' ',collect($recipe->transferStocks ?? [])->pluck('item')->toArray())) }}"
+                                                data-ingredient-sizes="{{ strtolower(implode(' ',collect($recipe->transferStocks ?? [])->pluck('size')->toArray())) }}">
                                                 <td>{{ $recipeCount++ }}</td>
-                                                <td>{{ htmlspecialchars($recipe->product_name ?? 'Unknown Product') }}</td>
-                                                <td>{{ htmlspecialchars($recipe->size ?? 'Unknown Size') }}</td>
+                                                <td class="product-name-cell">
+                                                    {{ htmlspecialchars($recipe->product_name ?? 'Unknown Product') }}</td>
+                                                <td class="product-size-cell">
+                                                    {{ htmlspecialchars($recipe->size ?? 'Unknown Size') }}</td>
                                                 <td>
                                                     {{ number_format($recipe->transferStocks->sum('nominal') ?? 0, 2, ',', '.') }}
                                                 </td>
-                                                </td>
                                                 <td>
                                                     @if (!empty($recipe->transferStocks))
-                                                        <table class="table table-sm table-bordered mt-2">
+                                                        <table
+                                                            class="table table-sm table-bordered mt-2 ingredients-table">
                                                             <thead>
                                                                 <tr>
                                                                     <th>Bahan Baku</th>
@@ -425,9 +475,11 @@
                                                             <tbody>
                                                                 @foreach ($recipe->transferStocks as $transferStock)
                                                                     <tr>
-                                                                        <td>{{ htmlspecialchars($transferStock->item ?? 'Unknown Item') }}
+                                                                        <td class="ingredient-name-cell">
+                                                                            {{ htmlspecialchars($transferStock->item ?? 'Unknown Item') }}
                                                                         </td>
-                                                                        <td>{{ htmlspecialchars($transferStock->size ?? 'Unknown Size') }}
+                                                                        <td class="ingredient-size-cell">
+                                                                            {{ htmlspecialchars($transferStock->size ?? 'Unknown Size') }}
                                                                         </td>
                                                                         <td>{{ $transferStock->quantity ?? 0 }}</td>
                                                                         <td>{{ number_format($transferStock->nominal ?? 0, 2, ',', '.') }}
@@ -443,7 +495,7 @@
                                             </tr>
                                         @endforeach
                                     @else
-                                        <tr>
+                                        <tr id="noRecipeData">
                                             <td colspan="5" class="text-center">
                                                 <div class="alert alert-info mb-0">Tidak ada rumus yang ditemukan.</div>
                                             </td>
@@ -700,7 +752,155 @@
             const globalSearch = document.getElementById('globalSearch');
             const clearSearch = document.getElementById('clearSearch');
             const searchCount = document.getElementById('searchCount');
+            const recipeGlobalSearch = document.getElementById('recipeGlobalSearch');
+            const clearRecipeSearch = document.getElementById('clearRecipeSearch');
+            const recipeSearchCount = document.getElementById('recipeSearchCount');
+            const recipeTable = document.getElementById('recipeTable');
+            // Recipe Global Filter Function
+            function applyRecipeGlobalFilter() {
+                const searchValue = recipeGlobalSearch.value.trim().toLowerCase();
+                const recipeRows = document.querySelectorAll('.recipe-row');
+                let visibleCount = 0;
 
+                // Clear existing highlights
+                document.querySelectorAll('.recipe-highlight').forEach(el => {
+                    const parent = el.parentNode;
+                    parent.replaceChild(document.createTextNode(el.textContent), el);
+                    parent.normalize();
+                });
+
+                // Handle empty search
+                if (!searchValue) {
+                    recipeRows.forEach(row => {
+                        row.classList.remove('hidden');
+                        row.style.display = '';
+                        visibleCount++;
+                    });
+                    recipeSearchCount.textContent = '';
+                    removeNoResultsMessage();
+                    return;
+                }
+
+                // Apply filter
+                recipeRows.forEach(row => {
+                    const productName = row.dataset.productName || '';
+                    const productSize = row.dataset.productSize || '';
+                    const ingredients = row.dataset.ingredients || '';
+                    const ingredientSizes = row.dataset.ingredientSizes || '';
+
+                    const matchesProduct = productName.includes(searchValue);
+                    const matchesSize = productSize.includes(searchValue);
+                    const matchesIngredients = ingredients.includes(searchValue);
+                    const matchesIngredientSizes = ingredientSizes.includes(searchValue);
+
+                    if (matchesProduct || matchesSize || matchesIngredients || matchesIngredientSizes) {
+                        row.classList.remove('hidden');
+                        row.style.display = '';
+                        visibleCount++;
+
+                        // Highlight matches
+                        highlightText(row.querySelector('.product-name-cell'), searchValue, matchesProduct);
+                        highlightText(row.querySelector('.product-size-cell'), searchValue, matchesSize);
+
+                        // Highlight ingredient matches
+                        if (matchesIngredients || matchesIngredientSizes) {
+                            const ingredientNameCells = row.querySelectorAll('.ingredient-name-cell');
+                            const ingredientSizeCells = row.querySelectorAll('.ingredient-size-cell');
+
+                            ingredientNameCells.forEach(cell => {
+                                if (cell.textContent.toLowerCase().includes(searchValue)) {
+                                    highlightText(cell, searchValue, true);
+                                }
+                            });
+
+                            ingredientSizeCells.forEach(cell => {
+                                if (cell.textContent.toLowerCase().includes(searchValue)) {
+                                    highlightText(cell, searchValue, true);
+                                }
+                            });
+                        }
+                    } else {
+                        row.classList.add('hidden');
+                        row.style.display = 'none';
+                    }
+                });
+
+                // Update search count
+                recipeSearchCount.textContent = `${visibleCount} formula ditemukan`;
+
+                // Show no results message if needed
+                if (visibleCount === 0) {
+                    showNoResultsMessage();
+                } else {
+                    removeNoResultsMessage();
+                }
+            }
+
+            // Function to highlight text
+            function highlightText(element, searchValue, shouldHighlight) {
+                if (!element || !shouldHighlight || !searchValue) return;
+
+                const text = element.textContent;
+                const regex = new RegExp(`(${escapeRegExp(searchValue)})`, 'gi');
+                const highlightedText = text.replace(regex, '<span class="recipe-highlight">$1</span>');
+
+                if (highlightedText !== text) {
+                    element.innerHTML = highlightedText;
+                }
+            }
+
+            // Function to escape special regex characters
+            function escapeRegExp(string) {
+                return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            }
+
+            // Function to show no results message
+            function showNoResultsMessage() {
+                removeNoResultsMessage(); // Remove existing message first
+
+                const tbody = recipeTable.querySelector('tbody');
+                const noResultsRow = document.createElement('tr');
+                noResultsRow.id = 'noSearchResults';
+                noResultsRow.innerHTML = `
+            <td colspan="5" class="text-center">
+                <div class="no-results-message">
+                    <i class="fas fa-search mb-2"></i>
+                    <p class="mb-0">Tidak ada formula yang cocok dengan pencarian "${recipeGlobalSearch.value}"</p>
+                    <small class="text-muted">Coba kata kunci yang berbeda atau hapus pencarian untuk melihat semua formula</small>
+                </div>
+            </td>
+        `;
+                tbody.appendChild(noResultsRow);
+            }
+
+            // Function to remove no results message
+            function removeNoResultsMessage() {
+                const existingMessage = document.getElementById('noSearchResults');
+                if (existingMessage) {
+                    existingMessage.remove();
+                }
+            }
+
+            // Event listeners for recipe search
+            recipeGlobalSearch.addEventListener('input', applyRecipeGlobalFilter);
+            recipeGlobalSearch.addEventListener('keyup', applyRecipeGlobalFilter);
+
+            clearRecipeSearch.addEventListener('click', function() {
+                recipeGlobalSearch.value = '';
+                applyRecipeGlobalFilter();
+                recipeGlobalSearch.focus();
+            });
+
+            // Reset search when modal is closed
+            document.getElementById('RecipeList').addEventListener('hidden.bs.modal', function() {
+                recipeGlobalSearch.value = '';
+                applyRecipeGlobalFilter();
+            });
+
+            // Optional: Focus search input when modal opens
+            document.getElementById('RecipeList').addEventListener('shown.bs.modal', function() {
+                recipeGlobalSearch.focus();
+            });
             // Table visibility function
             function updateTableVisibility(filter) {
                 tableSections.forEach(section => {
@@ -784,7 +984,7 @@
                                 if (matchesItem) {
                                     const nameTd = row.closest('tbody').querySelector(
                                         `td.item-name[data-original-text="${row.dataset.item}"]`
-                                        ) || row.querySelector('.item-name');
+                                    ) || row.querySelector('.item-name');
                                     if (nameTd) {
                                         nameTd.innerHTML = nameTd.textContent.replace(new RegExp(
                                                 searchValue, 'gi'), match =>
