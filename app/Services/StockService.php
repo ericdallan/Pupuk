@@ -638,4 +638,202 @@ class StockService
             'date' => Carbon::today()->format('d-m-Y'),
         ];
     }
+    /**
+     * Update an existing recipe
+     */
+    public function updateRecipe(int $recipeId, string $productName, array $transferStockIds, array $quantities, string $productSize): void
+    {
+        $recipe = Recipes::findOrFail($recipeId);
+
+        // Check if recipe has been used in transactions
+        $hasTransactions = DB::table('transactions')
+            ->where('description', $recipe->product_name)
+            ->where('size', $recipe->size)
+            ->exists();
+
+        if ($hasTransactions) {
+            throw new \Exception("Recipe sudah digunakan dalam transaksi dan tidak dapat diedit.");
+        }
+
+        // Check for duplicate recipe name and size (excluding current recipe)
+        $existingRecipe = Recipes::where('id', '!=', $recipeId)
+            ->whereRaw('LOWER(product_name) = ?', [strtolower($productName)])
+            ->whereRaw('LOWER(size) = ?', [strtolower($productSize)])
+            ->first();
+
+        if ($existingRecipe) {
+            throw new \Exception("Kombinasi nama produk dan ukuran sudah ada. Produk \"{$existingRecipe->product_name}\" dengan ukuran \"{$existingRecipe->size}\" sudah terdaftar.");
+        }
+
+        // Validate stock availability
+        foreach ($transferStockIds as $index => $stockId) {
+            $transferStock = TransferStock::find($stockId);
+            if (!$transferStock) {
+                Log::warning('Transfer stock not found:', ['stock_id' => $stockId]);
+                throw new \Exception("Bahan baku dengan ID $stockId tidak ditemukan.");
+            }
+            if ($transferStock->quantity < $quantities[$index]) {
+                Log::warning('Insufficient stock for transfer stock:', [
+                    'stock_id' => $stockId,
+                    'item' => $transferStock->item,
+                    'available_quantity' => $transferStock->quantity,
+                    'requested_quantity' => $quantities[$index],
+                ]);
+                throw new \Exception("Stok untuk {$transferStock->item} ({$transferStock->size}) tidak cukup. Tersedia: {$transferStock->quantity}, diminta: {$quantities[$index]}.");
+            }
+        }
+
+        DB::beginTransaction();
+
+        try {
+            // Calculate total nominal for the recipe
+            $totalNominal = 0;
+            $ingredientData = [];
+
+            for ($i = 0; $i < count($transferStockIds); $i++) {
+                $transferStock = TransferStock::find($transferStockIds[$i]);
+
+                // Get the average PH nominal
+                $averagePhHpp = DB::table('transactions')
+                    ->join('vouchers', 'transactions.voucher_id', '=', 'vouchers.id')
+                    ->where('transactions.description', $transferStock->item)
+                    ->where('transactions.size', $transferStock->size)
+                    ->where('vouchers.voucher_type', 'PH')
+                    ->where('transactions.description', 'NOT LIKE', 'HPP %')
+                    ->avg('transactions.nominal') ?? 0;
+
+                // Fallback to average PB nominal
+                $nominal = $averagePhHpp;
+                if ($nominal == 0) {
+                    $averagePbHpp = DB::table('transactions')
+                        ->join('vouchers', 'transactions.voucher_id', '=', 'vouchers.id')
+                        ->where('transactions.description', $transferStock->item)
+                        ->where('transactions.size', $transferStock->size)
+                        ->where('vouchers.voucher_type', 'PB')
+                        ->where('transactions.description', 'NOT LIKE', 'HPP %')
+                        ->avg('transactions.nominal') ?? 0;
+                    $nominal = $averagePbHpp;
+                }
+
+                // Calculate nominal for this ingredient
+                $ingredientNominal = $quantities[$i] * $nominal;
+                $totalNominal += $ingredientNominal;
+
+                $ingredientData[] = [
+                    'transfer_stock_id' => $transferStockIds[$i],
+                    'quantity' => $quantities[$i],
+                    'nominal' => $ingredientNominal,
+                    'item' => $transferStock->item,
+                    'size' => $transferStock->size,
+                ];
+            }
+
+            // Update recipe basic info
+            $recipe->update([
+                'product_name' => $productName,
+                'size' => $productSize,
+                'nominal' => $totalNominal,
+            ]);
+
+            // Update used_stock item name if it changed
+            if ($recipe->usedStock) {
+                $recipe->usedStock->update([
+                    'item' => $productName,
+                    'size' => $productSize,
+                ]);
+            }
+
+            // Find and update HPP used stock if it exists
+            $hppUsedStock = UsedStock::where('item', 'LIKE', 'HPP %')
+                ->where('size', $recipe->size)
+                ->first();
+
+            if ($hppUsedStock) {
+                $hppUsedStock->update([
+                    'item' => "HPP {$productName}",
+                    'size' => $productSize,
+                ]);
+            }
+
+            // Remove existing recipe-transfer stock relationships
+            $recipe->transferStocks()->detach();
+
+            // Attach new ingredients to recipe
+            foreach ($ingredientData as $data) {
+                $recipe->transferStocks()->attach($data['transfer_stock_id'], [
+                    'quantity' => $data['quantity'],
+                    'nominal' => $data['nominal'],
+                    'item' => $data['item'],
+                    'size' => $data['size'],
+                ]);
+            }
+
+            DB::commit();
+
+            Log::info('Recipe updated successfully:', [
+                'recipe_id' => $recipe->id,
+                'product_name' => $productName,
+                'size' => $productSize,
+                'nominal' => $totalNominal,
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Update Recipe Service Error: ' . $e->getMessage(), ['exception' => $e]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Delete a recipe
+     */
+    public function deleteRecipe(int $recipeId): void
+    {
+        $recipe = Recipes::findOrFail($recipeId);
+
+        // Check if recipe has been used in transactions
+        $hasTransactions = DB::table('transactions')
+            ->where('description', $recipe->product_name)
+            ->where('size', $recipe->size)
+            ->exists();
+
+        if ($hasTransactions) {
+            throw new \Exception("Recipe sudah digunakan dalam transaksi dan tidak dapat dihapus.");
+        }
+
+        DB::beginTransaction();
+
+        try {
+            // Remove recipe-transfer stock relationships
+            $recipe->transferStocks()->detach();
+
+            // Delete associated used stocks
+            if ($recipe->usedStock) {
+                $recipe->usedStock->delete();
+            }
+
+            // Find and delete HPP used stock
+            $hppUsedStock = UsedStock::where('item', "HPP {$recipe->product_name}")
+                ->where('size', $recipe->size)
+                ->first();
+
+            if ($hppUsedStock) {
+                $hppUsedStock->delete();
+            }
+
+            // Delete the recipe
+            $recipe->delete();
+
+            DB::commit();
+
+            Log::info('Recipe deleted successfully:', [
+                'recipe_id' => $recipeId,
+                'product_name' => $recipe->product_name,
+                'size' => $recipe->size,
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Delete Recipe Service Error: ' . $e->getMessage(), ['exception' => $e]);
+            throw $e;
+        }
+    }
 }

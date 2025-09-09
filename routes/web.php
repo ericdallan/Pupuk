@@ -43,6 +43,9 @@ Route::middleware(['auth:admin'])->group(function () {
     Route::get('/stock/export', [StockController::class, 'export'])->name('stock.export');
     Route::get('stock/transfer/print', [StockController::class, 'printTransferForm'])->name('stock.transfer.print');
     Route::post('stock/recipe/store', [StockController::class, 'storeRecipe'])->name('recipe.store');
+    Route::get('/recipe/{id}/ingredients', [StockController::class, 'getRecipeIngredients'])->name('recipe.ingredients');
+    Route::put('/recipe/{id}', [StockController::class, 'updateRecipe'])->name('recipe.update');
+    Route::delete('/recipe/{id}', [StockController::class, 'deleteRecipe'])->name('recipe.delete');
     //Buku Besar
     Route::get('/generalLedger_page', [generalLedgerController::class, 'generalledger_page'])->name('generalledger_page');
     Route::get('/general-ledger/print', [ExportController::class, 'generalledger_print'])->name('generalledger_print');
