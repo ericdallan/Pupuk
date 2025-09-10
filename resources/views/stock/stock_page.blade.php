@@ -138,7 +138,6 @@
             margin-right: 0.25rem;
         }
 
-        /* Recipe action buttons specific styling */
         .recipe-row .btn-group {
             white-space: nowrap;
         }
@@ -166,7 +165,6 @@
             color: #fff;
         }
 
-        /* Tooltip styling for disabled buttons */
         .btn[title] {
             cursor: help;
         }
@@ -175,7 +173,6 @@
             cursor: not-allowed;
         }
 
-        /* Responsive adjustments */
         @media (max-width: 768px) {
             .btn-group {
                 display: flex;
@@ -194,14 +191,12 @@
             }
         }
 
-        /* Enhanced styling for recipe table */
         #recipeTable th:last-child,
         #recipeTable td:last-child {
             min-width: 120px;
             width: 120px;
         }
 
-        /* Loading state for edit modal */
         .loading-edit-ingredients {
             text-align: center;
             padding: 20px;
@@ -213,7 +208,6 @@
             height: 1.5rem;
         }
 
-        /* Form validation styling for edit modal */
         #editIngredientsContainer .invalid-feedback {
             display: block;
             width: 100%;
@@ -555,6 +549,8 @@
                 </div>
             </div>
         </div>
+
+        <!-- Recipe List Modal -->
         <div class="modal fade" id="RecipeList" tabindex="-1" aria-labelledby="RecipeListLabel" aria-hidden="true">
             <div class="modal-dialog modal-xl">
                 <div class="modal-content">
@@ -563,7 +559,6 @@
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
-                        <!-- Search Input for Recipe Modal -->
                         <div class="mb-4">
                             <div class="input-group">
                                 <input type="text" id="recipeGlobalSearch" class="form-control"
@@ -589,11 +584,9 @@
                                     @php
                                         $recipeCount = 1;
                                     @endphp
-
                                     @if (!empty($recipes))
                                         @foreach ($recipes as $recipe)
                                             @php
-                                                // Check if recipe has been used in transactions
                                                 $hasTransactions = DB::table('transactions')
                                                     ->where('description', $recipe->product_name)
                                                     ->where('size', $recipe->size)
@@ -687,6 +680,96 @@
                 </div>
             </div>
         </div>
+        <!-- Create Recipe Modal -->
+        <div class="modal fade" id="createRecipeModal" tabindex="-1" aria-labelledby="createRecipeModalLabel"
+            aria-hidden="true">
+            <div class="modal-dialog modal-xl">
+                <div class="modal-content">
+                    <form id="recipeForm" action="{{ route('recipe.store') }}" method="POST">
+                        @csrf
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="createRecipeModalLabel">Buat Rumus Produk</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label for="product_name" class="form-label">Nama Produk</label>
+                                <input type="text" name="product_name" id="product_name" class="form-control"
+                                    required minlength="2" maxlength="100" pattern="[A-Za-z0-9\s]+"
+                                    title="Nama produk hanya boleh berisi huruf, angka, dan spasi">
+                                <div class="invalid-feedback">Masukkan nama produk yang valid (2-100 karakter, hanya huruf,
+                                    angka, dan spasi)</div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="product_size" class="form-label">Ukuran Produk</label>
+                                <input type="text" name="product_size" id="product_size" class="form-control"
+                                    maxlength="50" pattern="[A-Za-z0-9\s\-\/]*"
+                                    title="Ukuran produk hanya boleh berisi huruf, angka, spasi, tanda hubung, atau garis miring">
+                                <div class="invalid-feedback">Masukkan ukuran produk yang valid (maksimal 50 karakter)
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="total_nominal" class="form-label">Total Nominal</label>
+                                <input type="number" name="total_nominal" id="total_nominal" class="form-control"
+                                    value="0.00" step="0.01" readonly>
+                                <div class="invalid-feedback">Total nominal tidak valid</div>
+                            </div>
+                            <div id="ingredientsContainer">
+                                <div class="ingredient-row mb-3" data-row-id="0">
+                                    <div class="row align-items-end">
+                                        <div class="col-md-4">
+                                            <label for="transfer_stock_id_0" class="form-label">Bahan Baku</label>
+                                            <select name="transfer_stock_id[]" id="transfer_stock_id_0"
+                                                class="form-select transfer-stock-select" required>
+                                                <option value="">Pilih Bahan Baku</option>
+                                                @if (isset($transferStockData) && is_array($transferStockData) && !empty($transferStockData))
+                                                    @foreach (collect($transferStockData)->flatten() as $stock)
+                                                        <option value="{{ $stock->id }}"
+                                                            data-max-quantity="{{ $stock->quantity }}"
+                                                            data-nominal="{{ $stock->nominal ?? 0 }}">
+                                                            {{ htmlspecialchars($stock->item) }}
+                                                            ({{ htmlspecialchars($stock->size) }})
+                                                            - {{ $stock->quantity }} tersedia
+                                                        </option>
+                                                    @endforeach
+                                                @else
+                                                    <option value="" disabled>Tidak ada bahan baku tersedia</option>
+                                                @endif
+                                            </select>
+                                            <div class="invalid-feedback">Pilih bahan baku</div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label for="quantity_0" class="form-label">Kuantitas</label>
+                                            <input type="number" name="quantity[]" id="quantity_0" class="form-control"
+                                                min="1" max="999999" step="1" required>
+                                            <div class="invalid-feedback">Masukkan kuantitas yang valid (minimal 1)</div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label for="nominal_0" class="form-label">Nominal</label>
+                                            <input type="number" name="nominal[]" id="nominal_0" class="form-control"
+                                                min="0" step="0.01" readonly>
+                                            <div class="invalid-feedback"></div>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <button type="button" class="btn btn-danger remove-ingredient">Hapus</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <button type="button" id="addIngredient" class="btn btn-secondary mt-2">Tambah Bahan
+                                Baku</button>
+                            <div id="errorMessage" class="text-danger mt-2" style="display: none;"></div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                            <button type="submit" class="btn btn-primary">Simpan Resep</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
         <!-- Edit Recipe Modal -->
         <div class="modal fade" id="editRecipeModal" tabindex="-1" aria-labelledby="editRecipeModalLabel"
             aria-hidden="true">
@@ -739,6 +822,7 @@
                 </div>
             </div>
         </div>
+
         <!-- Delete Recipe Confirmation Modal -->
         <div class="modal fade" id="deleteRecipeModal" tabindex="-1" aria-labelledby="deleteRecipeModalLabel"
             aria-hidden="true">
@@ -767,6 +851,7 @@
                 </div>
             </div>
         </div>
+
         <!-- Transaction Detail Modals -->
         @php
             $allStocks = [
@@ -831,6 +916,7 @@
                                                                     data-transaction-date="{{ $transaction->created_at }}">
                                                                     <td>{{ $loop->iteration }}</td>
                                                                     <td>{{ htmlspecialchars($transaction->description ?? 'No Description') }}
+                                                                    </td>
                                                                     <td>
                                                                         @if ($transaction->voucher_id && $transaction->voucher_number !== 'N/A')
                                                                             <a href="{{ route('voucher_detail', $transaction->voucher_id) }}"
@@ -840,7 +926,6 @@
                                                                         @else
                                                                             {{ htmlspecialchars($transaction->voucher_number ?? 'No Voucher') }}
                                                                         @endif
-                                                                    </td>
                                                                     </td>
                                                                     <td>
                                                                         @switch($transaction->voucher_type)
@@ -907,101 +992,12 @@
                 @endif
             @endforeach
         @endforeach
-
-        <!-- Create Recipe Modal -->
-        <div class="modal fade" id="createRecipeModal" tabindex="-1" aria-labelledby="createRecipeModalLabel"
-            aria-hidden="true">
-            <div class="modal-dialog modal-xl">
-                <div class="modal-content">
-                    <form id="recipeForm" action="{{ route('recipe.store') }}" method="POST">
-                        @csrf
-                        <div class="modal-header">
-                            <h5 class="modal-title" id="createRecipeModalLabel">Buat Rumus Produk</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal"
-                                aria-label="Close"></button>
-                        </div>
-                        <div class="modal-body">
-                            <div class="mb-3">
-                                <label for="product_name" class="form-label">Nama Produk</label>
-                                <input type="text" name="product_name" id="product_name" class="form-control"
-                                    required minlength="2" maxlength="100" pattern="[A-Za-z0-9\s]+"
-                                    title="Nama produk hanya boleh berisi huruf, angka, dan spasi">
-                                <div class="invalid-feedback">Masukkan nama produk yang valid (2-100 karakter, hanya huruf,
-                                    angka, dan spasi)</div>
-                            </div>
-                            <div class="mb-3">
-                                <label for="product_size" class="form-label">Ukuran Produk</label>
-                                <input type="text" name="product_size" id="product_size" class="form-control"
-                                    maxlength="50" pattern="[A-Za-z0-9\s\-\/]*"
-                                    title="Ukuran produk hanya boleh berisi huruf, angka, spasi, tanda hubung, atau garis miring">
-                                <div class="invalid-feedback">Masukkan ukuran produk yang valid (maksimal 50 karakter)
-                                </div>
-                            </div>
-                            <div class="mb-3">
-                                <label for="total_nominal" class="form-label">Total Nominal</label>
-                                <input type="number" name="total_nominal" id="total_nominal" class="form-control"
-                                    value="0.00" step="0.01" readonly>
-                                <div class="invalid-feedback">Total nominal tidak valid</div>
-                            </div>
-                            <div id="ingredientsContainer">
-                                <div class="ingredient-row mb-3" data-row-id="0">
-                                    <div class="row align-items-end">
-                                        <div class="col-md-4">
-                                            <label for="transfer_stock_id_0" class="form-label">Bahan Baku</label>
-                                            <select name="transfer_stock_id[]" id="transfer_stock_id_0"
-                                                class="form-select transfer-stock-select" required>
-                                                <option value="">Pilih Bahan Baku</option>
-                                                @if (isset($transferStockData) && is_array($transferStockData) && !empty($transferStockData))
-                                                    @foreach (collect($transferStockData)->flatten() as $stock)
-                                                        <option value="{{ $stock->id }}"
-                                                            data-max-quantity="{{ $stock->quantity }}"
-                                                            data-nominal="{{ $stock->nominal ?? 0 }}">
-                                                            {{ htmlspecialchars($stock->item) }}
-                                                            ({{ htmlspecialchars($stock->size) }})
-                                                            -
-                                                            {{ $stock->quantity }} tersedia</option>
-                                                    @endforeach
-                                                @else
-                                                    <option value="" disabled>Tidak ada bahan baku tersedia</option>
-                                                @endif
-                                            </select>
-                                            <div class="invalid-feedback">Pilih bahan baku</div>
-                                        </div>
-                                        <div class="col-md-3">
-                                            <label for="quantity_0" class="form-label">Kuantitas</label>
-                                            <input type="number" name="quantity[]" id="quantity_0" class="form-control"
-                                                min="1" max="999999" step="1" required>
-                                            <div class="invalid-feedback">Masukkan kuantitas yang valid (minimal 1)</div>
-                                        </div>
-                                        <div class="col-md-3">
-                                            <label for="nominal_0" class="form-label">Nominal</label>
-                                            <input type="number" name="nominal[]" id="nominal_0" class="form-control"
-                                                min="0" step="0.01" readonly>
-                                            <div class="invalid-feedback"></div>
-                                        </div>
-                                        <div class="col-md-2">
-                                            <button type="button" class="btn btn-danger remove-ingredient">Hapus</button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <button type="button" id="addIngredient" class="btn btn-secondary mt-2">Tambah Bahan
-                                Baku</button>
-                            <div id="errorMessage" class="text-danger mt-2" style="display: none;"></div>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-                            <button type="submit" class="btn btn-primary">Simpan Resep</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
     </div>
 
     <!-- JavaScript -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            // Define all variables at the top
             const form = document.getElementById('filterForm');
             const tableFilterInput = document.getElementById('table_filter');
             const dropdownButton = document.getElementById('tableFilterDropdown');
@@ -1013,7 +1009,408 @@
             const clearRecipeSearch = document.getElementById('clearRecipeSearch');
             const recipeSearchCount = document.getElementById('recipeSearchCount');
             const recipeTable = document.getElementById('recipeTable');
+            let ingredientCount = document.querySelectorAll('.ingredient-row').length - 1;
             let editIngredientCount = 0;
+
+            // Table visibility function
+            function updateTableVisibility(filter) {
+                tableSections.forEach(section => {
+                    section.classList.toggle('hidden', filter !== 'all' && filter !== section.dataset
+                        .table);
+                });
+                applyGlobalFilter(); // Re-apply filter after visibility change
+            }
+
+            // Initialize table visibility
+            if (tableFilterInput) { // Check if tableFilterInput exists
+                const initialFilter = tableFilterInput.value || 'all';
+                updateTableVisibility(initialFilter);
+                dropdownButton.textContent = {
+                    'all': 'Semua Table',
+                    'stocks': 'Table Stocks',
+                    'transfer_stocks': 'Table Transfer Stocks',
+                    'used_stocks': 'Table Used Stocks'
+                } [initialFilter] || 'Semua Table';
+            }
+
+            // Handle dropdown item clicks
+            document.querySelectorAll('.dropdown-item[data-filter]').forEach(item => {
+                item.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const filterValue = this.dataset.filter;
+                    if (tableFilterInput) {
+                        tableFilterInput.value = filterValue;
+                    }
+                    dropdownButton.textContent = this.textContent;
+                    updateTableVisibility(filterValue);
+                });
+            });
+
+            // Global Filter Function
+            function applyGlobalFilter() {
+                const searchValue = globalSearch.value.trim().toLowerCase();
+                let totalVisibleItems = 0;
+                let currentItem = '';
+                let itemRows = [];
+                let itemMatches = false;
+
+                // Clear existing highlights
+                document.querySelectorAll('.highlight').forEach(el => {
+                    el.replaceWith(el.textContent);
+                });
+
+                tableSections.forEach(section => {
+                    if (section.classList.contains('hidden')) return;
+                    const rows = section.querySelectorAll('tbody tr');
+                    rows.forEach(row => {
+                        if (row.querySelector('td[colspan]')) return; // Skip no-data rows
+
+                        const item = row.dataset.item.toLowerCase();
+                        const size = row.dataset.size.toLowerCase();
+
+                        // Check if new item group
+                        if (item !== currentItem) {
+                            // Process previous group
+                            if (itemRows.length > 0) {
+                                if (itemMatches) {
+                                    itemRows.forEach(r => {
+                                        r.style.display = '';
+                                        totalVisibleItems++;
+                                    });
+                                } else {
+                                    itemRows.forEach(r => r.style.display = 'none');
+                                }
+                            }
+                            // Reset for new group
+                            currentItem = item;
+                            itemRows = [];
+                            itemMatches = false;
+                        }
+
+                        itemRows.push(row);
+
+                        // Check match for this row
+                        const matchesItem = item.includes(searchValue);
+                        const matchesSize = size.includes(searchValue);
+                        if (matchesItem || matchesSize) {
+                            itemMatches = true;
+                            // Highlight
+                            if (searchValue) {
+                                if (matchesItem) {
+                                    const nameTd = row.closest('tbody').querySelector(
+                                        `td.item-name[data-original-text="${row.dataset.item}"]`
+                                    ) || row.querySelector('.item-name');
+                                    if (nameTd) {
+                                        nameTd.innerHTML = nameTd.textContent.replace(new RegExp(
+                                                searchValue, 'gi'), match =>
+                                            `<span class="highlight">${match}</span>`);
+                                    }
+                                }
+                                if (matchesSize) {
+                                    const sizeTd = row.querySelector('.item-size');
+                                    if (sizeTd) {
+                                        sizeTd.innerHTML = sizeTd.textContent.replace(new RegExp(
+                                                searchValue, 'gi'), match =>
+                                            `<span class="highlight">${match}</span>`);
+                                    }
+                                }
+                            }
+                        }
+                    });
+
+                    // Process last group
+                    if (itemRows.length > 0) {
+                        if (itemMatches) {
+                            itemRows.forEach(r => {
+                                r.style.display = '';
+                                totalVisibleItems++;
+                            });
+                        } else {
+                            itemRows.forEach(r => r.style.display = 'none');
+                        }
+                    }
+                });
+
+                searchCount.textContent = searchValue ? `${totalVisibleItems} item ditemukan` : '';
+            }
+
+            // Event listeners for global search
+            globalSearch.addEventListener('keyup', applyGlobalFilter);
+            clearSearch.addEventListener('click', () => {
+                globalSearch.value = '';
+                applyGlobalFilter();
+            });
+
+            // Modal filter logic for client-side filtering
+            document.querySelectorAll('.modal-filter').forEach(select => {
+                select.addEventListener('change', function() {
+                    const stockId = this.dataset.stockId;
+                    const tableName = this.closest('.modal-content').dataset.tableName;
+                    const filter = this.value;
+                    const transactionTable = document.getElementById(
+                        `transactionTable_${tableName}_${stockId}`);
+                    const rows = transactionTable.querySelectorAll('tbody tr');
+
+                    rows.forEach(row => {
+                        const transactionDate = row.dataset.transactionDate;
+                        if (!transactionDate) {
+                            row.style.display = filter === 'all' ? '' : 'none';
+                            return;
+                        }
+
+                        const date = new Date(transactionDate);
+                        const now = new Date();
+                        let showRow = true;
+
+                        if (filter === '7_days') {
+                            showRow = date >= new Date(now.setDate(now.getDate() - 7));
+                        } else if (filter === '1_month') {
+                            showRow = date >= new Date(now.setMonth(now.getMonth() - 1));
+                        }
+
+                        row.style.display = showRow || filter === 'all' ? '' : 'none';
+                    });
+
+                    // Show message if no transactions are visible
+                    const visibleRows = Array.from(rows).filter(row => row.style.display !==
+                        'none');
+                    if (visibleRows.length === 0) {
+                        transactionTable.innerHTML =
+                            '<p class="text-center">Tidak ada transaksi terkait untuk periode ini.</p>';
+                    } else if (transactionTable.querySelector('p.text-center')) {
+                        location.reload(); // Simplest way to restore the table
+                    }
+                });
+            });
+
+            // Recipe form validation and dynamic ingredient rows
+            function updateNominal(row, select, quantityInput) {
+                const selectedOption = select.options[select.selectedIndex];
+                const nominal = parseFloat(selectedOption?.dataset.nominal || 0);
+                const quantity = parseInt(quantityInput.value) || 0;
+                const nominalInput = row.querySelector('input[name="nominal[]"]');
+                const feedback = row.querySelector('.invalid-feedback');
+
+                if (isNaN(nominal) || nominal <= 0) {
+                    nominalInput.value = '0.00';
+                    feedback.textContent = 'Nominal tidak tersedia untuk bahan baku ini';
+                    feedback.style.display = 'block';
+                    return;
+                }
+
+                if (quantity > 0) {
+                    nominalInput.value = (nominal * quantity).toFixed(2);
+                    feedback.style.display = 'none';
+                } else {
+                    nominalInput.value = '0.00';
+                    feedback.textContent = 'Masukkan kuantitas yang valid';
+                    feedback.style.display = 'block';
+                }
+                updateTotalNominal();
+            }
+
+            function updateTotalNominal() {
+                const nominalInputs = document.querySelectorAll('input[name="nominal[]"]');
+                let totalNominal = 0;
+                nominalInputs.forEach(input => {
+                    totalNominal += parseFloat(input.value) || 0;
+                });
+                const totalNominalInput = document.getElementById('total_nominal');
+                totalNominalInput.value = totalNominal.toFixed(2);
+            }
+
+            function validateQuantityInput(row, quantityInput, select) {
+                quantityInput.addEventListener('input', function() {
+                    this.value = this.value.replace(/[^0-9]/g, '');
+                    const maxQuantity = select.options[select.selectedIndex]?.dataset.maxQuantity || 999999;
+                    const feedback = row.querySelector('.invalid-feedback');
+
+                    if (parseInt(this.value) > parseInt(maxQuantity)) {
+                        this.value = maxQuantity;
+                        feedback.textContent =
+                            `Kuantitas tidak boleh melebihi stok tersedia (${maxQuantity})`;
+                        this.classList.add('is-invalid');
+                    } else if (parseInt(this.value) < 1) {
+                        this.value = 1;
+                        feedback.textContent = 'Kuantitas minimal adalah 1';
+                        this.classList.add('is-invalid');
+                    } else {
+                        this.classList.remove('is-invalid');
+                        feedback.style.display = 'none';
+                    }
+                    updateNominal(row, select, this);
+                });
+
+                select.addEventListener('change', function() {
+                    const maxQuantity = this.options[this.selectedIndex]?.dataset.maxQuantity || 999999;
+                    const feedback = row.querySelector('.invalid-feedback');
+
+                    if (quantityInput.value && parseInt(quantityInput.value) > parseInt(maxQuantity)) {
+                        quantityInput.value = maxQuantity;
+                        quantityInput.classList.add('is-invalid');
+                        feedback.textContent =
+                            `Kuantitas tidak boleh melebihi stok tersedia (${maxQuantity})`;
+                    } else {
+                        quantityInput.classList.remove('is-invalid');
+                        feedback.style.display = 'none';
+                    }
+                    updateNominal(row, this, quantityInput);
+                });
+            }
+
+            // Initialize validation for existing ingredient rows
+            document.querySelectorAll('.ingredient-row').forEach(row => {
+                const quantityInput = row.querySelector('input[name="quantity[]"]');
+                const select = row.querySelector('.transfer-stock-select');
+                if (quantityInput && select) {
+                    validateQuantityInput(row, quantityInput, select);
+                    updateNominal(row, select, quantityInput); // Initialize nominal
+                }
+            });
+
+            // Add ingredient button handler
+            const addIngredientButton = document.getElementById('addIngredient');
+            addIngredientButton.addEventListener('click', function() {
+                ingredientCount++;
+                const container = document.getElementById('ingredientsContainer');
+                const newRow = document.createElement('div');
+                newRow.className = 'ingredient-row mb-3';
+                newRow.dataset.rowId = ingredientCount;
+                newRow.innerHTML = `
+        <div class="row align-items-end">
+            <div class="col-md-4">
+                <label for="transfer_stock_id_${ingredientCount}" class="form-label">Bahan Baku</label>
+                <select name="transfer_stock_id[]" id="transfer_stock_id_${ingredientCount}" class="form-select transfer-stock-select" required>
+                    <option value="">Pilih Bahan Baku</option>
+                    @if (isset($transferStockData) && is_array($transferStockData) && !empty($transferStockData))
+                        @foreach (collect($transferStockData)->flatten() as $stock)
+                            <option value="{{ $stock->id }}" data-max-quantity="{{ $stock->quantity }}" data-nominal="{{ $stock->nominal ?? 0 }}">
+                                {{ htmlspecialchars($stock->item) }} ({{ htmlspecialchars($stock->size) }}) - {{ $stock->quantity }} tersedia
+                            </option>
+                        @endforeach
+                    @else
+                        <option value="" disabled>Tidak ada bahan baku tersedia</option>
+                    @endif
+                </select>
+                <div class="invalid-feedback">Pilih bahan baku</div>
+            </div>
+            <div class="col-md-3">
+                <label for="quantity_${ingredientCount}" class="form-label">Kuantitas</label>
+                <input type="number" name="quantity[]" id="quantity_${ingredientCount}" class="form-control" min="1" max="999999" step="1" required>
+                <div class="invalid-feedback">Masukkan kuantitas yang valid (minimal 1)</div>
+            </div>
+            <div class="col-md-3">
+                <label for="nominal_${ingredientCount}" class="form-label">Nominal</label>
+                <input type="number" name="nominal[]" id="nominal_${ingredientCount}" class="form-control" min="0" step="0.01" readonly value="0.00">
+                <div class="invalid-feedback"></div>
+            </div>
+            <div class="col-md-2">
+                <button type="button" class="btn btn-danger remove-ingredient">Hapus</button>
+            </div>
+        </div>
+    `;
+                container.appendChild(newRow);
+
+                const quantityInput = newRow.querySelector('input[name="quantity[]"]');
+                const select = newRow.querySelector('.transfer-stock-select');
+
+                // Ensure event listeners are attached
+                validateQuantityInput(newRow, quantityInput, select);
+
+                // Trigger initial nominal update
+                updateNominal(newRow, select, quantityInput);
+
+                // Update remove button visibility
+                document.querySelectorAll('.remove-ingredient').forEach(button => {
+                    button.style.display = document.querySelectorAll('.ingredient-row').length > 1 ?
+                        'block' : 'none';
+                });
+
+                updateTotalNominal();
+            });
+            // Remove ingredient handler
+            document.addEventListener('click', function(e) {
+                if (e.target.classList.contains('remove-ingredient')) {
+                    const row = e.target.closest('.ingredient-row');
+                    if (document.querySelectorAll('.ingredient-row').length > 1) {
+                        row.remove();
+                        ingredientCount--;
+                        document.querySelectorAll('.remove-ingredient').forEach(button => {
+                            button.style.display = document.querySelectorAll('.ingredient-row')
+                                .length > 1 ? 'block' : 'none';
+                        });
+                        updateTotalNominal();
+                    }
+                }
+            });
+
+            // Recipe form validation
+            document.getElementById('recipeForm').addEventListener('submit', function(e) {
+                const productName = document.getElementById('product_name');
+                const productSize = document.getElementById('product_size');
+                const nominalInputs = document.querySelectorAll('input[name="nominal[]"]');
+                const totalNominalInput = document.getElementById('total_nominal');
+                let isValid = true;
+
+                // Validate product name
+                if (!productName.value.match(/^[A-Za-z0-9\s]+$/)) {
+                    productName.classList.add('is-invalid');
+                    productName.nextElementSibling.textContent =
+                        'Nama produk hanya boleh berisi huruf, angka, dan spasi';
+                    isValid = false;
+                } else if (productName.value.length < 2 || productName.value.length > 100) {
+                    productName.classList.add('is-invalid');
+                    productName.nextElementSibling.textContent = 'Nama produk harus antara 2-100 karakter';
+                    isValid = false;
+                } else {
+                    productName.classList.remove('is-invalid');
+                }
+
+                // Validate product size
+                if (productSize.value && !productSize.value.match(/^[A-Za-z0-9\s\-\/]*$/)) {
+                    productSize.classList.add('is-invalid');
+                    productSize.nextElementSibling.textContent =
+                        'Ukuran produk hanya boleh berisi huruf, angka, spasi, tanda hubung, atau garis miring';
+                    isValid = false;
+                } else if (productSize.value.length > 50) {
+                    productSize.classList.add('is-invalid');
+                    productSize.nextElementSibling.textContent = 'Ukuran produk maksimal 50 karakter';
+                    isValid = false;
+                } else {
+                    productSize.classList.remove('is-invalid');
+                }
+
+                // Validate nominal values
+                nominalInputs.forEach(input => {
+                    if (parseFloat(input.value) === 0) {
+                        const row = input.closest('.ingredient-row');
+                        const feedback = row.querySelector('.invalid-feedback');
+                        feedback.textContent = 'Nominal tidak valid untuk bahan baku ini';
+                        feedback.style.display = 'block';
+                        input.classList.add('is-invalid');
+                        isValid = false;
+                    } else {
+                        input.classList.remove('is-invalid');
+                    }
+                });
+
+                // Validate total nominal
+                if (parseFloat(totalNominalInput.value) === 0) {
+                    totalNominalInput.classList.add('is-invalid');
+                    totalNominalInput.nextElementSibling.textContent =
+                        'Total nominal harus lebih besar dari 0';
+                    isValid = false;
+                } else {
+                    totalNominalInput.classList.remove('is-invalid');
+                }
+
+                if (!isValid) {
+                    e.preventDefault();
+                    document.getElementById('errorMessage').textContent =
+                        'Harap perbaiki kesalahan pada formulir.';
+                    document.getElementById('errorMessage').style.display = 'block';
+                }
+            });
 
             // Edit Recipe Button Handler
             document.addEventListener('click', function(e) {
@@ -1092,36 +1489,36 @@
                 newRow.dataset.rowId = editIngredientCount;
 
                 newRow.innerHTML = `
-            <div class="row align-items-end">
-                <div class="col-md-4">
-                    <label for="edit_transfer_stock_id_${editIngredientCount}" class="form-label">Bahan Baku</label>
-                    <select name="transfer_stock_id[]" id="edit_transfer_stock_id_${editIngredientCount}" class="form-select transfer-stock-select" required>
-                        <option value="">Pilih Bahan Baku</option>
-                        @if (isset($transferStockData) && is_array($transferStockData) && !empty($transferStockData))
-                            @foreach (collect($transferStockData)->flatten() as $stock)
-                                <option value="{{ $stock->id }}" data-max-quantity="{{ $stock->quantity }}" data-nominal="{{ $stock->nominal ?? 0 }}">
-                                    {{ htmlspecialchars($stock->item) }} ({{ htmlspecialchars($stock->size) }}) - {{ $stock->quantity }} tersedia
-                                </option>
-                            @endforeach
-                        @endif
-                    </select>
-                    <div class="invalid-feedback">Pilih bahan baku</div>
-                </div>
-                <div class="col-md-3">
-                    <label for="edit_quantity_${editIngredientCount}" class="form-label">Kuantitas</label>
-                    <input type="number" name="quantity[]" id="edit_quantity_${editIngredientCount}" class="form-control" min="1" max="999999" step="1" required>
-                    <div class="invalid-feedback">Masukkan kuantitas yang valid (minimal 1)</div>
-                </div>
-                <div class="col-md-3">
-                    <label for="edit_nominal_${editIngredientCount}" class="form-label">Nominal</label>
-                    <input type="number" name="nominal[]" id="edit_nominal_${editIngredientCount}" class="form-control" min="0" step="0.01" readonly>
-                    <div class="invalid-feedback"></div>
-                </div>
-                <div class="col-md-2">
-                    <button type="button" class="btn btn-danger remove-edit-ingredient">Hapus</button>
-                </div>
-            </div>
-        `;
+                    <div class="row align-items-end">
+                        <div class="col-md-4">
+                            <label for="edit_transfer_stock_id_${editIngredientCount}" class="form-label">Bahan Baku</label>
+                            <select name="transfer_stock_id[]" id="edit_transfer_stock_id_${editIngredientCount}" class="form-select transfer-stock-select" required>
+                                <option value="">Pilih Bahan Baku</option>
+                                @if (isset($transferStockData) && is_array($transferStockData) && !empty($transferStockData))
+                                    @foreach (collect($transferStockData)->flatten() as $stock)
+                                        <option value="{{ $stock->id }}" data-max-quantity="{{ $stock->quantity }}" data-nominal="{{ $stock->nominal ?? 0 }}">
+                                            {{ htmlspecialchars($stock->item) }} ({{ htmlspecialchars($stock->size) }}) - {{ $stock->quantity }} tersedia
+                                        </option>
+                                    @endforeach
+                                @endif
+                            </select>
+                            <div class="invalid-feedback">Pilih bahan baku</div>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="edit_quantity_${editIngredientCount}" class="form-label">Kuantitas</label>
+                            <input type="number" name="quantity[]" id="edit_quantity_${editIngredientCount}" class="form-control" min="1" max="999999" step="1" required>
+                            <div class="invalid-feedback">Masukkan kuantitas yang valid (minimal 1)</div>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="edit_nominal_${editIngredientCount}" class="form-label">Nominal</label>
+                            <input type="number" name="nominal[]" id="edit_nominal_${editIngredientCount}" class="form-control" min="0" step="0.01" readonly>
+                            <div class="invalid-feedback"></div>
+                        </div>
+                        <div class="col-md-2">
+                            <button type="button" class="btn btn-danger remove-edit-ingredient">Hapus</button>
+                        </div>
+                    </div>
+                `;
 
                 container.appendChild(newRow);
 
@@ -1139,7 +1536,7 @@
                 // Setup validation for new row
                 const quantityInput = newRow.querySelector('input[name="quantity[]"]');
                 const select = newRow.querySelector('.transfer-stock-select');
-                validateQuantityInput(newRow, quantityInput, select);
+                validateEditQuantityInput(newRow, quantityInput, select);
 
                 editIngredientCount++;
 
@@ -1184,757 +1581,290 @@
                 });
                 document.getElementById('edit_total_nominal').value = totalNominal.toFixed(2);
             }
-        });
-        // Recipe Global Filter Function
-        function applyRecipeGlobalFilter() {
-            const searchValue = recipeGlobalSearch.value.trim().toLowerCase();
-            const recipeRows = document.querySelectorAll('.recipe-row');
-            let visibleCount = 0;
 
-            // Clear existing highlights
-            document.querySelectorAll('.recipe-highlight').forEach(el => {
-                const parent = el.parentNode;
-                parent.replaceChild(document.createTextNode(el.textContent), el);
-                parent.normalize();
-            });
+            // Edit Recipe Modal Functions
+            function updateEditNominal(row, select, quantityInput) {
+                const selectedOption = select.options[select.selectedIndex];
+                const nominal = parseFloat(selectedOption?.dataset.nominal || 0);
+                const quantity = parseInt(quantityInput.value) || 0;
+                const nominalInput = row.querySelector('input[name="nominal[]"]');
+                const feedback = row.querySelector('.invalid-feedback');
 
-            // Handle empty search
-            if (!searchValue) {
-                recipeRows.forEach(row => {
-                    row.classList.remove('hidden');
-                    row.style.display = '';
-                    visibleCount++;
-                });
-                recipeSearchCount.textContent = '';
-                removeNoResultsMessage();
-                return;
-            }
-
-            // Apply filter
-            recipeRows.forEach(row => {
-                const productName = row.dataset.productName || '';
-                const productSize = row.dataset.productSize || '';
-                const ingredients = row.dataset.ingredients || '';
-                const ingredientSizes = row.dataset.ingredientSizes || '';
-
-                const matchesProduct = productName.includes(searchValue);
-                const matchesSize = productSize.includes(searchValue);
-                const matchesIngredients = ingredients.includes(searchValue);
-                const matchesIngredientSizes = ingredientSizes.includes(searchValue);
-
-                if (matchesProduct || matchesSize || matchesIngredients || matchesIngredientSizes) {
-                    row.classList.remove('hidden');
-                    row.style.display = '';
-                    visibleCount++;
-
-                    // Highlight matches
-                    highlightText(row.querySelector('.product-name-cell'), searchValue, matchesProduct);
-                    highlightText(row.querySelector('.product-size-cell'), searchValue, matchesSize);
-
-                    // Highlight ingredient matches
-                    if (matchesIngredients || matchesIngredientSizes) {
-                        const ingredientNameCells = row.querySelectorAll('.ingredient-name-cell');
-                        const ingredientSizeCells = row.querySelectorAll('.ingredient-size-cell');
-
-                        ingredientNameCells.forEach(cell => {
-                            if (cell.textContent.toLowerCase().includes(searchValue)) {
-                                highlightText(cell, searchValue, true);
-                            }
-                        });
-
-                        ingredientSizeCells.forEach(cell => {
-                            if (cell.textContent.toLowerCase().includes(searchValue)) {
-                                highlightText(cell, searchValue, true);
-                            }
-                        });
-                    }
+                if (nominal && quantity) {
+                    nominalInput.value = (nominal * quantity).toFixed(2);
+                    feedback.style.display = 'none';
                 } else {
-                    row.classList.add('hidden');
-                    row.style.display = 'none';
-                }
-            });
-
-            // Update search count
-            recipeSearchCount.textContent = `${visibleCount} formula ditemukan`;
-
-            // Show no results message if needed
-            if (visibleCount === 0) {
-                showNoResultsMessage();
-            } else {
-                removeNoResultsMessage();
-            }
-        }
-
-        // Function to highlight text
-        function highlightText(element, searchValue, shouldHighlight) {
-            if (!element || !shouldHighlight || !searchValue) return;
-
-            const text = element.textContent;
-            const regex = new RegExp(`(${escapeRegExp(searchValue)})`, 'gi');
-            const highlightedText = text.replace(regex, '<span class="recipe-highlight">$1</span>');
-
-            if (highlightedText !== text) {
-                element.innerHTML = highlightedText;
-            }
-        }
-
-        // Function to escape special regex characters
-        function escapeRegExp(string) {
-            return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        }
-
-        // Function to show no results message
-        function showNoResultsMessage() {
-            removeNoResultsMessage(); // Remove existing message first
-
-            const tbody = recipeTable.querySelector('tbody');
-            const noResultsRow = document.createElement('tr');
-            noResultsRow.id = 'noSearchResults';
-            noResultsRow.innerHTML = `
-            <td colspan="5" class="text-center">
-                <div class="no-results-message">
-                    <i class="fas fa-search mb-2"></i>
-                    <p class="mb-0">Tidak ada formula yang cocok dengan pencarian "${recipeGlobalSearch.value}"</p>
-                    <small class="text-muted">Coba kata kunci yang berbeda atau hapus pencarian untuk melihat semua formula</small>
-                </div>
-            </td>
-        `;
-            tbody.appendChild(noResultsRow);
-        }
-
-        // Function to remove no results message
-        function removeNoResultsMessage() {
-            const existingMessage = document.getElementById('noSearchResults');
-            if (existingMessage) {
-                existingMessage.remove();
-            }
-        }
-
-        // Event listeners for recipe search
-        recipeGlobalSearch.addEventListener('input', applyRecipeGlobalFilter);
-        recipeGlobalSearch.addEventListener('keyup', applyRecipeGlobalFilter);
-
-        clearRecipeSearch.addEventListener('click', function() {
-            recipeGlobalSearch.value = '';
-            applyRecipeGlobalFilter();
-            recipeGlobalSearch.focus();
-        });
-
-        // Reset search when modal is closed
-        document.getElementById('RecipeList').addEventListener('hidden.bs.modal', function() {
-            recipeGlobalSearch.value = '';
-            applyRecipeGlobalFilter();
-        });
-
-        // Optional: Focus search input when modal opens
-        document.getElementById('RecipeList').addEventListener('shown.bs.modal', function() {
-            recipeGlobalSearch.focus();
-        });
-        // Table visibility function
-        function updateTableVisibility(filter) {
-            tableSections.forEach(section => {
-                section.classList.toggle('hidden', filter !== 'all' && filter !== section.dataset
-                    .table);
-            });
-            applyGlobalFilter(); // Re-apply filter after visibility change
-        }
-
-        // Initialize table visibility
-        const initialFilter = tableFilterInput.value || 'all';
-        updateTableVisibility(initialFilter);
-        dropdownButton.textContent = {
-            'all': 'Semua Table',
-            'stocks': 'Table Stocks',
-            'transfer_stocks': 'Table Transfer Stocks',
-            'used_stocks': 'Table Used Stocks'
-        } [initialFilter] || 'Semua Table';
-
-        // Handle dropdown item clicks
-        document.querySelectorAll('.dropdown-item[data-filter]').forEach(item => {
-            item.addEventListener('click', function(e) {
-                e.preventDefault();
-                const filterValue = this.dataset.filter;
-                tableFilterInput.value = filterValue;
-                dropdownButton.textContent = this.textContent;
-                updateTableVisibility(filterValue);
-            });
-        });
-
-        // Global Filter Function
-        function applyGlobalFilter() {
-            const searchValue = globalSearch.value.trim().toLowerCase();
-            let totalVisibleItems = 0;
-            let currentItem = '';
-            let itemRows = [];
-            let itemMatches = false;
-
-            // Clear existing highlights
-            document.querySelectorAll('.highlight').forEach(el => {
-                el.replaceWith(el.textContent);
-            });
-
-            tableSections.forEach(section => {
-                if (section.classList.contains('hidden')) return;
-                const rows = section.querySelectorAll('tbody tr');
-                rows.forEach(row => {
-                    if (row.querySelector('td[colspan]')) return; // Skip no-data rows
-
-                    const item = row.dataset.item.toLowerCase();
-                    const size = row.dataset.size.toLowerCase();
-
-                    // Check if new item group
-                    if (item !== currentItem) {
-                        // Process previous group
-                        if (itemRows.length > 0) {
-                            if (itemMatches) {
-                                itemRows.forEach(r => {
-                                    r.style.display = '';
-                                    totalVisibleItems++;
-                                });
-                            } else {
-                                itemRows.forEach(r => r.style.display = 'none');
-                            }
-                        }
-                        // Reset for new group
-                        currentItem = item;
-                        itemRows = [];
-                        itemMatches = false;
-                    }
-
-                    itemRows.push(row);
-
-                    // Check match for this row
-                    const matchesItem = item.includes(searchValue);
-                    const matchesSize = size.includes(searchValue);
-                    if (matchesItem || matchesSize) {
-                        itemMatches = true;
-                        // Highlight
-                        if (searchValue) {
-                            if (matchesItem) {
-                                const nameTd = row.closest('tbody').querySelector(
-                                    `td.item-name[data-original-text="${row.dataset.item}"]`
-                                ) || row.querySelector('.item-name');
-                                if (nameTd) {
-                                    nameTd.innerHTML = nameTd.textContent.replace(new RegExp(
-                                            searchValue, 'gi'), match =>
-                                        `<span class="highlight">${match}</span>`);
-                                }
-                            }
-                            if (matchesSize) {
-                                const sizeTd = row.querySelector('.item-size');
-                                if (sizeTd) {
-                                    sizeTd.innerHTML = sizeTd.textContent.replace(new RegExp(
-                                            searchValue, 'gi'), match =>
-                                        `<span class="highlight">${match}</span>`);
-                                }
-                            }
-                        }
-                    }
-                });
-
-                // Process last group
-                if (itemRows.length > 0) {
-                    if (itemMatches) {
-                        itemRows.forEach(r => {
-                            r.style.display = '';
-                            totalVisibleItems++;
-                        });
+                    nominalInput.value = '0.00';
+                    if (!nominal) {
+                        feedback.textContent = 'Nominal tidak tersedia untuk bahan baku ini';
+                        feedback.style.display = 'block';
+                    } else if (!quantity) {
+                        feedback.textContent = 'Masukkan kuantitas yang valid';
+                        feedback.style.display = 'block';
                     } else {
-                        itemRows.forEach(r => r.style.display = 'none');
+                        feedback.style.display = 'none';
                     }
                 }
-            });
+                updateEditTotalNominal();
+            }
 
-            searchCount.textContent = searchValue ? `${totalVisibleItems} item ditemukan` : '';
-        }
+            function validateEditQuantityInput(row, quantityInput, select) {
+                quantityInput.addEventListener('input', function() {
+                    this.value = this.value.replace(/[^0-9]/g, '');
+                    const maxQuantity = select.options[select.selectedIndex]?.dataset.maxQuantity || 999999;
+                    const feedback = row.querySelector('.invalid-feedback');
 
-        // Event listeners for global search
-        globalSearch.addEventListener('keyup', applyGlobalFilter);
-        clearSearch.addEventListener('click', () => {
-            globalSearch.value = '';
-            applyGlobalFilter();
-        });
-
-        // Modal filter logic for client-side filtering
-        document.querySelectorAll('.modal-filter').forEach(select => {
-            select.addEventListener('change', function() {
-                const stockId = this.dataset.stockId;
-                const tableName = this.closest('.modal-content').dataset.tableName;
-                const filter = this.value;
-                const transactionTable = document.getElementById(
-                    `transactionTable_${tableName}_${stockId}`);
-                const rows = transactionTable.querySelectorAll('tbody tr');
-
-                rows.forEach(row => {
-                    const transactionDate = row.dataset.transactionDate;
-                    if (!transactionDate) {
-                        row.style.display = filter === 'all' ? '' : 'none';
-                        return;
+                    if (parseInt(this.value) > parseInt(maxQuantity)) {
+                        this.value = maxQuantity;
+                        feedback.textContent =
+                            `Kuantitas tidak boleh melebihi stok tersedia (${maxQuantity})`;
+                        this.classList.add('is-invalid');
+                    } else if (parseInt(this.value) < 1) {
+                        this.value = 1;
+                        feedback.textContent = 'Kuantitas minimal adalah 1';
+                        this.classList.add('is-invalid');
+                    } else {
+                        this.classList.remove('is-invalid');
+                        feedback.style.display = 'none';
                     }
-
-                    const date = new Date(transactionDate);
-                    const now = new Date();
-                    let showRow = true;
-
-                    if (filter === '7_days') {
-                        showRow = date >= new Date(now.setDate(now.getDate() - 7));
-                    } else if (filter === '1_month') {
-                        showRow = date >= new Date(now.setMonth(now.getMonth() - 1));
-                    }
-
-                    row.style.display = showRow || filter === 'all' ? '' : 'none';
+                    updateEditNominal(row, select, this);
                 });
 
-                // Show message if no transactions are visible
-                const visibleRows = Array.from(rows).filter(row => row.style.display !==
-                    'none');
-                if (visibleRows.length === 0) {
-                    transactionTable.innerHTML =
-                        '<p class="text-center">Tidak ada transaksi terkait untuk periode ini.</p>';
-                } else if (transactionTable.querySelector('p.text-center')) {
-                    // Re-render the table if it was replaced with a message
-                    location
-                        .reload(); // Simplest way to restore the table; alternatively, store the original HTML
-                }
-            });
-        });
+                select.addEventListener('change', function() {
+                    const maxQuantity = this.options[this.selectedIndex]?.dataset.maxQuantity || 999999;
+                    const feedback = row.querySelector('.invalid-feedback');
 
-        // Recipe form validation and dynamic ingredient rows
-        let ingredientCount = 0;
-
-        function updateNominal(row, select, quantityInput) {
-            const selectedOption = select.options[select.selectedIndex];
-            const nominal = parseFloat(selectedOption?.dataset.nominal || 0);
-            const quantity = parseInt(quantityInput.value) || 0;
-            const nominalInput = row.querySelector('input[name="nominal[]"]');
-            const feedback = row.querySelector('.invalid-feedback');
-
-            if (nominal && quantity) {
-                nominalInput.value = (nominal * quantity).toFixed(2);
-                feedback.style.display = 'none';
-            } else {
-                nominalInput.value = '0.00';
-                if (!nominal) {
-                    feedback.textContent =
-                        'Nominal tidak tersedia untuk bahan baku ini (tidak ada transaksi pemindahan atau pembelian)';
-                    feedback.style.display = 'block';
-                } else if (!quantity) {
-                    feedback.textContent = 'Masukkan kuantitas yang valid';
-                    feedback.style.display = 'block';
-                } else {
-                    feedback.style.display = 'none';
-                }
-            }
-            updateTotalNominal();
-        }
-
-        function updateTotalNominal() {
-            const nominalInputs = document.querySelectorAll('input[name="nominal[]"]');
-            let totalNominal = 0;
-            nominalInputs.forEach(input => {
-                totalNominal += parseFloat(input.value) || 0;
-            });
-            const totalNominalInput = document.getElementById('total_nominal');
-            totalNominalInput.value = totalNominal.toFixed(2);
-        }
-
-        function validateQuantityInput(row, quantityInput, select) {
-            quantityInput.addEventListener('input', function() {
-                this.value = this.value.replace(/[^0-9]/g, '');
-                const maxQuantity = select.options[select.selectedIndex]?.dataset.maxQuantity || 999999;
-                const feedback = row.querySelector('.invalid-feedback');
-
-                if (parseInt(this.value) > parseInt(maxQuantity)) {
-                    this.value = maxQuantity;
-                    feedback.textContent =
-                        `Kuantitas tidak boleh melebihi stok tersedia (${maxQuantity})`;
-                    this.classList.add('is-invalid');
-                } else if (parseInt(this.value) < 1) {
-                    this.value = 1;
-                    feedback.textContent = 'Kuantitas minimal adalah 1';
-                    this.classList.add('is-invalid');
-                } else {
-                    this.classList.remove('is-invalid');
-                    feedback.style.display = 'none';
-                }
-                updateNominal(row, select, this);
-            });
-
-            select.addEventListener('change', function() {
-                const maxQuantity = this.options[this.selectedIndex]?.dataset.maxQuantity || 999999;
-                const feedback = row.querySelector('.invalid-feedback');
-
-                if (quantityInput.value && parseInt(quantityInput.value) > parseInt(maxQuantity)) {
-                    quantityInput.value = maxQuantity;
-                    quantityInput.classList.add('is-invalid');
-                    feedback.textContent =
-                        `Kuantitas tidak boleh melebihi stok tersedia (${maxQuantity})`;
-                } else {
-                    quantityInput.classList.remove('is-invalid');
-                    feedback.style.display = 'none';
-                }
-                updateNominal(row, this, quantityInput);
-            });
-        }
-
-        document.querySelectorAll('.ingredient-row').forEach(row => {
-            const quantityInput = row.querySelector('input[name="quantity[]"]');
-            const select = row.querySelector('.transfer-stock-select');
-            if (quantityInput && select) {
-                validateQuantityInput(row, quantityInput, select);
-            }
-        });
-
-        document.getElementById('addIngredient').addEventListener('click', function() {
-            ingredientCount++;
-            const container = document.getElementById('ingredientsContainer');
-            const newRow = document.createElement('div');
-            newRow.className = 'ingredient-row mb-3';
-            newRow.dataset.rowId = ingredientCount;
-            newRow.innerHTML = `
-                <div class="row align-items-end">
-                    <div class="col-md-4">
-                        <label for="transfer_stock_id_${ingredientCount}" class="form-label">Bahan Baku</label>
-                        <select name="transfer_stock_id[]" id="transfer_stock_id_${ingredientCount}" class="form-select transfer-stock-select" required>
-                            <option value="">Pilih Bahan Baku</option>
-                            @if (isset($transferStockData) && is_array($transferStockData) && !empty($transferStockData))
-                            @foreach (collect($transferStockData)->flatten() as $stock)
-                            <option value="{{ $stock->id }}" data-max-quantity="{{ $stock->quantity }}" data-nominal="{{ $stock->nominal ?? 0 }}">{{ htmlspecialchars($stock->item) }} ({{ htmlspecialchars($stock->size) }}) - {{ $stock->quantity }} tersedia</option>
-                            @endforeach
-                            @else
-                            <option value="" disabled>Tidak ada bahan baku tersedia</option>
-                            @endif
-                        </select>
-                        <div class="invalid-feedback">Pilih bahan baku</div>
-                    </div>
-                    <div class="col-md-3">
-                        <label for="quantity_${ingredientCount}" class="form-label">Kuantitas</label>
-                        <input type="number" name="quantity[]" id="quantity_${ingredientCount}" class="form-control" min="1" max="999999" step="1" required>
-                        <div class="invalid-feedback">Masukkan kuantitas yang valid (minimal 1)</div>
-                    </div>
-                    <div class="col-md-3">
-                        <label for="nominal_${ingredientCount}" class="form-label">Nominal</label>
-                        <input type="number" name="nominal[]" id="nominal_${ingredientCount}" class="form-control" min="0" step="0.01" readonly>
-                        <div class="invalid-feedback"></div>
-                    </div>
-                    <div class="col-md-2">
-                        <button type="button" class="btn btn-danger remove-ingredient">Hapus</button>
-                    </div>
-                </div>
-            `;
-            container.appendChild(newRow);
-
-            const quantityInput = newRow.querySelector('input[name="quantity[]"]');
-            const select = newRow.querySelector('.transfer-stock-select');
-            validateQuantityInput(newRow, quantityInput, select);
-
-            document.querySelectorAll('.remove-ingredient').forEach(button => {
-                button.style.display = ingredientCount > 0 ? 'block' : 'none';
-            });
-
-            updateTotalNominal();
-        });
-
-        document.addEventListener('click', function(e) {
-            if (e.target.classList.contains('remove-ingredient')) {
-                const row = e.target.closest('.ingredient-row');
-                if (document.querySelectorAll('.ingredient-row').length > 1) {
-                    row.remove();
-                    ingredientCount--;
-                    if (ingredientCount === 0) {
-                        document.querySelectorAll('.remove-ingredient').forEach(button => {
-                            button.style.display = 'none';
-                        });
+                    if (quantityInput.value && parseInt(quantityInput.value) > parseInt(maxQuantity)) {
+                        quantityInput.value = maxQuantity;
+                        quantityInput.classList.add('is-invalid');
+                        feedback.textContent =
+                            `Kuantitas tidak boleh melebihi stok tersedia (${maxQuantity})`;
+                    } else {
+                        quantityInput.classList.remove('is-invalid');
+                        feedback.style.display = 'none';
                     }
-                    updateTotalNominal();
-                }
-            }
-        });
-
-        // Recipe form validation
-        document.getElementById('recipeForm').addEventListener('submit', function(e) {
-            const productName = document.getElementById('product_name');
-            const productSize = document.getElementById('product_size');
-            const nominalInputs = document.querySelectorAll('input[name="nominal[]"]');
-            const totalNominalInput = document.getElementById('total_nominal');
-            let isValid = true;
-
-            // Validate product name
-            if (!productName.value.match(/^[A-Za-z0-9\s]+$/)) {
-                productName.classList.add('is-invalid');
-                productName.nextElementSibling.textContent =
-                    'Nama produk hanya boleh berisi huruf, angka, dan spasi';
-                isValid = false;
-            } else if (productName.value.length < 2 || productName.value.length > 100) {
-                productName.classList.add('is-invalid');
-                productName.nextElementSibling.textContent = 'Nama produk harus antara 2-100 karakter';
-                isValid = false;
-            } else {
-                productName.classList.remove('is-invalid');
+                    updateEditNominal(row, this, quantityInput);
+                });
             }
 
-            // Validate product size
-            if (productSize.value && !productSize.value.match(/^[A-Za-z0-9\s\-\/]*$/)) {
-                productSize.classList.add('is-invalid');
-                productSize.nextElementSibling.textContent =
-                    'Ukuran produk hanya boleh berisi huruf, angka, spasi, tanda hubung, atau garis miring';
-                isValid = false;
-            } else if (productSize.value.length > 50) {
-                productSize.classList.add('is-invalid');
-                productSize.nextElementSibling.textContent = 'Ukuran produk maksimal 50 karakter';
-                isValid = false;
-            } else {
-                productSize.classList.remove('is-invalid');
-            }
+            // Edit Recipe Form Validation
+            document.getElementById('editRecipeForm').addEventListener('submit', function(e) {
+                const productName = document.getElementById('edit_product_name');
+                const productSize = document.getElementById('edit_product_size');
+                const nominalInputs = document.querySelectorAll(
+                    '#editIngredientsContainer input[name="nominal[]"]');
+                const totalNominalInput = document.getElementById('edit_total_nominal');
+                let isValid = true;
 
-            // Validate nominal values
-            nominalInputs.forEach(input => {
-                if (parseFloat(input.value) === 0) {
-                    const row = input.closest('.ingredient-row');
-                    const feedback = row.querySelector('.invalid-feedback');
-                    feedback.textContent = 'Nominal tidak valid untuk bahan baku ini';
-                    feedback.style.display = 'block';
-                    input.classList.add('is-invalid');
+                // Validate product name
+                if (!productName.value.match(/^[A-Za-z0-9\s]+$/)) {
+                    productName.classList.add('is-invalid');
+                    productName.nextElementSibling.textContent =
+                        'Nama produk hanya boleh berisi huruf, angka, dan spasi';
+                    isValid = false;
+                } else if (productName.value.length < 2 || productName.value.length > 100) {
+                    productName.classList.add('is-invalid');
+                    productName.nextElementSibling.textContent = 'Nama produk harus antara 2-100 karakter';
                     isValid = false;
                 } else {
-                    input.classList.remove('is-invalid');
+                    productName.classList.remove('is-invalid');
                 }
-            });
 
-            // Validate total nominal
-            if (parseFloat(totalNominalInput.value) === 0) {
-                totalNominalInput.classList.add('is-invalid');
-                totalNominalInput.nextElementSibling.textContent =
-                    'Total nominal harus lebih besar dari 0';
-                isValid = false;
-            } else {
-                totalNominalInput.classList.remove('is-invalid');
-            }
-
-            if (!isValid) {
-                e.preventDefault();
-                document.getElementById('errorMessage').textContent =
-                    'Harap perbaiki kesalahan pada formulir.';
-                document.getElementById('errorMessage').style.display = 'block';
-            }
-        });
-        // Add this JavaScript to your existing script section, after your current JavaScript
-
-        // Edit Recipe Modal Functions
-        function updateEditNominal(row, select, quantityInput) {
-            const selectedOption = select.options[select.selectedIndex];
-            const nominal = parseFloat(selectedOption?.dataset.nominal || 0);
-            const quantity = parseInt(quantityInput.value) || 0;
-            const nominalInput = row.querySelector('input[name="nominal[]"]');
-            const feedback = row.querySelector('.invalid-feedback');
-
-            if (nominal && quantity) {
-                nominalInput.value = (nominal * quantity).toFixed(2);
-                feedback.style.display = 'none';
-            } else {
-                nominalInput.value = '0.00';
-                if (!nominal) {
-                    feedback.textContent = 'Nominal tidak tersedia untuk bahan baku ini';
-                    feedback.style.display = 'block';
-                } else if (!quantity) {
-                    feedback.textContent = 'Masukkan kuantitas yang valid';
-                    feedback.style.display = 'block';
-                } else {
-                    feedback.style.display = 'none';
-                }
-            }
-            updateEditTotalNominal();
-        }
-
-        function validateEditQuantityInput(row, quantityInput, select) {
-            quantityInput.addEventListener('input', function() {
-                this.value = this.value.replace(/[^0-9]/g, '');
-                const maxQuantity = select.options[select.selectedIndex]?.dataset.maxQuantity || 999999;
-                const feedback = row.querySelector('.invalid-feedback');
-
-                if (parseInt(this.value) > parseInt(maxQuantity)) {
-                    this.value = maxQuantity;
-                    feedback.textContent = `Kuantitas tidak boleh melebihi stok tersedia (${maxQuantity})`;
-                    this.classList.add('is-invalid');
-                } else if (parseInt(this.value) < 1) {
-                    this.value = 1;
-                    feedback.textContent = 'Kuantitas minimal adalah 1';
-                    this.classList.add('is-invalid');
-                } else {
-                    this.classList.remove('is-invalid');
-                    feedback.style.display = 'none';
-                }
-                updateEditNominal(row, select, this);
-            });
-
-            select.addEventListener('change', function() {
-                const maxQuantity = this.options[this.selectedIndex]?.dataset.maxQuantity || 999999;
-                const feedback = row.querySelector('.invalid-feedback');
-
-                if (quantityInput.value && parseInt(quantityInput.value) > parseInt(maxQuantity)) {
-                    quantityInput.value = maxQuantity;
-                    quantityInput.classList.add('is-invalid');
-                    feedback.textContent = `Kuantitas tidak boleh melebihi stok tersedia (${maxQuantity})`;
-                } else {
-                    quantityInput.classList.remove('is-invalid');
-                    feedback.style.display = 'none';
-                }
-                updateEditNominal(row, this, quantityInput);
-            });
-        }
-
-        // Edit Recipe Form Validation
-        document.getElementById('editRecipeForm').addEventListener('submit', function(e) {
-            const productName = document.getElementById('edit_product_name');
-            const productSize = document.getElementById('edit_product_size');
-            const nominalInputs = document.querySelectorAll('#editIngredientsContainer input[name="nominal[]"]');
-            const totalNominalInput = document.getElementById('edit_total_nominal');
-            let isValid = true;
-
-            // Validate product name
-            if (!productName.value.match(/^[A-Za-z0-9\s]+$/)) {
-                productName.classList.add('is-invalid');
-                productName.nextElementSibling.textContent =
-                    'Nama produk hanya boleh berisi huruf, angka, dan spasi';
-                isValid = false;
-            } else if (productName.value.length < 2 || productName.value.length > 100) {
-                productName.classList.add('is-invalid');
-                productName.nextElementSibling.textContent = 'Nama produk harus antara 2-100 karakter';
-                isValid = false;
-            } else {
-                productName.classList.remove('is-invalid');
-            }
-
-            // Validate product size
-            if (productSize.value && !productSize.value.match(/^[A-Za-z0-9\s\-\/]*$/)) {
-                productSize.classList.add('is-invalid');
-                productSize.nextElementSibling.textContent =
-                    'Ukuran produk hanya boleh berisi huruf, angka, spasi, tanda hubung, atau garis miring';
-                isValid = false;
-            } else if (productSize.value.length > 50) {
-                productSize.classList.add('is-invalid');
-                productSize.nextElementSibling.textContent = 'Ukuran produk maksimal 50 karakter';
-                isValid = false;
-            } else {
-                productSize.classList.remove('is-invalid');
-            }
-
-            // Validate nominal values
-            nominalInputs.forEach(input => {
-                if (parseFloat(input.value) === 0) {
-                    const row = input.closest('.ingredient-row');
-                    const feedback = row.querySelector('.invalid-feedback');
-                    feedback.textContent = 'Nominal tidak valid untuk bahan baku ini';
-                    feedback.style.display = 'block';
-                    input.classList.add('is-invalid');
+                // Validate product size
+                if (productSize.value && !productSize.value.match(/^[A-Za-z0-9\s\-\/]*$/)) {
+                    productSize.classList.add('is-invalid');
+                    productSize.nextElementSibling.textContent =
+                        'Ukuran produk hanya boleh berisi huruf, angka, spasi, tanda hubung, atau garis miring';
+                    isValid = false;
+                } else if (productSize.value.length > 50) {
+                    productSize.classList.add('is-invalid');
+                    productSize.nextElementSibling.textContent = 'Ukuran produk maksimal 50 karakter';
                     isValid = false;
                 } else {
-                    input.classList.remove('is-invalid');
+                    productSize.classList.remove('is-invalid');
+                }
+
+                // Validate nominal values
+                nominalInputs.forEach(input => {
+                    if (parseFloat(input.value) === 0) {
+                        const row = input.closest('.ingredient-row');
+                        const feedback = row.querySelector('.invalid-feedback');
+                        feedback.textContent = 'Nominal tidak valid untuk bahan baku ini';
+                        feedback.style.display = 'block';
+                        input.classList.add('is-invalid');
+                        isValid = false;
+                    } else {
+                        input.classList.remove('is-invalid');
+                    }
+                });
+
+                // Validate total nominal
+                if (parseFloat(totalNominalInput.value) === 0) {
+                    totalNominalInput.classList.add('is-invalid');
+                    totalNominalInput.nextElementSibling.textContent =
+                        'Total nominal harus lebih besar dari 0';
+                    isValid = false;
+                } else {
+                    totalNominalInput.classList.remove('is-invalid');
+                }
+
+                if (!isValid) {
+                    e.preventDefault();
+                    document.getElementById('editErrorMessage').textContent =
+                        'Harap perbaiki kesalahan pada formulir.';
+                    document.getElementById('editErrorMessage').style.display = 'block';
                 }
             });
 
-            // Validate total nominal
-            if (parseFloat(totalNominalInput.value) === 0) {
-                totalNominalInput.classList.add('is-invalid');
-                totalNominalInput.nextElementSibling.textContent = 'Total nominal harus lebih besar dari 0';
-                isValid = false;
-            } else {
-                totalNominalInput.classList.remove('is-invalid');
-            }
-
-            if (!isValid) {
-                e.preventDefault();
-                document.getElementById('editErrorMessage').textContent = 'Harap perbaiki kesalahan pada formulir.';
-                document.getElementById('editErrorMessage').style.display = 'block';
-            }
-        });
-
-        // Clear error messages when modals are hidden
-        document.getElementById('editRecipeModal').addEventListener('hidden.bs.modal', function() {
-            document.getElementById('editErrorMessage').style.display = 'none';
-            document.querySelectorAll('#editIngredientsContainer .is-invalid').forEach(el => {
-                el.classList.remove('is-invalid');
-            });
-        });
-
-        // Enhanced recipe row filtering to include action buttons state
-        function applyRecipeGlobalFilter() {
-            const searchValue = recipeGlobalSearch.value.trim().toLowerCase();
-            const recipeRows = document.querySelectorAll('.recipe-row');
-            let visibleCount = 0;
-
-            // Clear existing highlights
-            document.querySelectorAll('.recipe-highlight').forEach(el => {
-                const parent = el.parentNode;
-                parent.replaceChild(document.createTextNode(el.textContent), el);
-                parent.normalize();
+            // Clear error messages when modals are hidden
+            document.getElementById('editRecipeModal').addEventListener('hidden.bs.modal', function() {
+                document.getElementById('editErrorMessage').style.display = 'none';
+                document.querySelectorAll('#editIngredientsContainer .is-invalid').forEach(el => {
+                    el.classList.remove('is-invalid');
+                });
             });
 
-            // Handle empty search
-            if (!searchValue) {
+            // Recipe Global Filter Function
+            function applyRecipeGlobalFilter() {
+                const searchValue = recipeGlobalSearch.value.trim().toLowerCase();
+                const recipeRows = document.querySelectorAll('.recipe-row');
+                let visibleCount = 0;
+
+                // Clear existing highlights
+                document.querySelectorAll('.recipe-highlight').forEach(el => {
+                    const parent = el.parentNode;
+                    parent.replaceChild(document.createTextNode(el.textContent), el);
+                    parent.normalize();
+                });
+
+                // Handle empty search
+                if (!searchValue) {
+                    recipeRows.forEach(row => {
+                        row.classList.remove('hidden');
+                        row.style.display = '';
+                        visibleCount++;
+                    });
+                    recipeSearchCount.textContent = '';
+                    removeNoResultsMessage();
+                    return;
+                }
+
+                // Apply filter
                 recipeRows.forEach(row => {
-                    row.classList.remove('hidden');
-                    row.style.display = '';
-                    visibleCount++;
+                    const productName = row.dataset.productName || '';
+                    const productSize = row.dataset.productSize || '';
+                    const ingredients = row.dataset.ingredients || '';
+                    const ingredientSizes = row.dataset.ingredientSizes || '';
+
+                    const matchesProduct = productName.includes(searchValue);
+                    const matchesSize = productSize.includes(searchValue);
+                    const matchesIngredients = ingredients.includes(searchValue);
+                    const matchesIngredientSizes = ingredientSizes.includes(searchValue);
+
+                    if (matchesProduct || matchesSize || matchesIngredients || matchesIngredientSizes) {
+                        row.classList.remove('hidden');
+                        row.style.display = '';
+                        visibleCount++;
+
+                        // Highlight matches
+                        highlightText(row.querySelector('.product-name-cell'), searchValue, matchesProduct);
+                        highlightText(row.querySelector('.product-size-cell'), searchValue, matchesSize);
+
+                        // Highlight ingredient matches
+                        if (matchesIngredients || matchesIngredientSizes) {
+                            const ingredientNameCells = row.querySelectorAll('.ingredient-name-cell');
+                            const ingredientSizeCells = row.querySelectorAll('.ingredient-size-cell');
+
+                            ingredientNameCells.forEach(cell => {
+                                if (cell.textContent.toLowerCase().includes(searchValue)) {
+                                    highlightText(cell, searchValue, true);
+                                }
+                            });
+
+                            ingredientSizeCells.forEach(cell => {
+                                if (cell.textContent.toLowerCase().includes(searchValue)) {
+                                    highlightText(cell, searchValue, true);
+                                }
+                            });
+                        }
+                    } else {
+                        row.classList.add('hidden');
+                        row.style.display = 'none';
+                    }
                 });
-                recipeSearchCount.textContent = '';
-                removeNoResultsMessage();
-                return;
+
+                // Update search count
+                recipeSearchCount.textContent = searchValue ? `${visibleCount} formula ditemukan` : '';
+
+                // Show or hide no results message
+                if (visibleCount === 0) {
+                    showNoResultsMessage();
+                } else {
+                    removeNoResultsMessage();
+                }
             }
 
-            // Apply filter
-            recipeRows.forEach(row => {
-                const productName = row.dataset.productName || '';
-                const productSize = row.dataset.productSize || '';
-                const ingredients = row.dataset.ingredients || '';
-                const ingredientSizes = row.dataset.ingredientSizes || '';
+            // Helper function to highlight text
+            function highlightText(element, searchValue, shouldHighlight) {
+                if (!element || !shouldHighlight) return;
+                const text = element.textContent;
+                const regex = new RegExp(`(${searchValue})`, 'gi');
+                element.innerHTML = text.replace(regex, '<span class="recipe-highlight">$1</span>');
+            }
 
-                const matchesProduct = productName.includes(searchValue);
-                const matchesSize = productSize.includes(searchValue);
-                const matchesIngredients = ingredients.includes(searchValue);
-                const matchesIngredientSizes = ingredientSizes.includes(searchValue);
-
-                if (matchesProduct || matchesSize || matchesIngredients || matchesIngredientSizes) {
-                    row.classList.remove('hidden');
-                    row.style.display = '';
-                    visibleCount++;
-
-                    // Highlight matches
-                    highlightText(row.querySelector('.product-name-cell'), searchValue, matchesProduct);
-                    highlightText(row.querySelector('.product-size-cell'), searchValue, matchesSize);
-
-                    // Highlight ingredient matches
-                    if (matchesIngredients || matchesIngredientSizes) {
-                        const ingredientNameCells = row.querySelectorAll('.ingredient-name-cell');
-                        const ingredientSizeCells = row.querySelectorAll('.ingredient-size-cell');
-
-                        ingredientNameCells.forEach(cell => {
-                            if (cell.textContent.toLowerCase().includes(searchValue)) {
-                                highlightText(cell, searchValue, true);
-                            }
-                        });
-
-                        ingredientSizeCells.forEach(cell => {
-                            if (cell.textContent.toLowerCase().includes(searchValue)) {
-                                highlightText(cell, searchValue, true);
-                            }
-                        });
-                    }
-                } else {
-                    row.classList.add('hidden');
-                    row.style.display = 'none';
+            // Show no results message
+            function showNoResultsMessage() {
+                if (!document.getElementById('noResultsMessage')) {
+                    const noResultsDiv = document.createElement('tr');
+                    noResultsDiv.id = 'noResultsMessage';
+                    noResultsDiv.innerHTML = `
+                        <td colspan="6" class="text-center">
+                            <div class="no-results-message">Tidak ada formula yang cocok dengan pencarian.</div>
+                        </td>
+                    `;
+                    recipeTable.querySelector('tbody').appendChild(noResultsDiv);
                 }
+            }
+
+            // Remove no results message
+            function removeNoResultsMessage() {
+                const noResultsMessage = document.getElementById('noResultsMessage');
+                if (noResultsMessage) {
+                    noResultsMessage.remove();
+                }
+            }
+
+            // Event listeners for recipe search
+            recipeGlobalSearch.addEventListener('keyup', applyRecipeGlobalFilter);
+            clearRecipeSearch.addEventListener('click', () => {
+                recipeGlobalSearch.value = '';
+                applyRecipeGlobalFilter();
             });
 
-            // Update search count
-            recipeSearchCount.textContent = `${visibleCount} formula ditemukan`;
+            // Auto-dismiss alerts after 5 seconds
+            setTimeout(() => {
+                const alerts = document.querySelectorAll('.alert');
+                alerts.forEach(alert => {
+                    const bsAlert = new bootstrap.Alert(alert);
+                    bsAlert.close();
+                });
+            }, 5000);
 
-            // Show no results message if needed
-            if (visibleCount === 0) {
-                showNoResultsMessage();
-            } else {
-                removeNoResultsMessage();
-            }
-        }
+            // Initialize form validation for existing inputs
+            ['product_name', 'product_size'].forEach(id => {
+                const input = document.getElementById(id);
+                input.addEventListener('input', function() {
+                    if (this.checkValidity()) {
+                        this.classList.remove('is-invalid');
+                    }
+                });
+            });
+
+            // Ensure remove buttons are hidden for single ingredient row
+            document.querySelectorAll('.remove-ingredient').forEach(button => {
+                button.style.display = document.querySelectorAll('.ingredient-row').length > 1 ? 'block' :
+                    'none';
+            });
+        });
     </script>
 @endsection
