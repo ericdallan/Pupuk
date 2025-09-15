@@ -562,7 +562,29 @@
                     if (recipe.id) {
                         const option = document.createElement('option');
                         option.value = recipe.id;
-                        option.textContent = recipe.product_name || 'Unnamed Recipe';
+
+                        // Membuat text dengan format: product_name (size)
+                        let displayText = recipe.product_name || 'Unnamed Recipe';
+                        if (recipe.size || recipe.nominal) {
+                            displayText += ' (';
+                            if (recipe.size) {
+                                displayText += recipe.size;
+                            }
+                            if (recipe.nominal) {
+                                // Format nominal to Rp. xxx.xxx.xxx,xx
+                                const formattedNominal = Number(recipe.nominal).toLocaleString(
+                                'id-ID', {
+                                    style: 'currency',
+                                    currency: 'IDR',
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2
+                                });
+                                displayText += recipe.size ? `, ${formattedNominal}` : formattedNominal;
+                            }
+                            displayText += ')';
+                        }
+                        option.textContent = displayText;
+
                         select.appendChild(option);
                     } else {
                         console.warn('Recipe missing id:', recipe);
