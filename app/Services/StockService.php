@@ -143,13 +143,13 @@ class StockService
 
         $results = $query->get();
 
-        // Debug log to verify data
-        // Log::debug('Raw Stock Transactions', $results->toArray());
-
         return $results->groupBy(function ($item) {
             return $item->item . '|' . ($item->size ?? '');
         })->map(function ($records) {
-            return $records->map(function ($record) {
+            // Hilangkan duplikat berdasarkan voucher_id, created_at, dan transaction_quantity
+            return $records->unique(function ($record) {
+                return ($record->voucher_id ?? 'null') . '|' . ($record->created_at ?? 'null') . '|' . ($record->transaction_quantity ?? 'null');
+            })->map(function ($record) {
                 return (object) [
                     'stock_id' => $record->stock_id,
                     'item' => $record->item,
@@ -241,7 +241,7 @@ class StockService
                 default => [],
             };
 
-            // Filter incoming records with strict voucher_type check
+            // Filter incoming records with strict voucher_type check and deduplicate
             $incomingRecords = $sortedRecords->filter(function ($record) use ($openingBalance, $incomingVoucherTypes, $sortedRecords, $openingVoucherType) {
                 if (is_array($openingVoucherType)) {
                     $firstOpeningRecord = $sortedRecords->whereIn('voucher_type', $openingVoucherType)
@@ -256,6 +256,8 @@ class StockService
                     $record->created_at == $firstOpeningRecord->created_at &&
                     (is_array($openingVoucherType) ? in_array($record->voucher_type, $openingVoucherType) : $record->voucher_type == $openingVoucherType);
                 return !$isOpening && in_array($record->voucher_type, $incomingVoucherTypes);
+            })->unique(function ($record) {
+                return $record->voucher_id . '|' . $record->created_at . '|' . $record->transaction_quantity; // Deduplicate based on unique combo
             });
 
             $incomingQty = $incomingRecords->sum('transaction_quantity') ?? 0;
@@ -316,7 +318,7 @@ class StockService
                     $outgoingHpp = $incomingHpp; // Fallback to incoming HPP if no recipe data
                 }
             } else {
-                // Filter outgoing records with strict voucher_type check
+                // Filter outgoing records with strict voucher_type check and deduplicate
                 $outgoingRecords = $sortedRecords->filter(function ($record) use ($openingBalance, $outgoingVoucherTypes, $openingVoucherType, $sortedRecords) {
                     if (is_array($openingVoucherType)) {
                         $firstOpeningRecord = $sortedRecords->whereIn('voucher_type', $openingVoucherType)
@@ -331,7 +333,10 @@ class StockService
                         $record->created_at == $firstOpeningRecord->created_at &&
                         (is_array($openingVoucherType) ? in_array($record->voucher_type, $openingVoucherType) : $record->voucher_type == $openingVoucherType);
                     return !$isOpening && in_array($record->voucher_type, $outgoingVoucherTypes);
+                })->unique(function ($record) {
+                    return $record->voucher_id . '|' . $record->created_at; // Deduplicate based on voucher_id and created_at
                 });
+
                 $outgoingQty = $outgoingRecords->sum('transaction_quantity') ?? 0;
                 $outgoingHpp = $outgoingRecords->isNotEmpty() ? ($outgoingRecords->avg('nominal') ?? $incomingHpp) : $incomingHpp;
             }
