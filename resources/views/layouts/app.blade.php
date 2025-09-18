@@ -6,316 +6,680 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'Admin Dashboard')</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css">
-    <!-- Tambahkan dayjs dan locale Indonesia -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
     <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dayjs@1/locale/id.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@2.2.1/dist/chartjs-plugin-annotation.min.js"
         type="module"></script>
-    </script>
+
     <style>
-        body {
-            background-color: #f0f2f5;
+        :root {
+            --primary-color: #4f46e5;
+            --primary-dark: #3730a3;
+            --secondary-color: #6366f1;
+            --accent-color: #0ea5e9;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
+            --dark-bg: #0f172a;
+            --sidebar-bg: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+            --text-light: #f8fafc;
+            --text-muted: #cbd5e1;
+            --border-color: #334155;
+            --hover-bg: rgba(255, 255, 255, 0.1);
+            --content-bg: #f8fafc;
+            --card-bg: #ffffff;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+
+        * {
             margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--content-bg);
+            color: #334155;
+            line-height: 1.6;
         }
 
         .sidebar {
-            background-color: #343a40;
-            color: white;
+            background: var(--sidebar-bg);
+            color: var(--text-light);
             height: 100vh;
-            /* Full viewport height */
-            padding-top: 20px;
-            width: 200px;
+            width: 240px;
             position: fixed;
             left: 0;
+            top: 0;
             display: flex;
             flex-direction: column;
             overflow-y: auto;
-            /* Enable vertical scrolling for the entire sidebar */
+            box-shadow: var(--shadow-lg);
+            z-index: 1000;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        .sidebar .admin-info {
-            padding: 20px;
+        .sidebar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .sidebar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .sidebar::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+        }
+
+        .sidebar::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .sidebar-header {
+            padding: 1.5rem 1rem 1rem;
             text-align: center;
-            margin-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 1rem;
         }
 
-        .sidebar .admin-info i {
-            font-size: 2em;
-            margin-bottom: 5px;
+        .admin-info {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+            position: relative;
+            /* Added for status indicator positioning */
         }
 
-        .sidebar .nav {
-            flex-grow: 1;
-        }
-
-        .sidebar ul {
-            padding: 0;
-            list-style: none;
-            margin-bottom: 0;
-        }
-
-        .sidebar ul li a {
-            text-decoration: none;
+        .admin-avatar {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
             color: white;
-            display: block;
-            padding: 10px 20px;
-            border-radius: 5px;
-            transition: background-color 0.3s ease;
-            font-size: 16px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            transition: transform 0.3s ease;
+            flex-shrink: 0;
+            /* Prevents avatar from shrinking */
         }
 
-        .sidebar ul li a:hover,
-        .sidebar ul li a.active {
-            background-color: #495057;
+        .admin-avatar:hover {
+            transform: scale(1.05);
         }
 
-        .content {
-            padding: 20px;
-            margin-left: 200px;
+        /* --- MODIFIED CODE START --- */
+        .admin-name {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            /* Space between avatar and name */
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: var(--text-light);
+            text-decoration: none;
+            transition: color 0.3s ease;
+            line-height: 1.2;
         }
 
-        .content h2 {
-            margin-bottom: 20px;
-            color: #343a40;
+        /* --- MODIFIED CODE END --- */
+
+        .admin-name:hover {
+            color: var(--accent-color);
+        }
+
+        .sidebar-nav {
+            flex: 1;
+            padding: 0 0.75rem;
+        }
+
+        .nav-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .nav-section-title {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            margin-bottom: 0.75rem;
+            padding: 0 0.75rem;
+        }
+
+        .nav-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .nav-item {
+            position: relative;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.65rem;
+            color: var(--text-muted);
+            text-decoration: none;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            font-size: 0.85rem;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .nav-link::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            width: 3px;
+            background: var(--primary-color);
+            transform: scaleY(0);
+            transition: transform 0.3s ease;
+        }
+
+        .nav-link:hover {
+            color: var(--text-light);
+            background: var(--hover-bg);
+            transform: translateX(4px);
+        }
+
+        .nav-link.active {
+            color: var(--text-light);
+            background: linear-gradient(135deg, rgba(79, 70, 229, 0.2), rgba(99, 102, 241, 0.1));
+            border-left: 3px solid var(--primary-color);
+        }
+
+        .nav-link.active::before {
+            transform: scaleY(1);
+        }
+
+        .nav-icon {
+            width: 18px;
+            text-align: center;
+            font-size: 1rem;
+        }
+
+        .nav-text {
+            flex: 1;
+        }
+
+        .sidebar-footer {
+            padding: 1rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .logout-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            width: 100%;
+            padding: 0.65rem;
+            background: none;
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
+            color: var(--text-muted);
+            font-family: inherit;
+            font-weight: 500;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .logout-btn:hover {
+            background: rgba(239, 68, 68, 0.1);
+            border-color: var(--danger-color);
+            color: var(--danger-color);
+        }
+
+        .main-content {
+            margin-left: 240px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .top-navbar {
-            background-color: #ffffff;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            padding: 15px 25px;
-            margin-bottom: 20px;
-            position: sticky;
-            top: 0;
-            z-index: 999;
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid #e2e8f0;
+            padding: 1.25rem 2rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 500;
+            box-shadow: var(--shadow);
         }
 
-        .top-navbar .title h2 {
-            margin-bottom: 0;
-            font-size: 1.5rem;
-        }
-
-        .top-navbar .right-icons {
+        .navbar-title {
             display: flex;
             align-items: center;
+            gap: 1rem;
         }
 
-        .top-navbar .right-icons i,
-        .top-navbar .right-icons img {
-            margin-left: 15px;
-            font-size: 18px;
-            max-height: 30px;
+        .navbar-title h2 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #1e293b;
+            margin: 0;
         }
 
-        /* Responsive Styles */
-        @media (max-width: 767.98px) {
-            .sidebar {
-                position: fixed;
-                top: 0;
-                left: -200px;
-                width: 200px;
-                height: 100vh;
-                /* Full height in mobile */
-                z-index: 1000;
-                transition: left 0.3s ease;
-                flex-direction: column;
-                overflow-y: auto;
-                /* Maintain scrolling in mobile */
-            }
-
-            .sidebar.active {
-                left: 0;
-            }
-
-            .content {
-                margin-left: 0;
-                transition: margin-left 0.3s ease;
-            }
-
-            .content.active {
-                margin-left: 200px;
-            }
-        }
-
-        .sidebar .logout-form {
-            margin-top: auto;
-            padding: 20px;
-            width: 100%;
-        }
-
-        .sidebar .logout-form button {
-            border: none;
+        .mobile-menu-btn {
+            display: none;
             background: none;
-            color: white;
-            padding: 10px 20px;
-            font-size: 16px;
-            text-align: left;
-            width: 100%;
-            border-radius: 5px;
-            transition: background-color 0.3s ease;
+            border: none;
+            font-size: 1.5rem;
+            color: #64748b;
             cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 0.375rem;
+            transition: all 0.3s ease;
         }
 
-        .sidebar .logout-form button:hover {
-            background-color: #495057;
+        .mobile-menu-btn:hover {
+            background: #f1f5f9;
+            color: #334155;
+        }
+
+        .navbar-right {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .brand-logo {
+            max-height: 40px;
+            width: auto;
+        }
+
+        .content-wrapper {
+            flex: 1;
+            padding: 2rem;
+        }
+
+        /* Mobile Responsiveness */
+        @media (max-width: 1024px) {
+            .sidebar {
+                width: 220px;
+            }
+
+            .main-content {
+                margin-left: 220px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+                width: 240px;
+            }
+
+            .sidebar.mobile-active {
+                transform: translateX(0);
+            }
+
+            .main-content {
+                margin-left: 0;
+            }
+
+            .mobile-menu-btn {
+                display: block;
+            }
+
+            .top-navbar {
+                padding: 1rem 1.5rem;
+            }
+
+            .content-wrapper {
+                padding: 1.5rem;
+            }
+
+            .navbar-title h2 {
+                font-size: 1.25rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .content-wrapper {
+                padding: 1rem;
+            }
+
+            .top-navbar {
+                padding: 1rem;
+            }
+
+            .sidebar {
+                width: 100%;
+            }
+        }
+
+        /* Overlay for mobile */
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 999;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .sidebar-overlay.active {
+            display: block;
+            opacity: 1;
+        }
+
+        /* Improved animations */
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .content-wrapper>* {
+            animation: slideIn 0.5s ease-out;
+        }
+
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--success-color);
+            position: absolute;
+            top: 8px;
+            right: 8px;
+        }
+
+        .notification-badge {
+            background: var(--danger-color);
+            color: white;
+            font-size: 0.75rem;
+            padding: 2px 6px;
+            border-radius: 10px;
+            margin-left: auto;
+            min-width: 18px;
+            text-align: center;
         }
     </style>
 </head>
 
 <body>
-    <div class="d-flex">
-        <nav class="sidebar d-flex flex-column">
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
             @if (auth()->guard('admin')->check())
                 @php
                     $admin = auth()->guard('admin')->user();
                 @endphp
-                <div class="text-center admin-info">
-                    <a class="nav-link {{ request()->routeIs('admin_profile') ? 'active' : '' }}"
-                        href="{{ route('admin_profile') }}">
-                        <i class="fas fa-user-circle"></i>
-                        <div>{{ $admin ? $admin->name : 'No Admin Found' }}</div>
+                <div class="admin-info">
+                    <a class="admin-name" href="{{ route('admin_profile') }}">
+                        <div class="admin-avatar">
+                            <i class="fas fa-user-tie"></i>
+                        </div>
+                        <span>{{ $admin ? $admin->name : 'Administrator' }}</span>
                     </a>
+                    <div class="status-indicator"></div>
                 </div>
             @else
-                <div class="text-center admin-info">
-                    <i class="fas fa-user-circle"></i>
-                    <div>No User Session</div>
+                <div class="admin-info">
+                    <div class="admin-avatar">
+                        <i class="fas fa-user-slash"></i>
+                    </div>
+                    <div class="admin-name">No Session</div>
                 </div>
             @endif
-            <ul class="nav flex-column">
-                <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('dashboard_page') ? 'active' : '' }}"
-                        href="{{ route('dashboard_page') }}">
-                        <i class="fas fa-tachometer-alt"></i> Dashboard
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('account_page') ? 'active' : '' }}"
-                        href="{{ route('account_page') }}">
-                        <i class="fas fa-solid fa-book"></i> Kode Perkiraan
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('voucher_page') ? 'active' : '' }}"
-                        href="{{ route('voucher_page') }}">
-                        <i class="fas fa-file-invoice-dollar"></i> Transaksi
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('stock_page') ? 'active' : '' }}"
-                        href="{{ route('stock_page') }}">
-                        <i class="fas fa-file-invoice-dollar"></i> Stock
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('generalledger_page') ? 'active' : '' }}"
-                        href="{{ route('generalledger_page') }}">
-                        <i class="fas fa-file-alt"></i> Buku Besar
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('subsidiary_piutang') ? 'active' : '' }}"
-                        href="{{ route('subsidiary_piutang') }}">
-                        <i class="fas fa-file"></i> Subsidiary Piutang
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('subsidiary_utang') ? 'active' : '' }}"
-                        href="{{ route('subsidiary_utang') }}">
-                        <i class="fas fa-file"></i> Subsidiary Utang
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('trialBalance_page') ? 'active' : '' }}"
-                        href="{{ route('trialBalance_page') }}">
-                        <i class="fas fa-file"></i> Neraca Saldo
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('incomeStatement_page') ? 'active' : '' }}"
-                        href="{{ route('incomeStatement_page') }}">
-                        <i class="fas fa-file-alt"></i> Laba Rugi
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('balanceSheet_page') ? 'active' : '' }}"
-                        href="{{ route('balanceSheet_page') }}">
-                        <i class="fas fa-file-alt"></i> Neraca Keuangan
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('zakat_page') ? 'active' : '' }}"
-                        href="{{ route('zakat_page') }}">
-                        <i class="fas fa-file-alt"></i> Zakat
-                    </a>
-                </li>
-                <li class="nav-item" hidden>
-                    <a class="nav-link {{ request()->routeIs('employee_page') ? 'active' : '' }}"
-                        href="{{ route('employee_page') }}">
-                        <i class="fas fa-users"></i> Employee
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('company_page') ? 'active' : '' }}"
-                        href="{{ route('company_page') }}">
-                        <i class="fas fa-building"></i> Perusahaan
-                    </a>
-                </li>
-            </ul>
-            <div class="logout-form">
-                {{-- Ubah method menjadi POST --}}
-                <form action="{{ route('logout') }}" method="POST">
-                    @csrf
-                    <button type="submit" class="nav-link">
-                        <i class="fas fa-sign-out-alt"></i> Logout
-                    </button>
-                </form>
+        </div>
+
+        <nav class="sidebar-nav">
+            <div class="nav-section">
+                <div class="nav-section-title">Dashboard</div>
+                <ul class="nav-list">
+                    <li class="nav-item">
+                        <a class="nav-link {{ request()->routeIs('dashboard_page') ? 'active' : '' }}"
+                            href="{{ route('dashboard_page') }}">
+                            <i class="nav-icon fas fa-chart-line"></i>
+                            <span class="nav-text">Dashboard</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="nav-section">
+                <div class="nav-section-title">Akuntansi</div>
+                <ul class="nav-list">
+                    <li class="nav-item">
+                        <a class="nav-link {{ request()->routeIs('account_page') ? 'active' : '' }}"
+                            href="{{ route('account_page') }}">
+                            <i class="nav-icon fas fa-code-branch"></i>
+                            <span class="nav-text">Kode Perkiraan</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {{ request()->routeIs('voucher_page') ? 'active' : '' }}"
+                            href="{{ route('voucher_page') }}">
+                            <i class="nav-icon fas fa-receipt"></i>
+                            <span class="nav-text">Transaksi</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {{ request()->routeIs('generalledger_page') ? 'active' : '' }}"
+                            href="{{ route('generalledger_page') }}">
+                            <i class="nav-icon fas fa-book-open"></i>
+                            <span class="nav-text">Buku Besar</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="nav-section">
+                <div class="nav-section-title">Inventori</div>
+                <ul class="nav-list">
+                    <li class="nav-item">
+                        <a class="nav-link {{ request()->routeIs('stock_page') ? 'active' : '' }}"
+                            href="{{ route('stock_page') }}">
+                            <i class="nav-icon fas fa-boxes"></i>
+                            <span class="nav-text">Stock</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="nav-section">
+                <div class="nav-section-title">Subsidiary</div>
+                <ul class="nav-list">
+                    <li class="nav-item">
+                        <a class="nav-link {{ request()->routeIs('subsidiary_piutang') ? 'active' : '' }}"
+                            href="{{ route('subsidiary_piutang') }}">
+                            <i class="nav-icon fas fa-hand-holding-usd"></i>
+                            <span class="nav-text">Subsidiary Piutang</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {{ request()->routeIs('subsidiary_utang') ? 'active' : '' }}"
+                            href="{{ route('subsidiary_utang') }}">
+                            <i class="nav-icon fas fa-credit-card"></i>
+                            <span class="nav-text">Subsidiary Utang</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="nav-section">
+                <div class="nav-section-title">Laporan</div>
+                <ul class="nav-list">
+                    <li class="nav-item">
+                        <a class="nav-link {{ request()->routeIs('trialBalance_page') ? 'active' : '' }}"
+                            href="{{ route('trialBalance_page') }}">
+                            <i class="nav-icon fas fa-balance-scale"></i>
+                            <span class="nav-text">Neraca Saldo</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {{ request()->routeIs('incomeStatement_page') ? 'active' : '' }}"
+                            href="{{ route('incomeStatement_page') }}">
+                            <i class="nav-icon fas fa-chart-bar"></i>
+                            <span class="nav-text">Laba Rugi</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {{ request()->routeIs('balanceSheet_page') ? 'active' : '' }}"
+                            href="{{ route('balanceSheet_page') }}">
+                            <i class="nav-icon fas fa-file-contract"></i>
+                            <span class="nav-text">Neraca Keuangan</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {{ request()->routeIs('zakat_page') ? 'active' : '' }}"
+                            href="{{ route('zakat_page') }}">
+                            <i class="nav-icon fas fa-mosque"></i>
+                            <span class="nav-text">Zakat</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="nav-section">
+                <div class="nav-section-title">Pengaturan</div>
+                <ul class="nav-list">
+                    <li class="nav-item" style="display: none;">
+                        <a class="nav-link {{ request()->routeIs('employee_page') ? 'active' : '' }}"
+                            href="{{ route('employee_page') }}">
+                            <i class="nav-icon fas fa-users"></i>
+                            <span class="nav-text">Employee</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {{ request()->routeIs('company_page') ? 'active' : '' }}"
+                            href="{{ route('company_page') }}">
+                            <i class="nav-icon fas fa-building"></i>
+                            <span class="nav-text">Perusahaan</span>
+                        </a>
+                    </li>
+                </ul>
             </div>
         </nav>
 
-        <main class="flex-grow-1 content">
-            <div class="top-navbar">
-                <div class="d-flex align-items-center">
-                    <div class="title mr-2">
-                        <h2>@yield('title')</h2>
-                    </div>
-                </div>
-                <div class="right-icons">
-                    <img src="{{ asset('logo/LogoInniDigi.png') }}" alt="DeveloperLogo"
-                        style="max-width: 100px; max-height: 100px;">
-                </div>
-            </div>
-            @yield('content')
-            @stack('scripts')
-        </main>
-    </div>
+        <div class="sidebar-footer">
+            <form action="{{ route('logout') }}" method="POST">
+                @csrf
+                <button type="submit" class="logout-btn">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Logout</span>
+                </button>
+            </form>
+        </div>
+    </aside>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <main class="main-content">
+        <header class="top-navbar">
+            <div class="navbar-title">
+                <button class="mobile-menu-btn" id="mobileMenuBtn">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <h2>@yield('title')</h2>
+            </div>
+            <div class="navbar-right">
+                <img src="{{ asset('logo/LogoInniDigi.png') }}" alt="InniDigi Logo" class="brand-logo">
+            </div>
+        </header>
+
+        <div class="content-wrapper">
+            @yield('content')
+        </div>
+    </main>
+
+    @stack('scripts')
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            const sidebar = document.querySelector('.sidebar');
-            const toggleButton = document.querySelector('.navbar-toggler');
-            const content = document.querySelector('.content');
+            const sidebar = document.getElementById('sidebar');
+            const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+            const sidebarOverlay = document.getElementById('sidebarOverlay');
 
-            if (toggleButton) {
-                toggleButton.addEventListener('click', function() {
-                    sidebar.classList.toggle('active');
-                    content.classList.toggle('active');
-                });
+            // Mobile menu toggle
+            function toggleMobileMenu() {
+                sidebar.classList.toggle('mobile-active');
+                sidebarOverlay.classList.toggle('active');
+                document.body.style.overflow = sidebar.classList.contains('mobile-active') ? 'hidden' : '';
             }
 
-            // Set active class for sidebar links based on current route
-            const navLinks = document.querySelectorAll('.sidebar .nav-link');
+            // Event listeners
+            if (mobileMenuBtn) {
+                mobileMenuBtn.addEventListener('click', toggleMobileMenu);
+            }
+
+            if (sidebarOverlay) {
+                sidebarOverlay.addEventListener('click', toggleMobileMenu);
+            }
+
+            // Close mobile menu on window resize
+            window.addEventListener('resize', function() {
+                if (window.innerWidth > 768) {
+                    sidebar.classList.remove('mobile-active');
+                    sidebarOverlay.classList.remove('active');
+                    document.body.style.overflow = '';
+                }
+            });
+
+            // Enhanced active link detection
+            const currentPath = window.location.pathname;
+            const navLinks = document.querySelectorAll('.nav-link');
+
             navLinks.forEach(link => {
-                if (link.getAttribute('href') === window.location.pathname || link.getAttribute('href') ===
-                    window.location.route) {
+                const linkPath = link.getAttribute('href');
+                if (linkPath && (linkPath === currentPath || currentPath.startsWith(linkPath + '/'))) {
                     link.classList.add('active');
                 }
+            });
+
+            // Smooth scroll behavior
+            document.documentElement.style.scrollBehavior = 'smooth';
+
+            // Add loading states for navigation
+            navLinks.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    if (this.getAttribute('href') && this.getAttribute('href') !== '#') {
+                        this.style.opacity = '0.7';
+                        this.style.pointerEvents = 'none';
+
+                        setTimeout(() => {
+                            this.style.opacity = '';
+                            this.style.pointerEvents = '';
+                        }, 1000);
+                    }
+                });
             });
         });
     </script>
