@@ -451,6 +451,19 @@
                     </a>
                     <div class="status-indicator"></div>
                 </div>
+            @elseif (auth()->guard('master')->check())
+                @php
+                    $master = auth()->guard('master')->user();
+                @endphp
+                <div class="admin-info">
+                    <a class="admin-name" href="{{ route('master_profile') }}">
+                        <div class="admin-avatar">
+                            <i class="fas fa-user-cog"></i>
+                        </div>
+                        <span>{{ $master ? $master->name : 'Master User' }}</span>
+                    </a>
+                    <div class="status-indicator"></div>
+                </div>
             @else
                 <div class="admin-info">
                     <div class="admin-avatar">

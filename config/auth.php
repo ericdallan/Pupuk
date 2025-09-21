@@ -45,6 +45,10 @@ return [
             'driver' => 'session',
             'provider' => 'admins',
         ],
+        'master' => [
+            'driver' => 'session',
+            'provider' => 'masters',
+        ],
     ],
 
     /*
@@ -74,6 +78,11 @@ return [
             'driver' => 'eloquent',
             'model' => App\Models\Admin::class,
         ],
+
+        'masters' => [
+            'driver' => 'eloquent',
+            'model' => App\Models\Master::class,
+        ],
     ],
 
     /*
@@ -102,9 +111,13 @@ return [
             'expire' => 60,
             'throttle' => 60,
         ],
-        'admins'=>[
-            'driver'=>'eloquent',
-            'model'=>App\Models\Admin::class,
+        'admins' => [
+            'driver' => 'eloquent',
+            'model' => App\Models\Admin::class,
+        ],
+        'masters' => [
+            'driver' => 'eloquent',
+            'model' => App\Models\Master::class,
         ],
     ],
 

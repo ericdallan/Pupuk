@@ -4,22 +4,17 @@ namespace App\Http\Middleware;
 
 use Illuminate\Auth\Middleware\Authenticate as Middleware;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Route;
 
 class Authenticate extends Middleware
 {
     /**
      * Get the path the user should be redirected to when they are not authenticated.
      */
-    protected function redirectTo(Request $request): ?string
+    protected function redirectTo($request)
     {
-        Log::info('Authenticate Middleware triggered for: ' . $request->fullUrl());
         if (!$request->expectsJson()) {
-            Log::info('Redirecting to: ' . route('login_page'));
-            return route('login_page');
+            // Always redirect to the same login page since both admin and master use it
+            return route('login');
         }
-        Log::info('Not redirecting (expects JSON)');
-        return null;
     }
 }

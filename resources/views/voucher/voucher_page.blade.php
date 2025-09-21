@@ -49,6 +49,11 @@
         margin-top: 20px;
         justify-content: center;
     }
+
+    .create-voucher-button[disabled] {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
 </style>
 
 @if (session('success'))
@@ -147,7 +152,7 @@
                 <button type="submit" class="btn btn-primary me-2 filter-button">Filter</button>
                 <button type="submit" class="btn btn-info me-2 search-button">Cari</button>
                 <button type="button" class="btn btn-primary create-voucher-button" data-bs-toggle="modal"
-                    data-bs-target="#voucherModal">
+                    data-bs-target="#voucherModal" @if (Auth::guard('master')->check()) disabled @endif>
                     Buat Voucher
                 </button>
             </div>

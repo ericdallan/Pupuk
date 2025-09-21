@@ -18,13 +18,20 @@ class AdminSeeder extends Seeder
     public function run()
     {
         $now = Carbon::now();
-         
+
         DB::table('admins')->insert([
             'name' => 'Super Admin',
             'email' => 'super@admin.net',
             'password' => Hash::make('verysecret'),
             'created_at' => $now,
             'updated_at' => $now,
-        ]);  
+        ]);
+        DB::table('masters')->insert([
+            'name' => 'Master Admin',
+            'email' => 'Master@admin.net',
+            'password' => Hash::make('VerySecretAdmin'),
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
     }
 }

@@ -261,7 +261,7 @@
                                 min="{{ request('start_date', now()->startOfYear()->toDateString()) }}"
                                 max="{{ now()->toDateString() }}">
                         </div>
-                        <div class="flex-shrink-0">
+                        <div class="flex-shrink-0" hidden>
                             <input type="hidden" name="table_filter" id="table_filter"
                                 value="{{ request('table_filter', 'all') }}">
                             <div class="dropdown me-2">
@@ -284,11 +284,16 @@
                             <a href="{{ route('stock.export') . '?start_date=' . request('start_date', now()->startOfYear()->toDateString()) . '&end_date=' . request('end_date', now()->toDateString()) . '&table_filter=' . request('table_filter', 'all') }}"
                                 class="btn btn-success">Export to Excel</a>
                             <a href="{{ route('stock.transfer.print') . '?table_filter=' . request('table_filter', 'all') }}"
-                                class="btn btn-secondary me-2">Print Form</a>
-                            <button type="button" class="btn btn-light" data-bs-toggle="modal"
-                                data-bs-target="#RecipeList">Daftar Formula</button>
+                                class="btn btn-secondary me-2" hidden>Print Form</a>
+                            <button type="button" class="btn btn-light" data-bs-toggle="modal" data-bs-target="#RecipeList"
+                                hidden>Daftar Formula</button>
                             <button type="button" class="btn btn-info" data-bs-toggle="modal"
-                                data-bs-target="#createRecipeModal">Buat Formula</button>
+                                data-bs-target="#createRecipeModal" hidden>Buat Formula</button>
+                            <!-- New Button: Perhitungan Beban -->
+                            <button type="button" class="btn btn-warning" data-bs-toggle="modal"
+                                data-bs-target="#loadCalculationModal">
+                                Perhitungan Beban
+                            </button>
                         </div>
                     </form>
                 </div>
@@ -308,7 +313,7 @@
         <div class="table-container">
             <!-- Stocks Table -->
             <div class="table-section mb-4" data-table="stocks">
-                <h3>Stok Bahan Baku</h3>
+                <h3>Stok Barang Dagangan</h3>
                 <div class="table-responsive">
                     <table class="table table-striped table-bordered table-hover text-center">
                         <thead class="table-dark">
@@ -390,7 +395,7 @@
             </div>
 
             <!-- Transfer Stocks Table -->
-            <div class="table-section mb-4" data-table="transfer_stocks">
+            <div class="table-section mb-4" data-table="transfer_stocks" hidden>
                 <h3>Stok Pemindahan</h3>
                 <div class="table-responsive">
                     <table class="table table-striped table-bordered table-hover text-center">
@@ -470,7 +475,7 @@
             </div>
 
             <!-- Used Stocks Table -->
-            <div class="table-section mb-4" data-table="used_stocks">
+            <div class="table-section mb-4" data-table="used_stocks" hidden>
                 <h3>Stok Barang Jadi</h3>
                 <div class="table-responsive">
                     <table class="table table-striped table-bordered table-hover text-center">
@@ -551,7 +556,8 @@
         </div>
 
         <!-- Recipe List Modal -->
-        <div class="modal fade" id="RecipeList" tabindex="-1" aria-labelledby="RecipeListLabel" aria-hidden="true">
+        <div class="modal fade" id="RecipeList" tabindex="-1" aria-labelledby="RecipeListLabel" aria-hidden="true"
+            hidden>
             <div class="modal-dialog modal-xl">
                 <div class="modal-content">
                     <div class="modal-header">
@@ -682,7 +688,7 @@
         </div>
         <!-- Create Recipe Modal -->
         <div class="modal fade" id="createRecipeModal" tabindex="-1" aria-labelledby="createRecipeModalLabel"
-            aria-hidden="true">
+            aria-hidden="true" hidden>
             <div class="modal-dialog modal-xl">
                 <div class="modal-content">
                     <form id="recipeForm" action="{{ route('recipe.store') }}" method="POST">
@@ -772,7 +778,7 @@
 
         <!-- Edit Recipe Modal -->
         <div class="modal fade" id="editRecipeModal" tabindex="-1" aria-labelledby="editRecipeModalLabel"
-            aria-hidden="true">
+            aria-hidden="true" hidden>
             <div class="modal-dialog modal-xl">
                 <div class="modal-content">
                     <form id="editRecipeForm" method="POST">
@@ -825,7 +831,7 @@
 
         <!-- Delete Recipe Confirmation Modal -->
         <div class="modal fade" id="deleteRecipeModal" tabindex="-1" aria-labelledby="deleteRecipeModalLabel"
-            aria-hidden="true">
+            aria-hidden="true" hidden>
             <div class="modal-dialog">
                 <div class="modal-content">
                     <div class="modal-header">
@@ -992,6 +998,62 @@
                 @endif
             @endforeach
         @endforeach
+
+        <!-- Modal Perhitungan Beban -->
+        <div class="modal fade" id="loadCalculationModal" tabindex="-1" aria-labelledby="loadCalculationModalLabel"
+            aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="loadCalculationModalLabel">Perhitungan Beban</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <form id="loadCalculationForm" action="{{ route('applied_cost.store') }}" method="POST">
+                        @csrf
+                        <div class="modal-body">
+                            <div id="errorMessage" class="alert alert-danger" style="display: none;"></div>
+                            <div id="bebanInputs">
+                                <!-- Default Initial Row -->
+                                <div class="input-group mb-2 beban-row">
+                                    <span class="input-group-text">Beban 1</span>
+                                    <input type="text"
+                                        class="form-control @error('beban_description.*') is-invalid @enderror"
+                                        name="beban_description[]" placeholder="Deskripsi Beban (e.g., Beban Operasional)"
+                                        required>
+                                    <input type="number"
+                                        class="form-control @error('beban_nominal.*') is-invalid @enderror"
+                                        name="beban_nominal[]" placeholder="Nominal (Rp)" step="0.01" min="0"
+                                        required>
+                                    <button type="button" class="btn btn-outline-danger remove-row"
+                                        style="display: none;">Hapus</button>
+                                    @error('beban_description.*')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                    @error('beban_nominal.*')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-outline-primary mb-3" id="addBebanRow">Tambah
+                                Beban</button>
+                            <div class="row">
+                                <div class="col-md-8"></div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-bold">Total Akumulasi:</label>
+                                    <input type="text" class="form-control bg-light" id="totalAkumulasi" readonly
+                                        value="Rp 0">
+                                    <input type="hidden" name="total" id="totalHidden" value="0">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                            <button type="submit" class="btn btn-primary">Hitung & Simpan</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- JavaScript -->
@@ -1009,6 +1071,13 @@
             const clearRecipeSearch = document.getElementById('clearRecipeSearch');
             const recipeSearchCount = document.getElementById('recipeSearchCount');
             const recipeTable = document.getElementById('recipeTable');
+            const addBebanRow = document.getElementById('addBebanRow');
+            const bebanInputs = document.getElementById('bebanInputs');
+            const totalAkumulasi = document.getElementById('totalAkumulasi');
+            const totalHidden = document.getElementById('totalHidden');
+            const loadCalculationForm = document.getElementById('loadCalculationForm');
+            const errorMessage = document.getElementById('errorMessage');
+
             let ingredientCount = document.querySelectorAll('.ingredient-row').length - 1;
             let editIngredientCount = 0;
 
@@ -1865,6 +1934,148 @@
                 button.style.display = document.querySelectorAll('.ingredient-row').length > 1 ? 'block' :
                     'none';
             });
+            // Function to calculate and update total
+            function updateTotal() {
+                let total = 0;
+                const nominalInputs = bebanInputs.querySelectorAll('input[name="beban_nominal[]"]');
+                nominalInputs.forEach(input => {
+                    const value = parseFloat(input.value) || 0;
+                    total += value;
+                });
+                totalAkumulasi.value = new Intl.NumberFormat('id-ID', {
+                    style: 'currency',
+                    currency: 'IDR'
+                }).format(total);
+                totalHidden.value = total.toFixed(2); // Store total for submission
+                return total;
+            }
+
+            // Add new row
+            addBebanRow.addEventListener('click', function() {
+                const rowCount = bebanInputs.querySelectorAll('.beban-row').length + 1;
+                const newRow = document.createElement('div');
+                newRow.className = 'input-group mb-2 beban-row';
+                newRow.innerHTML = `
+                    <span class="input-group-text">Beban ${rowCount}</span>
+                    <input type="text" class="form-control" name="beban_description[]" placeholder="Deskripsi Beban (e.g., Beban Operasional)" required>
+                    <input type="number" class="form-control" name="beban_nominal[]" placeholder="Nominal (Rp)" step="0.01" min="0" required>
+                    <button type="button" class="btn btn-outline-danger remove-row">Hapus</button>
+                    <div class="invalid-feedback"></div>
+                `;
+                bebanInputs.appendChild(newRow);
+                renumberRows();
+                updateTotal();
+            });
+
+            // Remove row event delegation
+            bebanInputs.addEventListener('click', function(e) {
+                if (e.target.classList.contains('remove-row')) {
+                    const row = e.target.closest('.beban-row');
+                    if (bebanInputs.querySelectorAll('.beban-row').length > 1) {
+                        row.remove();
+                        renumberRows();
+                        updateTotal();
+                    }
+                }
+            });
+
+            // Input change event for real-time update
+            bebanInputs.addEventListener('input', function(e) {
+                if (e.target.name === 'beban_nominal[]') {
+                    updateTotal();
+                }
+                // Clear invalid feedback on input
+                if (e.target.checkValidity()) {
+                    e.target.classList.remove('is-invalid');
+                    const feedback = e.target.nextElementSibling?.classList.contains('invalid-feedback') ?
+                        e.target.nextElementSibling :
+                        e.target.nextElementSibling?.nextElementSibling;
+                    if (feedback) feedback.textContent = '';
+                }
+            });
+
+            // Renumber rows after removal
+            function renumberRows() {
+                const rows = bebanInputs.querySelectorAll('.beban-row');
+                rows.forEach((row, index) => {
+                    row.querySelector('.input-group-text').textContent = `Beban ${index + 1}`;
+                    row.querySelector('.remove-row').style.display = rows.length > 1 ? 'block' : 'none';
+                });
+            }
+
+            // Client-side form validation
+            loadCalculationForm.addEventListener('submit', function(e) {
+                const descriptions = Array.from(bebanInputs.querySelectorAll(
+                        'input[name="beban_description[]"]'))
+                    .map(input => input.value.trim());
+                const nominals = Array.from(bebanInputs.querySelectorAll('input[name="beban_nominal[]"]'))
+                    .map(input => parseFloat(input.value) || 0);
+
+                let isValid = true;
+                if (descriptions.length === 0 || nominals.length === 0 || descriptions.length !== nominals
+                    .length) {
+                    errorMessage.textContent =
+                        'Harap masukkan setidaknya satu beban dengan deskripsi dan nominal.';
+                    errorMessage.style.display = 'block';
+                    e.preventDefault();
+                    return;
+                }
+
+                descriptions.forEach((desc, index) => {
+                    const descInput = bebanInputs.querySelectorAll(
+                        'input[name="beban_description[]"]')[index];
+                    if (!desc) {
+                        descInput.classList.add('is-invalid');
+                        const feedback = descInput.nextElementSibling?.nextElementSibling
+                            ?.nextElementSibling || descInput.nextElementSibling;
+                        feedback.textContent = 'Deskripsi tidak boleh kosong.';
+                        isValid = false;
+                    }
+                });
+
+                nominals.forEach((nom, index) => {
+                    const nomInput = bebanInputs.querySelectorAll('input[name="beban_nominal[]"]')[
+                        index];
+                    if (nom <= 0) {
+                        nomInput.classList.add('is-invalid');
+                        const feedback = nomInput.nextElementSibling?.nextElementSibling || nomInput
+                            .nextElementSibling;
+                        feedback.textContent = 'Nominal harus lebih besar dari 0.';
+                        isValid = false;
+                    }
+                });
+
+                if (!isValid) {
+                    e.preventDefault();
+                    errorMessage.textContent = 'Harap perbaiki kesalahan pada formulir.';
+                    errorMessage.style.display = 'block';
+                }
+            });
+
+            // Clear error message and validation styles when modal is closed
+            document.getElementById('loadCalculationModal').addEventListener('hidden.bs.modal', function() {
+                errorMessage.style.display = 'none';
+                loadCalculationForm.querySelectorAll('.is-invalid').forEach(el => el.classList.remove(
+                    'is-invalid'));
+                loadCalculationForm.querySelectorAll('.invalid-feedback').forEach(el => el.textContent =
+                    '');
+                // Reset form to one row
+                bebanInputs.innerHTML = `
+                    <div class="input-group mb-2 beban-row">
+                        <span class="input-group-text">Beban 1</span>
+                        <input type="text" class="form-control" name="beban_description[]" placeholder="Deskripsi Beban (e.g., Beban Operasional)" required>
+                        <input type="number" class="form-control" name="beban_nominal[]" placeholder="Nominal (Rp)" step="0.01" min="0" required>
+                        <button type="button" class="btn btn-outline-danger remove-row" style="display: none;">Hapus</button>
+                        <div class="invalid-feedback"></div>
+                    </div>
+                `;
+                updateTotal();
+            });
+
+            // Initialize
+            renumberRows();
+            updateTotal();
         });
+        
     </script>
 @endsection
