@@ -38,7 +38,6 @@ class VoucherController extends Controller
             return view('voucher.voucher_page', $data);
         } catch (\Exception $e) {
             Log::error('Voucher Page Error', [
-                'user_id' => auth()->id(),
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
@@ -325,7 +324,6 @@ class VoucherController extends Controller
 
         if ($validator->fails()) {
             Log::warning('Voucher creation validation failed', [
-                'user_id' => auth()->id(),
                 'input' => $request->except(['password']),
                 'errors' => $validator->errors()->toArray(),
             ]);
@@ -340,7 +338,6 @@ class VoucherController extends Controller
             return redirect()->route('voucher_page')->with('success', 'Voucher berhasil dibuat.');
         } catch (\Exception $e) {
             Log::error('Error creating voucher', [
-                'user_id' => auth()->id(),
                 'input' => $request->except(['password']),
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
@@ -367,7 +364,6 @@ class VoucherController extends Controller
         if ($validator->fails()) {
             Log::warning('Voucher update validation failed', [
                 'voucher_id' => $id,
-                'user_id' => auth()->id(),
                 'input' => $request->except(['password']),
                 'errors' => $validator->errors()->toArray(),
             ]);
@@ -380,7 +376,6 @@ class VoucherController extends Controller
         } catch (\Exception $e) {
             Log::error('Voucher update failed', [
                 'voucher_id' => $id,
-                'user_id' => auth()->id(),
                 'input' => $request->except(['password']),
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
@@ -403,7 +398,6 @@ class VoucherController extends Controller
         } catch (\Exception $e) {
             Log::error('Error fetching invoice details', [
                 'invoice' => $request->invoice,
-                'user_id' => auth()->id(),
                 'error' => $e->getMessage(),
             ]);
             return response()->json(['error' => $e->getMessage()], 404);
@@ -425,7 +419,6 @@ class VoucherController extends Controller
         } catch (\Exception $e) {
             Log::error('Voucher Edit Error', [
                 'voucher_id' => $id,
-                'user_id' => auth()->id(),
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
@@ -447,7 +440,6 @@ class VoucherController extends Controller
         } catch (\Exception $e) {
             Log::error('Error deleting voucher', [
                 'voucher_id' => $id,
-                'user_id' => auth()->id(),
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
@@ -469,7 +461,6 @@ class VoucherController extends Controller
         } catch (\Exception $e) {
             Log::error('Voucher Detail Error', [
                 'voucher_id' => $id,
-                'user_id' => auth()->id(),
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
@@ -493,14 +484,12 @@ class VoucherController extends Controller
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             Log::error('Company data not found for PDF', [
                 'voucher_id' => $id,
-                'user_id' => auth()->id(),
                 'error' => $e->getMessage(),
             ]);
             return redirect()->back()->withErrors(['error' => 'Data perusahaan tidak ditemukan untuk pembuatan PDF']);
         } catch (\Exception $e) {
             Log::error('Error generating PDF', [
                 'voucher_id' => $id,
-                'user_id' => auth()->id(),
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);

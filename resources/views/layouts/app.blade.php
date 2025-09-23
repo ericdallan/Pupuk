@@ -8,8 +8,8 @@
     <title>@yield('title', 'Admin Dashboard')</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dayjs@1/locale/id.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.js"></script>
@@ -26,15 +26,15 @@
             --warning-color: #f59e0b;
             --danger-color: #ef4444;
             --dark-bg: #0f172a;
-            --sidebar-bg: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+            --sidebar-bg: #1e293b;
             --text-light: #f8fafc;
             --text-muted: #cbd5e1;
             --border-color: #334155;
             --hover-bg: rgba(255, 255, 255, 0.1);
             --content-bg: #f8fafc;
             --card-bg: #ffffff;
-            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            --shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            --shadow-lg: 0 4px 8px rgba(0, 0, 0, 0.08);
         }
 
         * {
@@ -47,27 +47,27 @@
             font-family: 'Inter', sans-serif;
             background: var(--content-bg);
             color: #334155;
-            line-height: 1.6;
+            line-height: 1.4;
         }
 
         .sidebar {
             background: var(--sidebar-bg);
             color: var(--text-light);
             height: 100vh;
-            width: 240px;
+            width: 200px;
             position: fixed;
             left: 0;
             top: 0;
             display: flex;
             flex-direction: column;
             overflow-y: auto;
-            box-shadow: var(--shadow-lg);
+            box-shadow: var(--shadow);
             z-index: 1000;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .sidebar::-webkit-scrollbar {
-            width: 6px;
+            width: 4px;
         }
 
         .sidebar::-webkit-scrollbar-track {
@@ -76,7 +76,7 @@
 
         .sidebar::-webkit-scrollbar-thumb {
             background: rgba(255, 255, 255, 0.2);
-            border-radius: 3px;
+            border-radius: 2px;
         }
 
         .sidebar::-webkit-scrollbar-thumb:hover {
@@ -84,56 +84,50 @@
         }
 
         .sidebar-header {
-            padding: 1.5rem 1rem 1rem;
+            padding: 1rem 0.75rem;
             text-align: center;
             border-bottom: 1px solid var(--border-color);
-            margin-bottom: 1rem;
+            margin-bottom: 0.5rem;
         }
 
         .admin-info {
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 0.5rem;
+            gap: 0.4rem;
             position: relative;
-            /* Added for status indicator positioning */
         }
 
         .admin-avatar {
-            width: 50px;
-            height: 50px;
-            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            width: 40px;
+            height: 40px;
+            background: var(--primary-color);
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.2rem;
+            font-size: 1rem;
             color: white;
-            border: 2px solid rgba(255, 255, 255, 0.2);
-            transition: transform 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: transform 0.2s ease;
             flex-shrink: 0;
-            /* Prevents avatar from shrinking */
         }
 
         .admin-avatar:hover {
             transform: scale(1.05);
         }
 
-        /* --- MODIFIED CODE START --- */
         .admin-name {
             display: flex;
             align-items: center;
-            gap: 0.75rem;
-            /* Space between avatar and name */
-            font-weight: 600;
-            font-size: 0.9rem;
+            gap: 0.5rem;
+            font-weight: 500;
+            font-size: 0.85rem;
             color: var(--text-light);
             text-decoration: none;
-            transition: color 0.3s ease;
+            transition: color 0.2s ease;
             line-height: 1.2;
         }
-
-        /* --- MODIFIED CODE END --- */
 
         .admin-name:hover {
             color: var(--accent-color);
@@ -141,28 +135,28 @@
 
         .sidebar-nav {
             flex: 1;
-            padding: 0 0.75rem;
+            padding: 0 0.5rem;
         }
 
         .nav-section {
-            margin-bottom: 1.5rem;
+            margin-bottom: 1rem;
         }
 
         .nav-section-title {
-            font-size: 0.75rem;
+            font-size: 0.7rem;
             font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.05em;
             color: var(--text-muted);
-            margin-bottom: 0.75rem;
-            padding: 0 0.75rem;
+            margin-bottom: 0.5rem;
+            padding: 0 0.5rem;
         }
 
         .nav-list {
             list-style: none;
             display: flex;
             flex-direction: column;
-            gap: 0.25rem;
+            gap: 0.15rem;
         }
 
         .nav-item {
@@ -172,14 +166,14 @@
         .nav-link {
             display: flex;
             align-items: center;
-            gap: 0.75rem;
-            padding: 0.65rem;
+            gap: 0.5rem;
+            padding: 0.5rem;
             color: var(--text-muted);
             text-decoration: none;
-            border-radius: 0.5rem;
-            font-weight: 500;
-            font-size: 0.85rem;
-            transition: all 0.3s ease;
+            border-radius: 0.375rem;
+            font-weight: 400;
+            font-size: 0.8rem;
+            transition: all 0.2s ease;
             position: relative;
             overflow: hidden;
         }
@@ -190,22 +184,22 @@
             left: 0;
             top: 0;
             height: 100%;
-            width: 3px;
+            width: 2px;
             background: var(--primary-color);
             transform: scaleY(0);
-            transition: transform 0.3s ease;
+            transition: transform 0.2s ease;
         }
 
         .nav-link:hover {
             color: var(--text-light);
             background: var(--hover-bg);
-            transform: translateX(4px);
+            transform: translateX(3px);
         }
 
         .nav-link.active {
             color: var(--text-light);
-            background: linear-gradient(135deg, rgba(79, 70, 229, 0.2), rgba(99, 102, 241, 0.1));
-            border-left: 3px solid var(--primary-color);
+            background: rgba(79, 70, 229, 0.15);
+            border-left: 2px solid var(--primary-color);
         }
 
         .nav-link.active::before {
@@ -213,9 +207,9 @@
         }
 
         .nav-icon {
-            width: 18px;
+            width: 16px;
             text-align: center;
-            font-size: 1rem;
+            font-size: 0.9rem;
         }
 
         .nav-text {
@@ -223,25 +217,25 @@
         }
 
         .sidebar-footer {
-            padding: 1rem;
+            padding: 0.75rem;
             border-top: 1px solid var(--border-color);
         }
 
         .logout-btn {
             display: flex;
             align-items: center;
-            gap: 0.75rem;
+            gap: 0.5rem;
             width: 100%;
-            padding: 0.65rem;
+            padding: 0.5rem;
             background: none;
             border: 1px solid var(--border-color);
-            border-radius: 0.5rem;
+            border-radius: 0.375rem;
             color: var(--text-muted);
             font-family: inherit;
-            font-weight: 500;
-            font-size: 0.85rem;
+            font-weight: 400;
+            font-size: 0.8rem;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all 0.2s ease;
         }
 
         .logout-btn:hover {
@@ -251,18 +245,17 @@
         }
 
         .main-content {
-            margin-left: 240px;
+            margin-left: 200px;
             min-height: 100vh;
             display: flex;
             flex-direction: column;
-            transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: margin-left 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .top-navbar {
             background: var(--card-bg);
-            backdrop-filter: blur(20px);
             border-bottom: 1px solid #e2e8f0;
-            padding: 1.25rem 2rem;
+            padding: 1rem 1.5rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -275,12 +268,12 @@
         .navbar-title {
             display: flex;
             align-items: center;
-            gap: 1rem;
+            gap: 0.75rem;
         }
 
         .navbar-title h2 {
-            font-size: 1.5rem;
-            font-weight: 700;
+            font-size: 1.25rem;
+            font-weight: 600;
             color: #1e293b;
             margin: 0;
         }
@@ -289,12 +282,12 @@
             display: none;
             background: none;
             border: none;
-            font-size: 1.5rem;
+            font-size: 1.25rem;
             color: #64748b;
             cursor: pointer;
-            padding: 0.5rem;
-            border-radius: 0.375rem;
-            transition: all 0.3s ease;
+            padding: 0.4rem;
+            border-radius: 0.25rem;
+            transition: all 0.2s ease;
         }
 
         .mobile-menu-btn:hover {
@@ -305,34 +298,34 @@
         .navbar-right {
             display: flex;
             align-items: center;
-            gap: 1.5rem;
+            gap: 1rem;
         }
 
         .brand-logo {
-            max-height: 40px;
+            max-height: 32px;
             width: auto;
         }
 
         .content-wrapper {
             flex: 1;
-            padding: 2rem;
+            padding: 1.5rem;
         }
 
         /* Mobile Responsiveness */
         @media (max-width: 1024px) {
             .sidebar {
-                width: 220px;
+                width: 180px;
             }
 
             .main-content {
-                margin-left: 220px;
+                margin-left: 180px;
             }
         }
 
         @media (max-width: 768px) {
             .sidebar {
                 transform: translateX(-100%);
-                width: 240px;
+                width: 200px;
             }
 
             .sidebar.mobile-active {
@@ -348,25 +341,33 @@
             }
 
             .top-navbar {
-                padding: 1rem 1.5rem;
+                padding: 0.75rem 1rem;
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.5rem;
             }
 
             .content-wrapper {
-                padding: 1.5rem;
+                padding: 1rem;
             }
 
             .navbar-title h2 {
-                font-size: 1.25rem;
+                font-size: 1.1rem;
+            }
+
+            .navbar-right {
+                width: 100%;
+                justify-content: flex-end;
             }
         }
 
         @media (max-width: 480px) {
             .content-wrapper {
-                padding: 1rem;
+                padding: 0.75rem;
             }
 
             .top-navbar {
-                padding: 1rem;
+                padding: 0.5rem;
             }
 
             .sidebar {
@@ -382,10 +383,10 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.5);
+            background: rgba(0, 0, 0, 0.4);
             z-index: 999;
             opacity: 0;
-            transition: opacity 0.3s ease;
+            transition: opacity 0.2s ease;
         }
 
         .sidebar-overlay.active {
@@ -397,7 +398,7 @@
         @keyframes slideIn {
             from {
                 opacity: 0;
-                transform: translateY(-10px);
+                transform: translateY(-8px);
             }
 
             to {
@@ -407,27 +408,27 @@
         }
 
         .content-wrapper>* {
-            animation: slideIn 0.5s ease-out;
+            animation: slideIn 0.4s ease-out;
         }
 
         .status-indicator {
-            width: 8px;
-            height: 8px;
+            width: 6px;
+            height: 6px;
             border-radius: 50%;
             background: var(--success-color);
             position: absolute;
-            top: 8px;
-            right: 8px;
+            top: 6px;
+            right: 6px;
         }
 
         .notification-badge {
             background: var(--danger-color);
             color: white;
-            font-size: 0.75rem;
-            padding: 2px 6px;
-            border-radius: 10px;
+            font-size: 0.7rem;
+            padding: 1px 5px;
+            border-radius: 8px;
             margin-left: auto;
-            min-width: 18px;
+            min-width: 16px;
             text-align: center;
         }
     </style>
@@ -469,7 +470,7 @@
                     <div class="admin-avatar">
                         <i class="fas fa-user-slash"></i>
                     </div>
-                    <div class="admin-name">No Session</div>
+                    <span class="admin-name">No Session</span>
                 </div>
             @endif
         </div>
@@ -535,14 +536,14 @@
                         <a class="nav-link {{ request()->routeIs('subsidiary_piutang') ? 'active' : '' }}"
                             href="{{ route('subsidiary_piutang') }}">
                             <i class="nav-icon fas fa-hand-holding-usd"></i>
-                            <span class="nav-text">Subsidiary Piutang</span>
+                            <span class="nav-text">Piutang</span>
                         </a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link {{ request()->routeIs('subsidiary_utang') ? 'active' : '' }}"
                             href="{{ route('subsidiary_utang') }}">
                             <i class="nav-icon fas fa-credit-card"></i>
-                            <span class="nav-text">Subsidiary Utang</span>
+                            <span class="nav-text">Utang</span>
                         </a>
                     </li>
                 </ul>
@@ -686,11 +687,10 @@
                     if (this.getAttribute('href') && this.getAttribute('href') !== '#') {
                         this.style.opacity = '0.7';
                         this.style.pointerEvents = 'none';
-
                         setTimeout(() => {
                             this.style.opacity = '';
                             this.style.pointerEvents = '';
-                        }, 1000);
+                        }, 800);
                     }
                 });
             });

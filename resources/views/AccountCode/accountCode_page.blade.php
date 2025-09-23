@@ -181,7 +181,7 @@
         <div class="d-flex justify-content-between align-items-center mb-3">
             <div>
                 <button type="button" class="btn create-button btn-md" data-bs-toggle="modal"
-                    data-bs-target="#accountModal" data-bs-toggle="tooltip" data-bs-placement="top"
+                    data-bs-target="#accountModal" data-bs-toggle="tooltip" data-bs-placement="bottom"
                     title="Tambah akun perkiraan baru">
                     <i class="fas fa-plus me-2"></i>Buat Akun Baru
                 </button>
@@ -189,11 +189,11 @@
             </div>
             <div>
                 <button id="print-pdf" class="btn pdf-button btn-md me-2" data-bs-toggle="tooltip"
-                    data-bs-placement="top" title="Unduh daftar akun sebagai PDF">
+                    data-bs-placement="bottom" title="Unduh daftar akun sebagai PDF">
                     <i class="fas fa-file-pdf me-2"></i>Print to PDF
                 </button>
                 <button id="export-excel" class="btn excel-button btn-md" data-bs-toggle="tooltip"
-                    data-bs-placement="top" title="Ekspor daftar akun ke Excel">
+                    data-bs-placement="bottom" title="Ekspor daftar akun ke Excel">
                     <i class="fas fa-file-excel me-2"></i>Export to Excel
                 </button>
             </div>
@@ -301,7 +301,7 @@
                                                 @if ($accountCode)
                                                     <a href="{{ route('accountCode_edit', $accountCode) }}"
                                                         class="btn btn-warning btn-sm" data-bs-toggle="tooltip"
-                                                        data-bs-placement="top" title="Edit akun perkiraan">
+                                                        data-bs-placement="bottom" title="Edit akun perkiraan">
                                                         <i class="fas fa-edit"></i>
                                                     </a>
                                                 @else
@@ -353,7 +353,7 @@
                                             @if ($accountCode)
                                                 <a href="{{ route('accountCode_edit', $accountCode) }}"
                                                     class="btn btn-warning btn-sm" data-bs-toggle="tooltip"
-                                                    data-bs-placement="top" title="Edit akun perkiraan">
+                                                    data-bs-placement="bottom" title="Edit akun perkiraan">
                                                     <i class="fas fa-edit"></i>
                                                 </a>
                                             @else

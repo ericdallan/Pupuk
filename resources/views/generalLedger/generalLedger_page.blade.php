@@ -4,7 +4,7 @@
 @section('title', 'Buku Besar')
 
 <style>
-    /* Enhanced Button Styles */
+    /* Button Styles */
     .filter-button {
         background: linear-gradient(45deg, #007bff, #0056b3);
         border: none;
@@ -44,7 +44,23 @@
         background: linear-gradient(45deg, #138496, #0d5d6b);
     }
 
-    /* Table Enhancements */
+    /* Card Styling */
+    .card {
+        border-radius: 8px;
+        background-color: #fff;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .card-header {
+        background: linear-gradient(90deg, #343a40, #212529);
+        color: white;
+        border-top-left-radius: 8px;
+        border-top-right-radius: 8px;
+        padding: 0.75rem 1.25rem;
+        font-weight: 500;
+    }
+
+    /* Table Styling */
     .table {
         background-color: #fff;
         border-radius: 8px;
@@ -68,6 +84,47 @@
         transition: background-color 0.2s;
     }
 
+    /* Dropdown Menu */
+    .dropdown-menu {
+        border-radius: 8px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        max-height: 300px;
+        overflow-y: auto;
+        width: 100%;
+    }
+
+    .dropdown-menu.show {
+        display: block;
+    }
+
+    .form-check {
+        margin-bottom: 0.5rem;
+    }
+
+    .form-check-input:checked {
+        background-color: #007bff;
+        border-color: #007bff;
+    }
+
+    /* Search Input in Dropdown */
+    #accountNameSearch {
+        border-radius: 4px;
+        font-size: 0.875rem;
+    }
+
+    /* Form Select */
+    .form-select,
+    .form-control {
+        border-radius: 4px;
+        font-size: 0.875rem;
+    }
+
+    .form-label {
+        font-size: 0.85rem;
+        font-weight: 500;
+        color: #343a40;
+    }
+
     /* Alert Animations */
     .alert {
         animation: fadeIn 0.5s;
@@ -83,49 +140,62 @@
         }
     }
 
-    /* Badge Styles */
+    /* Badge Styling */
     .badge {
         font-size: 0.9em;
         padding: 4px 8px;
         border-radius: 12px;
     }
 
-    /* Date Color Based on Recency */
+    /* Date Styling */
     .recent-date {
         color: #28a745;
-        font-weight: bold;
+        font-weight: 500;
     }
 
     .old-date {
         color: #6c757d;
     }
 
-    /* Dropdown Menu */
-    .dropdown-menu {
-        max-height: 300px;
-        overflow-y: auto;
-        border-radius: 8px;
+    /* Highlight Styling */
+    .highlight {
+        background-color: yellow;
+        font-weight: bold;
     }
 
-    .highlight {
-        background-color: #fefcbf;
-        font-weight: bold;
-        padding: 2px 4px;
+    /* Responsive Design */
+    @media (max-width: 768px) {
+        .row.g-3.align-items-end {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .col-md-2,
+        .col-md-4 {
+            width: 100%;
+            margin-bottom: 1rem;
+        }
+
+        .btn {
+            width: 100%;
+            margin-bottom: 0.5rem;
+        }
+
+        .table-responsive {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+    }
+
+    /* Tooltip Styling */
+    .tooltip-inner {
+        background-color: #343a40;
+        color: white;
         border-radius: 4px;
     }
 
-    .account-section {
-        transition: all 0.3s ease;
-    }
-
-    .card-header {
-        background-color: #f8f9fa;
-        font-weight: 600;
-    }
-
-    .table th,
-    .table td {
-        vertical-align: middle;
+    .tooltip .tooltip-arrow::before {
+        border-bottom-color: #343a40;
     }
 </style>
 
@@ -156,13 +226,14 @@
     <!-- Filter Form -->
     <div class="card shadow-sm mb-4">
         <div class="card-header">
-            <i class="bi bi-funnel me-2"></i>Filter Transaksi
+            <i class="fas fa-filter me-2"></i> Filter Transaksi
         </div>
         <div class="card-body">
             <form action="{{ route('generalledger_page') }}" method="GET">
                 <div class="row g-3 align-items-end">
-                    <div class="col-md-3">
-                        <label for="month" class="form-label">Bulan</label>
+                    <div class="col-md-2">
+                        <label for="month" class="form-label" data-bs-toggle="tooltip" data-bs-placement="bottom"
+                            title="Pilih bulan untuk filter laporan">Bulan</label>
                         <select name="month" id="month" class="form-select">
                             <option value="">Semua</option>
                             @for ($i = 1; $i <= 12; $i++)
@@ -172,8 +243,9 @@
                             @endfor
                         </select>
                     </div>
-                    <div class="col-md-3">
-                        <label for="year" class="form-label">Tahun</label>
+                    <div class="col-md-2">
+                        <label for="year" class="form-label" data-bs-toggle="tooltip" data-bs-placement="bottom"
+                            title="Pilih tahun untuk filter laporan">Tahun</label>
                         <select name="year" id="year" class="form-select">
                             <option value="">Semua</option>
                             @for ($i = date('Y') - 5; $i <= date('Y') + 5; $i++)
@@ -182,16 +254,18 @@
                             @endfor
                         </select>
                     </div>
-                    <div class="col-md-3">
-                        <label for="accountNameDropdown" class="form-label">Nama Akun</label>
+                    <div class="col-md-4">
+                        <label for="accountNameDropdown" class="form-label" data-bs-toggle="tooltip"
+                            data-bs-placement="bottom" title="Pilih akun untuk difilter">Nama Akun</label>
                         <div class="position-relative">
-                            <button type="button" class="btn btn-outline-primary w-100 text-start filter-button"
-                                id="accountNameDropdown" data-bs-toggle="tooltip" title="Pilih akun untuk difilter">
-                                <span
-                                    id="selectedAccountNames">{{ empty($selectedAccountName) ? '-- Semua Akun --' : implode(', ', $selectedAccountName) }}</span>
-                                <i class="bi bi-caret-down-fill float-end"></i>
+                            <button type="button" class="btn filter-button w-100 text-start" id="accountNameDropdown"
+                                data-bs-toggle="tooltip" data-bs-placement="bottom" title="Pilih akun untuk difilter">
+                                <span id="selectedAccountNames">
+                                    {{ empty($selectedAccountName) ? '-- Semua Akun --' : implode(', ', $selectedAccountName) }}
+                                </span>
+                                <i class="fas fa-caret-down float-end"></i>
                             </button>
-                            <div id="accountNameChecklist" class="dropdown-menu w-100 p-3" style="display: none;">
+                            <div id="accountNameChecklist" class="dropdown-menu w-100 p-3">
                                 <input type="text" id="accountNameSearch" class="form-control mb-2"
                                     placeholder="Cari Akun...">
                                 <div id="accountList" style="max-height: 200px; overflow-y: auto;">
@@ -217,15 +291,15 @@
                         <input type="hidden" id="hiddenSelectedAccounts" name="account_name_hidden"
                             value="{{ implode(',', $selectedAccountName) }}">
                     </div>
-                    <div class="col-md-3 d-flex align-items-end gap-2">
-                        <button type="submit" class="btn filter-button" title="Filter data berdasarkan bulan dan tahun"
-                            data-bs-toggle="tooltip" data-bs-title="Filter data berdasarkan bulan dan tahun">
-                            <i class="bi bi-filter me-1"></i>Filter
+                    <div class="col-md-4">
+                        <button type="submit" class="btn filter-button me-2" data-bs-toggle="tooltip"
+                            data-bs-placement="bottom" title="Filter data berdasarkan bulan, tahun, dan akun">
+                            <i class="fas fa-filter me-1"></i> Filter
                         </button>
                         <a href="{{ route('generalledger_print', ['month' => $month, 'year' => $year, 'account_name_hidden' => implode(',', $selectedAccountName)]) }}"
-                            class="btn export-button" title="Ekspor data ke file Excel" data-bs-toggle="tooltip"
-                            data-bs-title="Ekspor data ke file Excel">
-                            <i class="bi bi-file-earmark-excel me-1"></i>Export Excel
+                            class="btn export-button" data-bs-toggle="tooltip" data-bs-placement="bottom"
+                            title="Ekspor data ke file Excel">
+                            <i class="fas fa-file-excel me-1"></i> Export Excel
                         </a>
                     </div>
                 </div>
@@ -237,12 +311,15 @@
     <div class="card shadow-sm mb-4">
         <div class="card-body">
             <div class="input-group">
-                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                <span class="input-group-text"><i class="fas fa-search"></i></span>
                 <input type="text" id="globalSearch" class="form-control"
                     placeholder="Cari berdasarkan tanggal (DD-MM-YYYY, DD MMMM YYYY, atau nama hari)..."
-                    data-bs-toggle="tooltip" title="Masukkan tanggal atau nama hari untuk mencari transaksi">
-                <button class="btn search-button" type="button" id="clearSearch"><i class="bi bi-x-lg"></i>
-                    Clear</button>
+                    data-bs-toggle="tooltip" data-bs-placement="bottom"
+                    title="Masukkan tanggal atau nama hari untuk mencari transaksi">
+                <button class="btn search-button" type="button" id="clearSearch" data-bs-toggle="tooltip"
+                    data-bs-placement="bottom" title="Hapus pencarian">
+                    <i class="fas fa-times"></i> Clear
+                </button>
             </div>
             <small id="searchCount" class="form-text text-muted mt-2"></small>
         </div>
@@ -256,7 +333,7 @@
 
         @if ($groupedDetails->isEmpty())
             <div class="alert alert-info alert-dismissible fade show" role="alert">
-                <i class="bi bi-info-circle me-2"></i>Data buku besar belum ditemukan, silakan buat voucher terlebih
+                <i class="fas fa-info-circle me-2"></i>Data buku besar belum ditemukan, silakan buat voucher terlebih
                 dahulu.
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
@@ -267,11 +344,11 @@
                 @endphp
 
                 @if (empty($selectedAccountName) || in_array($accountName, $selectedAccountName))
-                    <div class="account-section mb-4" data-account-name="{{ $accountName }}"
+                    <div class="account-section mb-4 fade-in" data-account-name="{{ $accountName }}"
                         data-account-code="{{ $accountCode }}">
                         <div class="card shadow-sm">
                             <div class="card-header d-flex justify-content-between align-items-center">
-                                <h3 class="h5 mb-0"><i class="bi bi-journal-text me-2"></i>Akun {{ $accountName }}
+                                <h3 class="h5 mb-0"><i class="fas fa-journal-text me-2"></i>Akun {{ $accountName }}
                                     ({{ $accountCode }})
                                 </h3>
                                 <span class="badge bg-secondary">{{ $details->count() }} Transaksi</span>
@@ -300,8 +377,6 @@
                                             @foreach ($details as $detail)
                                                 @php
                                                     $saldo += $detail->debit - $detail->credit;
-
-                                                    // For regular voucher details, use voucher_date
                                                     $carbonDate = \Carbon\Carbon::parse($detail->voucher->voucher_date);
                                                     $voucherNumber = $detail->voucher->voucher_number;
                                                     $detailRoute = route('voucher_detail', $detail->voucher->id);
@@ -318,14 +393,12 @@
                                                     <td class="date-cell {{ $dateClass }}">
                                                         {{ $carbonDate->locale('id')->isoFormat('dddd, DD MMMM YYYY') }}
                                                     </td>
-                                                    <td>
-
-                                                        {{ $transaction }}
-                                                    </td>
+                                                    <td>{{ $transaction }}</td>
                                                     <td>
                                                         <a href="{{ $detailRoute }}"
                                                             class="text-decoration-none fw-bold"
-                                                            data-bs-toggle="tooltip">
+                                                            data-bs-toggle="tooltip" data-bs-placement="bottom"
+                                                            title="Lihat detail voucher">
                                                             {{ $voucherNumber }}
                                                         </a>
                                                     </td>
@@ -354,12 +427,15 @@
 </div>
 
 @push('scripts')
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment-with-locales.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             // Initialize tooltips
-            const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
-            const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(
-                tooltipTriggerEl));
+            const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            tooltipTriggerList.map(function(tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
 
             // Auto-dismiss alerts
             const successMessage = document.getElementById('success-message');
@@ -371,83 +447,78 @@
                 setTimeout(() => errorMessage.classList.add('fade'), 5000);
             }
 
-            // Set moment.js locale to Indonesian
-            moment.locale('id');
-
-            const accountNameDropdown = document.getElementById('accountNameDropdown');
-            const accountNameChecklist = document.getElementById('accountNameChecklist');
-            const accountCheckboxes = document.querySelectorAll('.account-checkbox');
+            // Dropdown toggle
+            const dropdownButton = document.getElementById('accountNameDropdown');
+            const dropdownMenu = document.getElementById('accountNameChecklist');
+            const accountNameSearch = document.getElementById('accountNameSearch');
+            const accountList = document.getElementById('accountList');
+            const selectedAccountNames = document.getElementById('selectedAccountNames');
+            const hiddenSelectedAccounts = document.getElementById('hiddenSelectedAccounts');
             const allAccountsCheckbox = document.getElementById('all_accounts');
-            const selectedAccountNamesSpan = document.getElementById('selectedAccountNames');
-            const hiddenSelectedAccountsInput = document.getElementById('hiddenSelectedAccounts');
-            const accountNameSearchInput = document.getElementById('accountNameSearch');
-            const accountListDiv = document.getElementById('accountList');
+            const accountCheckboxes = document.querySelectorAll('.account-checkbox');
             const globalSearch = document.getElementById('globalSearch');
             const clearSearch = document.getElementById('clearSearch');
             const searchCount = document.getElementById('searchCount');
-            const initialAccountListHTML = accountListDiv.innerHTML;
 
-            // Update selected accounts text
-            function updateSelectedAccountsText() {
-                const checkedAccounts = Array.from(accountCheckboxes)
-                    .filter(checkbox => checkbox.checked)
-                    .map(checkbox => checkbox.value);
+            if (dropdownButton && dropdownMenu) {
+                dropdownButton.addEventListener('click', function() {
+                    dropdownMenu.classList.toggle('show');
+                });
 
-                if (allAccountsCheckbox.checked || checkedAccounts.length === 0) {
-                    selectedAccountNamesSpan.textContent = '-- Semua Akun --';
-                    hiddenSelectedAccountsInput.value = '';
-                } else {
-                    selectedAccountNamesSpan.textContent = checkedAccounts.join(', ');
-                    hiddenSelectedAccountsInput.value = checkedAccounts.join(',');
-                }
-                applyGlobalFilter();
+                // Close dropdown when clicking outside
+                document.addEventListener('click', function(e) {
+                    if (!dropdownButton.contains(e.target) && !dropdownMenu.contains(e.target)) {
+                        dropdownMenu.classList.remove('show');
+                    }
+                });
             }
 
-            // Account dropdown toggle
-            accountNameDropdown.addEventListener('click', () => {
-                accountNameChecklist.style.display = accountNameChecklist.style.display === 'none' ?
-                    'block' : 'none';
-                accountNameSearchInput.value = '';
-                accountListDiv.innerHTML = initialAccountListHTML;
-                applyGlobalFilter();
-            });
-
-            // Handle "All Accounts" checkbox
-            allAccountsCheckbox.addEventListener('change', () => {
-                if (allAccountsCheckbox.checked) {
-                    accountCheckboxes.forEach(checkbox => checkbox.checked = false);
+            // Update selected accounts display and hidden input
+            function updateSelectedAccounts() {
+                const checkedBoxes = Array.from(accountCheckboxes).filter(cb => cb.checked);
+                const selectedNames = checkedBoxes.length > 0 ?
+                    checkedBoxes.map(cb => cb.value).join(', ') :
+                    '-- Semua Akun --';
+                selectedAccountNames.textContent = selectedNames;
+                hiddenSelectedAccounts.value = checkedBoxes.map(cb => cb.value).join(',');
+                if (checkedBoxes.length > 0) {
+                    allAccountsCheckbox.checked = false;
+                } else {
+                    allAccountsCheckbox.checked = true;
                 }
-                updateSelectedAccountsText();
-            });
+            }
+
+            // Handle "Semua Akun" checkbox
+            if (allAccountsCheckbox) {
+                allAccountsCheckbox.addEventListener('change', function() {
+                    if (this.checked) {
+                        accountCheckboxes.forEach(cb => cb.checked = false);
+                        selectedAccountNames.textContent = '-- Semua Akun --';
+                        hiddenSelectedAccounts.value = '';
+                    }
+                });
+            }
 
             // Handle individual account checkboxes
             accountCheckboxes.forEach(checkbox => {
-                checkbox.addEventListener('change', () => {
-                    if (checkbox.checked) {
-                        allAccountsCheckbox.checked = false;
-                    }
-                    updateSelectedAccountsText();
-                });
+                checkbox.addEventListener('change', updateSelectedAccounts);
             });
 
-            // Account name search
-            accountNameSearchInput.addEventListener('input', () => {
-                const searchTerm = accountNameSearchInput.value.toLowerCase();
-                const accountItems = accountListDiv.querySelectorAll('.form-check');
-
-                accountItems.forEach(item => {
-                    const label = item.querySelector('.form-check-label').textContent.toLowerCase();
-                    item.style.display = label.includes(searchTerm) ? 'block' : 'none';
-                });
-            });
-
-            // Close account dropdown when clicking outside
-            document.addEventListener('click', (event) => {
-                if (!accountNameDropdown.contains(event.target) && !accountNameChecklist.contains(event
-                        .target)) {
-                    accountNameChecklist.style.display = 'none';
-                }
-            });
+            // Search filter for account list
+            if (accountNameSearch && accountList) {
+                accountNameSearch.addEventListener('input', debounce(function() {
+                    const searchValue = this.value.toLowerCase();
+                    const items = accountList.querySelectorAll('.form-check');
+                    items.forEach(item => {
+                        const label = item.querySelector('.form-check-label').textContent
+                            .toLowerCase();
+                        item.style.display = label.includes(searchValue) || item.contains(
+                                allAccountsCheckbox) ?
+                            'block' :
+                            'none';
+                    });
+                }, 300));
+            }
 
             // Global Filter Function
             function applyGlobalFilter() {
@@ -500,8 +571,8 @@
                                             match => `<span class="highlight">${match}</span>`);
                                     } else {
                                         displayText = displayText.replace(new RegExp(searchValue,
-                                                'gi'), match =>
-                                            `<span class="highlight">${match}</span>`);
+                                                'gi'),
+                                            match => `<span class="highlight">${match}</span>`);
                                     }
                                     dateCell.innerHTML = displayText;
                                 }
@@ -519,14 +590,27 @@
             }
 
             // Event listeners for global search
-            globalSearch.addEventListener('keyup', applyGlobalFilter);
-            clearSearch.addEventListener('click', () => {
+            if (globalSearch) globalSearch.addEventListener('keyup', debounce(applyGlobalFilter, 300));
+            if (clearSearch) clearSearch.addEventListener('click', () => {
                 globalSearch.value = '';
                 applyGlobalFilter();
             });
 
+            // Debounce function
+            function debounce(func, wait) {
+                let timeout;
+                return function executedFunction(...args) {
+                    const later = () => {
+                        clearTimeout(timeout);
+                        func(...args);
+                    };
+                    clearTimeout(timeout);
+                    timeout = setTimeout(later, wait);
+                };
+            }
+
             // Initial update
-            updateSelectedAccountsText();
+            updateSelectedAccounts();
         });
     </script>
 @endpush

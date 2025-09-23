@@ -156,7 +156,7 @@
     </div>
 @endif
 
-<div class="mt-2">
+<div class="mt-1">
     <form action="{{ route('voucher_page') }}" method="GET" class="mb-3">
         <div class="row g-3">
             <div class="col-md-3">
@@ -221,15 +221,15 @@
         <div class="row mt-3">
             <div class="col-md-12 d-flex align-items-end">
                 <button type="submit" class="btn btn-primary me-2 filter-button" data-bs-toggle="tooltip"
-                    data-bs-placement="top" title="Terapkan filter berdasarkan kriteria yang dipilih">
+                    data-bs-placement="bottom" title="Terapkan filter berdasarkan kriteria yang dipilih">
                     <i class="fas fa-filter me-1"></i> Filter
                 </button>
                 <button type="submit" class="btn btn-info me-2 search-button" data-bs-toggle="tooltip"
-                    data-bs-placement="top" title="Cari voucher atau invoice berdasarkan nomor">
+                    data-bs-placement="bottom" title="Cari voucher atau invoice berdasarkan nomor">
                     <i class="fas fa-search me-1"></i> Cari
                 </button>
                 <button type="button" class="btn btn-success create-voucher-button" data-bs-toggle="modal"
-                    data-bs-target="#voucherModal" data-bs-toggle="tooltip" data-bs-placement="top"
+                    data-bs-target="#voucherModal" data-bs-toggle="tooltip" data-bs-placement="bottom"
                     title="Create a new voucher">
                     <i class="fas fa-plus me-1"></i> Create Voucher
                 </button>
@@ -315,21 +315,21 @@
                             <td>{{ $voucher_item->transaction }}</td>
                             <td>Rp {{ number_format($voucher_item->total_debit, 2, ',', '.') }}</td>
                             <td><a href="{{ route('voucher_detail', $voucher_item->id) }}"
-                                    class="btn btn-info btn-sm" data-bs-toggle="tooltip" data-bs-placement="top"
+                                    class="btn btn-info btn-sm" data-bs-toggle="tooltip" data-bs-placement="bottom"
                                     title="Lihat detail voucher"><i class="fas fa-eye"></i></a></td>
                             <td>
                                 @if (
                                     $voucher_item->invoices()->exists() &&
                                         $voucher_item->invoices()->whereIn('id', DB::table('invoice_payments')->pluck('invoice_id'))->exists())
                                     <button class="btn btn-warning btn-sm btn-disabled" disabled
-                                        data-bs-toggle="tooltip" data-bs-placement="top"
+                                        data-bs-toggle="tooltip" data-bs-placement="bottom"
                                         title="Tidak dapat diedit karena terkait pembayaran invoice">
                                         <i class="fas fa-edit"></i>
                                     </button>
                                 @else
                                     <a href="{{ route('voucher_edit', $voucher_item->id) }}"
                                         class="btn btn-warning btn-sm" data-bs-toggle="tooltip"
-                                        data-bs-placement="top" title="Edit voucher"><i class="fas fa-edit"></i></a>
+                                        data-bs-placement="bottom" title="Edit voucher"><i class="fas fa-edit"></i></a>
                                 @endif
                             </td>
                             <td>
@@ -339,34 +339,34 @@
                                     @method('DELETE')
                                     @if ($voucher_item->has_stock)
                                         <button type="button" class="btn btn-danger btn-sm" disabled
-                                            data-bs-toggle="tooltip" data-bs-placement="top"
+                                            data-bs-toggle="tooltip" data-bs-placement="bottom"
                                             title="Tidak dapat dihapus karena memiliki data stok">
                                             <i class="fas fa-trash"></i>
                                         </button>
                                     @elseif ($voucher_item->invoices()->exists() && $voucher_item->invoices()->whereHas('invoice_payments')->exists())
                                         <button type="button" class="btn btn-danger btn-sm" disabled
-                                            data-bs-toggle="tooltip" data-bs-placement="top"
+                                            data-bs-toggle="tooltip" data-bs-placement="bottom"
                                             title="Tidak dapat dihapus karena terkait pembayaran invoice">
                                             <i class="fas fa-trash"></i>
                                         </button>
                                     @elseif ($voucher_item->invoices()->exists() && !$voucher_item->invoice_payments()->exists())
                                         <button type="submit" class="btn btn-danger btn-sm"
                                             onclick="return confirm('Apakah Anda yakin ingin menghapus voucher ini? Data invoice terkait akan dihapus.')"
-                                            data-bs-toggle="tooltip" data-bs-placement="top"
+                                            data-bs-toggle="tooltip" data-bs-placement="bottom"
                                             title="Hapus voucher dengan konfirmasi">
                                             <i class="fas fa-trash"></i>
                                         </button>
                                     @elseif (!$voucher_item->invoices()->exists() && $voucher_item->invoice_payments()->exists())
                                         <button type="submit" class="btn btn-danger btn-sm"
                                             onclick="return confirm('Apakah Anda yakin ingin menghapus voucher ini? Data pembayaran terkait akan dihapus.')"
-                                            data-bs-toggle="tooltip" data-bs-placement="top"
+                                            data-bs-toggle="tooltip" data-bs-placement="bottom"
                                             title="Hapus voucher dengan konfirmasi">
                                             <i class="fas fa-trash"></i>
                                         </button>
                                     @else
                                         <button type="submit" class="btn btn-danger btn-sm"
                                             onclick="return confirm('Apakah Anda yakin ingin menghapus voucher ini?')"
-                                            data-bs-toggle="tooltip" data-bs-placement="top"
+                                            data-bs-toggle="tooltip" data-bs-placement="bottom"
                                             title="Hapus voucher dengan konfirmasi">
                                             <i class="fas fa-trash"></i>
                                         </button>
@@ -376,7 +376,7 @@
                             <td>
                                 <a href="{{ route('voucher_pdf', $voucher_item->id) }}"
                                     class="btn btn-secondary btn-sm" target="_blank" data-bs-toggle="tooltip"
-                                    data-bs-placement="top" title="Unduh voucher sebagai PDF"><i
+                                    data-bs-placement="bottom" title="Unduh voucher sebagai PDF"><i
                                         class="fas fa-file-pdf"></i></a>
                             </td>
                         </tr>

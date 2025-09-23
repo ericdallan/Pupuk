@@ -4,26 +4,102 @@
 @section('title', 'Laporan Laba Rugi')
 
 <style>
-    .highlight {
-        background-color: #fefcbf;
-        padding: 2px 4px;
-        border-radius: 4px;
+    /* Enhanced Button Styles */
+    .filter-button {
+        background: linear-gradient(45deg, #007bff, #0056b3);
+        border: none;
+        color: white;
+        transition: transform 0.2s, box-shadow 0.2s;
     }
 
-    .table th,
-    .table td {
-        vertical-align: middle;
-        padding: 0.75rem;
+    .filter-button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0, 123, 255, 0.3);
+        background: linear-gradient(45deg, #0056b3, #003d80);
     }
 
+    .tax-button {
+        background: linear-gradient(45deg, #ffc107, #e0a800);
+        border: none;
+        color: white;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .tax-button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(255, 193, 7, 0.3);
+        background: linear-gradient(45deg, #e0a800, #c69500);
+    }
+
+    .export-button {
+        background: linear-gradient(45deg, #28a745, #1e7e34);
+        border: none;
+        color: white;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .export-button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(40, 167, 69, 0.3);
+        background: linear-gradient(45deg, #218838, #1a6030);
+    }
+
+    /* Table Enhancements */
+    .table {
+        background-color: #fff;
+        border-radius: 8px;
+        overflow: hidden;
+    }
+
+    .table thead {
+        background: linear-gradient(90deg, #343a40, #212529);
+        color: white;
+        position: sticky;
+        top: 0;
+        z-index: 1;
+    }
+
+    .table tbody tr:nth-child(even) {
+        background-color: #f8f9fa;
+    }
+
+    .table tbody tr:hover {
+        background-color: #e9ecef;
+        transition: background-color 0.2s;
+    }
+
+    /* Card Styling */
+    .card {
+        border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .card-header {
+        background: linear-gradient(90deg, #343a40, #212529);
+        color: white;
+        border-radius: 8px 8px 0 0;
+    }
+
+    /* Alert Animations */
+    .alert {
+        animation: fadeIn 0.5s;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+        }
+
+        to {
+            opacity: 1;
+        }
+    }
+
+    /* Expandable Row Styling */
     .expandable {
         cursor: pointer;
         transition: background-color 0.2s;
         position: relative;
-    }
-
-    .expandable:hover {
-        background-color: #e9ecef;
     }
 
     .expandable td:first-child::before {
@@ -66,31 +142,6 @@
         display: table-row !important;
     }
 
-    .summary-card {
-        border-left: 4px solid #007bff;
-        transition: transform 0.2s;
-    }
-
-    .summary-card:hover {
-        transform: translateY(-3px);
-    }
-
-    .btn-primary,
-    .btn-success,
-    .btn-warning {
-        transition: transform 0.2s;
-    }
-
-    .btn-primary:hover,
-    .btn-success:hover,
-    .btn-warning:hover {
-        transform: translateY(-2px);
-    }
-
-    .table-responsive {
-        overflow-x: auto;
-    }
-
     /* Ensure consistent column widths */
     .table th:first-child,
     .table td:first-child {
@@ -108,31 +159,64 @@
     .table td:last-child {
         width: 200px;
         text-align: right;
-    }
-
-    /* Prevent text wrapping in amount column */
-    .text-end {
         white-space: nowrap;
     }
 
-    /* Make sure all main rows are visible */
-    .main-row {
-        display: table-row !important;
+    /* Responsive Design */
+    @media (max-width: 768px) {
+        .row.g-3.align-items-end {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .col-md-3,
+        .col-md-6 {
+            width: 100%;
+            margin-bottom: 1rem;
+        }
+
+        .btn {
+            width: 100%;
+            margin-bottom: 0.5rem;
+        }
+
+        .table-responsive {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+    }
+
+    /* Tooltip Styling */
+    .tooltip-inner {
+        background-color: #343a40;
+        color: white;
+        border-radius: 4px;
+    }
+
+    .tooltip .tooltip-arrow::before {
+        border-top-color: #343a40;
     }
 </style>
 
-<div class="container-fluid">
+<div class="container-fluid mt-2">
     <!-- Filter Form -->
-    <div class="card shadow-sm mb-4">
-        <div class="card-header bg-light">
-            <i class="bi bi-funnel me-2"></i>Filter Laporan
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-filter me-2"></i>Filter Laporan</h5>
         </div>
         <div class="card-body">
+            @php
+                // Default to current month and year if not set
+                $currentMonth = \Carbon\Carbon::now()->month;
+                $currentYear = \Carbon\Carbon::now()->year;
+                $month = $month ?? $currentMonth;
+                $year = $year ?? $currentYear;
+            @endphp
             <form action="{{ route('incomeStatement_page') }}" method="GET" class="row g-3 align-items-end">
                 <div class="col-md-3">
                     <label for="month" class="form-label">Bulan</label>
                     <select name="month" id="month" class="form-select" data-bs-toggle="tooltip"
-                        title="Pilih bulan untuk filter laporan">
+                        data-bs-placement="top" title="Pilih bulan untuk filter laporan">
                         <option value="">Semua Bulan</option>
                         @for ($i = 1; $i <= 12; $i++)
                             <option value="{{ $i }}" {{ $month == $i ? 'selected' : '' }}>
@@ -144,31 +228,36 @@
                 <div class="col-md-3">
                     <label for="year" class="form-label">Tahun</label>
                     <select name="year" id="year" class="form-select" data-bs-toggle="tooltip"
-                        title="Pilih tahun untuk filter laporan">
+                        data-bs-placement="top" title="Pilih tahun untuk filter laporan">
                         @for ($y = date('Y'); $y >= date('Y') - 5; $y--)
                             <option value="{{ $y }}" {{ $year == $y ? 'selected' : '' }}>
                                 {{ $y }}</option>
                         @endfor
                     </select>
                 </div>
-                <div class="col-md-6">
-                    <button type="submit" class="btn btn-primary me-2" data-bs-toggle="tooltip"
-                        title="Terapkan filter"><i class="bi bi-filter me-1"></i>Filter</button>
-                    <button type="button" class="btn btn-warning me-2" id="toggleTax" data-bs-toggle="tooltip"
-                        title="Tampilkan atau sembunyikan perhitungan pajak"><i
-                            class="bi bi-calculator me-1"></i>Perhitungan Pajak</button>
+                <div class="col-md-6 d-flex align-items-end gap-2">
+                    <button type="submit" class="btn filter-button" data-bs-toggle="tooltip" data-bs-placement="top"
+                        title="Terapkan filter">
+                        <i class="fas fa-filter me-1"></i>Filter
+                    </button>
+                    <button type="button" class="btn tax-button" id="toggleTax" data-bs-toggle="tooltip"
+                        data-bs-placement="top" title="Tampilkan atau sembunyikan perhitungan pajak">
+                        <i class="fas fa-calculator me-1"></i>Perhitungan Pajak
+                    </button>
                     <a href="{{ route('export_income_statement', ['month' => $month, 'year' => $year]) }}"
-                        class="btn btn-success" data-bs-toggle="tooltip" title="Unduh laporan sebagai file Excel"><i
-                            class="fas fa-file-excel me-2"></i>Export Excel</a>
+                        class="btn export-button" data-bs-toggle="tooltip" data-bs-placement="top"
+                        title="Unduh laporan sebagai file Excel">
+                        <i class="fas fa-file-excel me-1"></i>Export Excel
+                    </a>
                 </div>
             </form>
         </div>
     </div>
 
     <!-- Income Statement Table -->
-    <div class="card shadow-sm">
-        <div class="card-header bg-light">
-            <i class="bi bi-table me-2"></i>Rincian Laba Rugi
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-table me-2"></i>Rincian Laba Rugi</h5>
         </div>
         <div class="card-body p-0">
             <div class="table-responsive">
@@ -188,7 +277,6 @@
                                 !empty($details['Pendapatan Penjualan Barang Jadi']) ||
                                 !empty($details['Pendapatan Sewa']);
                         @endphp
-
                         <tr class="main-row fw-bold {{ $hasPendapatanDetails ? 'expandable' : '' }}"
                             data-category="pendapatanPenjualan">
                             <td></td>
@@ -197,7 +285,6 @@
                                 {{ $pendapatanPenjualan < 0 ? '(' . number_format(abs($pendapatanPenjualan), 2, ',', '.') . ')' : number_format($pendapatanPenjualan, 2, ',', '.') }}
                             </td>
                         </tr>
-
                         @if ($hasPendapatanDetails)
                             @foreach ($details['Pendapatan Penjualan Bahan Baku'] ?? [] as $subsection => $balance)
                                 @if ($balance != 0)
@@ -210,7 +297,6 @@
                                     </tr>
                                 @endif
                             @endforeach
-
                             @foreach ($details['Pendapatan Penjualan Barang Jadi'] ?? [] as $subsection => $balance)
                                 @if ($balance != 0)
                                     <tr class="sub-row" data-parent="pendapatanPenjualan">
@@ -222,7 +308,6 @@
                                     </tr>
                                 @endif
                             @endforeach
-
                             @foreach ($details['Pendapatan Sewa'] ?? [] as $subsection => $balance)
                                 @if ($balance != 0)
                                     <tr class="sub-row" data-parent="pendapatanPenjualan">
@@ -235,12 +320,10 @@
                                 @endif
                             @endforeach
                         @endif
-
                         <!-- Harga Pokok Penjualan -->
                         @php
                             $hasHppDetails = !empty($details['Harga Pokok Penjualan']);
                         @endphp
-
                         <tr class="main-row fw-bold {{ $hasHppDetails ? 'expandable' : '' }}" data-category="hpp">
                             <td></td>
                             <td>Harga Pokok Penjualan</td>
@@ -248,7 +331,6 @@
                                 ({{ number_format(abs($hpp), 2, ',', '.') }})
                             </td>
                         </tr>
-
                         @if ($hasHppDetails)
                             @foreach ($details['Harga Pokok Penjualan'] ?? [] as $code => $balance)
                                 <tr class="sub-row" data-parent="hpp">
@@ -262,7 +344,6 @@
                                 </tr>
                             @endforeach
                         @endif
-
                         <!-- Laba Kotor -->
                         <tr class="main-row fw-bold bg-light">
                             <td></td>
@@ -271,12 +352,10 @@
                                 <strong>{{ $labaKotor < 0 ? '(' . number_format(abs($labaKotor), 2, ',', '.') . ')' : number_format($labaKotor, 2, ',', '.') }}</strong>
                             </td>
                         </tr>
-
                         <!-- Beban Operasional -->
                         @php
                             $hasBebanDetails = !empty($details['Beban Operasional']);
                         @endphp
-
                         <tr class="main-row fw-bold {{ $hasBebanDetails ? 'expandable' : '' }}"
                             data-category="bebanOperasional">
                             <td></td>
@@ -285,7 +364,6 @@
                                 ({{ number_format(abs($totalBebanOperasional), 2, ',', '.') }})
                             </td>
                         </tr>
-
                         @if ($hasBebanDetails)
                             @foreach ($details['Beban Operasional'] ?? [] as $subsection => $balance)
                                 <tr class="sub-row" data-parent="bebanOperasional">
@@ -297,7 +375,6 @@
                                 </tr>
                             @endforeach
                         @endif
-
                         <!-- Laba Operasi -->
                         <tr class="main-row fw-bold bg-light">
                             <td></td>
@@ -306,12 +383,10 @@
                                 <strong>{{ $labaOperasi < 0 ? '(' . number_format(abs($labaOperasi), 2, ',', '.') . ')' : number_format($labaOperasi, 2, ',', '.') }}</strong>
                             </td>
                         </tr>
-
                         <!-- Pendapatan Lain-lain -->
                         @php
                             $hasPendapatanLainDetails = !empty($details['Pendapatan Lain-lain']);
                         @endphp
-
                         <tr class="main-row fw-bold {{ $hasPendapatanLainDetails ? 'expandable' : '' }}"
                             data-category="pendapatanLain">
                             <td></td>
@@ -320,7 +395,6 @@
                                 {{ $totalPendapatanLain < 0 ? '(' . number_format(abs($totalPendapatanLain), 2, ',', '.') . ')' : number_format($totalPendapatanLain, 2, ',', '.') }}
                             </td>
                         </tr>
-
                         @if ($hasPendapatanLainDetails)
                             @foreach ($details['Pendapatan Lain-lain'] ?? [] as $subsection => $balance)
                                 <tr class="sub-row" data-parent="pendapatanLain">
@@ -332,7 +406,6 @@
                                 </tr>
                             @endforeach
                         @endif
-
                         <!-- Laba Sebelum Pajak -->
                         <tr class="main-row fw-bold bg-warning bg-opacity-25">
                             <td></td>
@@ -342,7 +415,6 @@
                                 <strong>{{ $labaSebelumPajak < 0 ? '(' . number_format(abs($labaSebelumPajak), 2, ',', '.') . ')' : number_format($labaSebelumPajak, 2, ',', '.') }}</strong>
                             </td>
                         </tr>
-
                         <!-- Pajak (Hidden by default) -->
                         <tr id="taxRow" class="main-row fw-bold">
                             <td></td>
@@ -351,7 +423,6 @@
                                 ({{ number_format(abs($bebanPajakPenghasilan), 2, ',', '.') }})
                             </td>
                         </tr>
-
                         <!-- Laba Bersih -->
                         <tr class="main-row fw-bold table-success">
                             <td></td>
@@ -372,9 +443,10 @@
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             // Initialize tooltips
-            const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
-            const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(
-                tooltipTriggerEl));
+            const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            tooltipTriggerList.map(function(tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
 
             // Store initial values from Blade
             const labaSebelumPajak = {{ $labaSebelumPajak }};
@@ -409,18 +481,20 @@
 
                 if (isTaxVisible) {
                     taxRow.classList.remove('visible');
+                    taxRow.style.display = 'none';
                     const formattedLabaSebelumPajak = formatRupiah(labaSebelumPajak);
                     labaBersihCell.innerHTML = '<strong>' + formattedLabaSebelumPajak + '</strong>';
                     labaBersihCell.className = 'text-end ' + (labaSebelumPajak < 0 ? 'text-danger' :
                         'text-success');
-                    this.innerHTML = '<i class="bi bi-calculator me-1"></i>Perhitungan Pajak';
+                    this.innerHTML = '<i class="fas fa-calculator me-1"></i>Perhitungan Pajak';
                 } else {
                     taxRow.classList.add('visible');
+                    taxRow.style.display = 'table-row';
                     const formattedLabaBersih = formatRupiah(labaBersih);
                     labaBersihCell.innerHTML = '<strong>' + formattedLabaBersih + '</strong>';
                     labaBersihCell.className = 'text-end ' + (labaBersih < 0 ? 'text-danger' :
                         'text-success');
-                    this.innerHTML = '<i class="bi bi-eye-slash me-1"></i>Sembunyikan Pajak';
+                    this.innerHTML = '<i class="fas fa-eye-slash me-1"></i>Sembunyikan Pajak';
                 }
             });
 
