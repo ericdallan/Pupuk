@@ -173,10 +173,6 @@
                         </option>
                         <option value="PB" {{ request('voucher_type') == 'PB' ? 'selected' : '' }}>Pembelian
                         </option>
-                        <option value="PH" {{ request('voucher_type') == 'PH' ? 'selected' : '' }} hidden>Pemindahan
-                        </option>
-                        <option value="PK" {{ request('voucher_type') == 'PK' ? 'selected' : '' }} hidden>Pemakaian
-                        </option>
                     </optgroup>
                     <optgroup label="Keuangan">
                         <option value="PG" {{ request('voucher_type') == 'PG' ? 'selected' : '' }}>Pengeluaran
@@ -290,10 +286,6 @@
                                     Pembelian
                                 @elseif($voucher_item->voucher_type == 'LN')
                                     Lainnya
-                                @elseif($voucher_item->voucher_type == 'PH')
-                                    Pemindahan
-                                @elseif($voucher_item->voucher_type == 'PK')
-                                    Pemakaian
                                 @elseif($voucher_item->voucher_type == 'PYB')
                                     Penyesuaian Bertambah
                                 @elseif($voucher_item->voucher_type == 'PYK')

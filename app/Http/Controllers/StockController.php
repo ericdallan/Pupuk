@@ -10,9 +10,10 @@ use App\Exports\StockExport;
 use Illuminate\Support\Facades\DB;
 use App\Exports\StockImportTemplate;
 use App\Imports\StockImport;
-use App\Models\Recipes;
+use App\Models\AppliedCost;
 use Maatwebsite\Excel\Facades\Excel;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Facades\Auth;
 
 class StockController extends Controller
 {
@@ -54,10 +55,75 @@ class StockController extends Controller
             $data['currentMode'] = $mode;
             $data['selectedAppliedCostId'] = $appliedCostId;
 
+            // Get applied cost history for the current master user with pagination
+            $masterId = Auth::guard('master')->id();
+            if ($masterId) {
+                $data['appliedCostHistory'] = AppliedCost::with('details')
+                    ->where('master_id', $masterId)
+                    ->orderBy('created_at', 'desc')
+                    ->paginate(10); // Paginasi untuk performa
+
+                // Check if user already has an applied cost (limit to 1)
+                $data['hasExistingAppliedCost'] = AppliedCost::where('master_id', $masterId)->exists();
+            } else {
+                $data['appliedCostHistory'] = collect([]);
+                $data['hasExistingAppliedCost'] = false;
+            }
+
             return view('stock.stock_page', $data);
         } catch (\Exception $e) {
             Log::error('Stock Page Error: ' . $e->getMessage(), ['exception' => $e]);
             return redirect()->back()->withErrors(['error' => 'Gagal memuat halaman stok']);
+        }
+    }
+
+    /**
+     * Apply selected applied cost to calculations
+     */
+    public function applyAppliedCost(Request $request)
+    {
+        try {
+            $request->validate([
+                'applied_cost_id' => 'required|exists:applied_costs,id'
+            ]);
+
+            $masterId = Auth::guard('master')->id();
+            $appliedCostId = $request->applied_cost_id;
+
+            // Verify the applied cost belongs to the current master
+            $appliedCost = AppliedCost::where('id', $appliedCostId)
+                ->where('master_id', $masterId)
+                ->first();
+
+            if (!$appliedCost) {
+                return redirect()->back()->withErrors(['error' => 'Applied cost tidak ditemukan atau tidak memiliki akses.']);
+            }
+
+            // Redirect back to stock page with applied cost and management mode
+            return redirect()->route('stock_page', array_merge($request->except(['applied_cost_id', '_token']), [
+                'mode' => 'management',
+                'applied_cost_id' => $appliedCostId
+            ]))->with('success', 'Perhitungan beban telah diterapkan ke HPP.');
+        } catch (\Exception $e) {
+            Log::error('Apply Applied Cost Error: ' . $e->getMessage());
+            return redirect()->back()->withErrors(['error' => 'Gagal menerapkan perhitungan beban.']);
+        }
+    }
+
+    /**
+     * Clear applied cost from calculations
+     */
+    public function clearAppliedCost(Request $request)
+    {
+        try {
+            // Redirect back to stock page with accounting mode and no applied cost
+            return redirect()->route('stock_page', array_merge($request->except(['_token']), [
+                'mode' => 'accounting',
+                'applied_cost_id' => null
+            ]))->with('success', 'Perhitungan beban telah dihapus dari HPP.');
+        } catch (\Exception $e) {
+            Log::error('Clear Applied Cost Error: ' . $e->getMessage());
+            return redirect()->back()->withErrors(['error' => 'Gagal menghapus perhitungan beban.']);
         }
     }
 
@@ -80,225 +146,6 @@ class StockController extends Controller
         } catch (\Exception $e) {
             Log::error('Stock Export Error: ' . $e->getMessage(), ['exception' => $e]);
             return redirect()->back()->withErrors(['error' => 'Gagal mengekspor data stok']);
-        }
-    }
-
-    /**
-     * Generate and download a PDF transfer form
-     *
-     * @param Request $request
-     * @return \Symfony\Component\HttpFoundation\BinaryFileResponse
-     */
-    public function printTransferForm(Request $request)
-    {
-        try {
-            $tableFilter = $request->input('table_filter', 'all');
-            $data = $this->stockService->prepareTransferFormData($tableFilter);
-            $pdf = Pdf::loadView('stock.stock_pdf', $data);
-            return $pdf->download('Formulir_Pemindahan_Barang_' . now()->format('Y-m-d') . '.pdf');
-        } catch (\Exception $e) {
-            Log::error('Print Transfer Form Error: ' . $e->getMessage(), ['exception' => $e]);
-            return redirect()->back()->withErrors(['error' => 'Gagal menghasilkan formulir pemindahan']);
-        }
-    }
-
-    /**
-     * Store a new recipe
-     *
-     * @param Request $request
-     * @return \Illuminate\Http\RedirectResponse
-     */
-    public function storeRecipe(Request $request)
-    {
-        try {
-            $validated = $request->validate([
-                'product_name' => 'required|string|max:255|regex:/^[A-Za-z0-9\s]+$/',
-                'product_size' => 'required|string|max:255',
-                'transfer_stock_id.*' => 'required|exists:transfer_stocks,id',
-                'quantity.*' => 'required|integer|min:1',
-                'nominal.*' => 'required|numeric|min:0',
-            ]);
-
-            // Pengecekan duplikasi product_name dan product_size (case-insensitive)
-            $existingRecipe = Recipes::whereRaw('LOWER(product_name) = ?', [strtolower($validated['product_name'])])
-                ->whereRaw('LOWER(size) = ?', [strtolower($validated['product_size'])])
-                ->first();
-
-            if ($existingRecipe) {
-                return redirect()->back()->withErrors([
-                    'product_name' => 'Kombinasi nama produk dan ukuran sudah ada. Produk "' . $existingRecipe->product_name . '" dengan ukuran "' . $existingRecipe->size . '" sudah terdaftar.'
-                ])->withInput();
-            }
-
-            Log::debug('Store Recipe Input:', [
-                'product_name' => $validated['product_name'],
-                'product_size' => $validated['product_size'],
-                'transfer_stock_ids' => $request->input('transfer_stock_id'),
-                'quantities' => $request->input('quantity'),
-                'nominals' => $request->input('nominal'),
-            ]);
-
-            $this->stockService->storeRecipe(
-                $validated['product_name'],
-                $request->input('transfer_stock_id'),
-                $request->input('quantity'),
-                $validated['product_size']
-            );
-
-            return redirect()->back()->with('success', 'Resep berhasil disimpan.');
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            Log::error('Store Recipe Validation Error: ' . $e->getMessage(), [
-                'errors' => $e->errors(),
-                'input' => $request->all(),
-            ]);
-            return redirect()->back()->withErrors($e->errors())->withInput();
-        } catch (\Exception $e) {
-            Log::error('Store Recipe Error: ' . $e->getMessage(), ['exception' => $e]);
-            return redirect()->back()->withErrors(['error' => 'Gagal menyimpan resep: ' . $e->getMessage()]);
-        }
-    }
-    /**
-     * Get recipe ingredients for editing
-     *
-     * @param int $recipeId
-     * @return \Illuminate\Http\JsonResponse
-     */
-    public function getRecipeIngredients($recipeId)
-    {
-        try {
-            $recipe = Recipes::with(['transferStocks'])->findOrFail($recipeId);
-
-            // Check if recipe has been used in transactions
-            $hasTransactions = DB::table('transactions')
-                ->where('description', $recipe->product_name)
-                ->where('size', $recipe->size)
-                ->exists();
-
-            if ($hasTransactions) {
-                return response()->json([
-                    'error' => 'Recipe sudah digunakan dalam transaksi dan tidak dapat diedit'
-                ], 400);
-            }
-
-            $ingredients = $recipe->transferStocks->map(function ($transferStock) {
-                return [
-                    'transfer_stock_id' => $transferStock->id,
-                    'item' => $transferStock->item,
-                    'size' => $transferStock->size,
-                    'quantity' => $transferStock->pivot->quantity,
-                    'nominal' => $transferStock->pivot->nominal,
-                ];
-            });
-
-            return response()->json([
-                'recipe' => [
-                    'id' => $recipe->id,
-                    'product_name' => $recipe->product_name,
-                    'size' => $recipe->size,
-                    'nominal' => $recipe->nominal,
-                ],
-                'ingredients' => $ingredients
-            ]);
-        } catch (\Exception $e) {
-            Log::error('Get Recipe Ingredients Error: ' . $e->getMessage(), ['exception' => $e]);
-            return response()->json(['error' => 'Gagal memuat data recipe'], 500);
-        }
-    }
-
-    /**
-     * Update a recipe
-     *
-     * @param Request $request
-     * @param int $recipeId
-     * @return \Illuminate\Http\RedirectResponse
-     */
-    public function updateRecipe(Request $request, $recipeId)
-    {
-        try {
-            $recipe = Recipes::findOrFail($recipeId);
-
-            // Check if recipe has been used in transactions
-            $hasTransactions = DB::table('transactions')
-                ->where('description', $recipe->product_name)
-                ->where('size', $recipe->size)
-                ->exists();
-
-            if ($hasTransactions) {
-                return redirect()->back()->withErrors([
-                    'error' => 'Recipe sudah digunakan dalam transaksi dan tidak dapat diedit'
-                ]);
-            }
-
-            $validated = $request->validate([
-                'product_name' => 'required|string|max:255|regex:/^[A-Za-z0-9\s]+$/',
-                'product_size' => 'required|string|max:255',
-                'transfer_stock_id.*' => 'required|exists:transfer_stocks,id',
-                'quantity.*' => 'required|integer|min:1',
-                'nominal.*' => 'required|numeric|min:0',
-            ]);
-
-            // Check for duplicate recipe name and size (excluding current recipe)
-            $existingRecipe = Recipes::where('id', '!=', $recipeId)
-                ->whereRaw('LOWER(product_name) = ?', [strtolower($validated['product_name'])])
-                ->whereRaw('LOWER(size) = ?', [strtolower($validated['product_size'])])
-                ->first();
-
-            if ($existingRecipe) {
-                return redirect()->back()->withErrors([
-                    'product_name' => 'Kombinasi nama produk dan ukuran sudah ada. Produk "' . $existingRecipe->product_name . '" dengan ukuran "' . $existingRecipe->size . '" sudah terdaftar.'
-                ])->withInput();
-            }
-
-            $this->stockService->updateRecipe(
-                $recipeId,
-                $validated['product_name'],
-                $request->input('transfer_stock_id'),
-                $request->input('quantity'),
-                $validated['product_size']
-            );
-
-            return redirect()->back()->with('success', 'Recipe berhasil diupdate.');
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            Log::error('Update Recipe Validation Error: ' . $e->getMessage(), [
-                'errors' => $e->errors(),
-                'input' => $request->all(),
-            ]);
-            return redirect()->back()->withErrors($e->errors())->withInput();
-        } catch (\Exception $e) {
-            Log::error('Update Recipe Error: ' . $e->getMessage(), ['exception' => $e]);
-            return redirect()->back()->withErrors(['error' => 'Gagal mengupdate recipe: ' . $e->getMessage()]);
-        }
-    }
-
-    /**
-     * Delete a recipe
-     *
-     * @param int $recipeId
-     * @return \Illuminate\Http\RedirectResponse
-     */
-    public function deleteRecipe($recipeId)
-    {
-        try {
-            $recipe = Recipes::findOrFail($recipeId);
-
-            // Check if recipe has been used in transactions
-            $hasTransactions = DB::table('transactions')
-                ->where('description', $recipe->product_name)
-                ->where('size', $recipe->size)
-                ->exists();
-
-            if ($hasTransactions) {
-                return redirect()->back()->withErrors([
-                    'error' => 'Recipe sudah digunakan dalam transaksi dan tidak dapat dihapus'
-                ]);
-            }
-
-            $this->stockService->deleteRecipe($recipeId);
-
-            return redirect()->back()->with('success', 'Recipe berhasil dihapus.');
-        } catch (\Exception $e) {
-            Log::error('Delete Recipe Error: ' . $e->getMessage(), ['exception' => $e]);
-            return redirect()->back()->withErrors(['error' => 'Gagal menghapus recipe: ' . $e->getMessage()]);
         }
     }
 }

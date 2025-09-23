@@ -64,13 +64,67 @@ class AppliedCostController extends Controller
             return redirect()->route('stock_page')->with('success', 'Akumulasi beban berhasil disimpan.');
         } catch (ValidationException $e) {
             Log::error('Validation error in AppliedCostController::store: ' . json_encode($e->errors()));
-            return redirect()->back()->withErrors($e->errors())->withInput()->with('modal_open', true);
+            return redirect()->back()->withErrors($e->errors())->withInput();
         } catch (\Exception $e) {
             Log::error('Error in AppliedCostController::store: ' . $e->getMessage(), [
                 'trace' => $e->getTraceAsString(),
                 'request' => $request->all()
             ]);
-            return redirect()->back()->with('error', 'Terjadi kesalahan saat menyimpan beban: ' . $e->getMessage())->withInput()->with('modal_open', true);
+            return redirect()->back()->with('error', 'Terjadi kesalahan saat menyimpan beban: ' . $e->getMessage())->withInput();
+        }
+    }
+    /**
+     * Update the existing applied cost
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function update(Request $request)
+    {
+        try {
+            $request->validate([
+                'total' => 'required|numeric|min:0',
+                'beban_description' => 'required|array|min:1',
+                'beban_description.*' => 'required|string|max:255',
+                'beban_nominal' => 'required|array|min:1',
+                'beban_nominal.*' => 'required|numeric|min:0',
+            ]);
+
+            $masterId = Auth::guard('master')->id();
+            if (!$masterId) {
+                throw new \Exception('Authenticated master user not found.');
+            }
+
+            // Combine descriptions and nominals into riwayat
+            $riwayat = array_map(function ($description, $nominal) {
+                return [
+                    'description' => $description,
+                    'nominal' => $nominal,
+                ];
+            }, $request->beban_description, $request->beban_nominal);
+
+            // Verify total matches sum of nominals
+            $calculatedTotal = array_sum(array_map('floatval', $request->beban_nominal));
+            if (abs($calculatedTotal - $request->total) > 0.01) {
+                throw ValidationException::withMessages(['total' => 'Total tidak sesuai dengan jumlah nominal beban.']);
+            }
+
+            $this->appliedCostService->updateBeban(
+                $request->total,
+                $riwayat,
+                $masterId
+            );
+
+            return redirect()->route('stock_page')->with('success', 'Perhitungan beban berhasil diperbarui.');
+        } catch (ValidationException $e) {
+            Log::error('Validation error in AppliedCostController::update: ' . json_encode($e->errors()));
+            return redirect()->back()->withErrors($e->errors())->withInput();
+        } catch (\Exception $e) {
+            Log::error('Error in AppliedCostController::update: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+                'request' => $request->all()
+            ]);
+            return redirect()->back()->with('error', 'Terjadi kesalahan saat memperbarui beban: ' . $e->getMessage())->withInput();
         }
     }
     /**

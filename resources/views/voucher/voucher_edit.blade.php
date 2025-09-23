@@ -102,10 +102,6 @@
                         <option value="PB" {{ $voucher->voucher_type == 'PB' ? 'selected' : '' }}>Pembelian
                         </option>
                         <option value="LN" {{ $voucher->voucher_type == 'LN' ? 'selected' : '' }}>Lainnya</option>
-                        <option value="PH" {{ $voucher->voucher_type == 'PH' ? 'selected' : '' }}>Pemindahan
-                        </option>
-                        <option value="PK" {{ $voucher->voucher_type == 'PK' ? 'selected' : '' }}>Pemakaian
-                        </option>
                         <option value="PYK" {{ $voucher->voucher_type == 'PYK' ? 'selected' : '' }}>Penyesuaian
                             Berkurang
                         </option>
@@ -752,16 +748,6 @@
                     value: 'LN',
                     text: 'Lainnya',
                     description: 'Voucher Lainnya digunakan untuk mencatat transaksi khusus atau non-standar yang tidak termasuk dalam kategori voucher lain seperti Penjualan, Pembelian, Pengeluaran, atau Pemasukan. Voucher ini mencakup transaksi seperti donasi, hadiah, penyelesaian sengketa keuangan, atau transaksi internal khusus seperti pemindahan dana antar akun perusahaan tanpa kaitan dengan operasional rutin. Contoh penggunaan termasuk pencatatan penerimaan hibah dari pihak eksternal, pembayaran denda atau penalti, atau transaksi barter barang yang tidak memengaruhi stok. Voucher ini mencatat detail seperti deskripsi transaksi, jumlah, pihak terkait, dan akun yang terpengaruh, memastikan dokumentasi yang jelas untuk pelaporan keuangan dan kepatuhan audit.'
-                },
-                PH: {
-                    value: 'PH',
-                    text: 'Pemindahan',
-                    description: 'Voucher Pemindahan digunakan untuk mencatat perpindahan stok barang dari satu lokasi penyimpanan ke lokasi lain dalam perusahaan, seperti dari gudang pusat ke cabang atau antar departemen. Voucher ini mencatat detail seperti nama barang, ukuran, jumlah, dan lokasi asal serta tujuan. Contoh penggunaan termasuk pemindahan bahan baku ke unit produksi atau pengiriman stok ke toko cabang. Voucher ini membantu melacak pergerakan inventaris tanpa memengaruhi nilai keuangan stok.'
-                },
-                PK: {
-                    value: 'PK',
-                    text: 'Pemakaian',
-                    description: 'Voucher Pemakaian digunakan untuk mencatat penggunaan barang atau bahan dalam operasional perusahaan, seperti bahan baku yang digunakan dalam proses produksi atau barang yang dikonsumsi untuk keperluan operasional. Voucher ini mencatat detail seperti nama barang, ukuran, jumlah, dan tujuan pemakaian. Contoh penggunaan termasuk pemakaian kayu untuk produksi furnitur atau penggunaan bahan kimia dalam proses manufaktur. Voucher ini penting untuk memperbarui stok dan menghitung biaya produksi.'
                 },
                 PYB: {
                     value: 'PYB',

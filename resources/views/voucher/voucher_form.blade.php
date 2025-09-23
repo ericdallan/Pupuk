@@ -88,8 +88,6 @@
                                     <option value="PM">Pemasukan</option>
                                     <option value="PB">Pembelian</option>
                                     <option value="LN">Lainnya</option>
-                                    <option value="PH">Pemindahan</option>
-                                    <option value="PK">Pemakaian</option>
                                     <option value="PYB">Penyesuaian Bertambah</option>
                                     <option value="PYK">Penyesuaian Berkurang</option>
                                     <option value="PYL">Penyesuaian Lainnya</option>
@@ -187,15 +185,6 @@
                             <div class="col-sm-9">
                                 <div id="storeFieldContainer">
                                     <input type="text" class="form-control" id="store" name="store">
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row mb-3">
-                            <label for="recipe" class="col-sm-3 col-form-label">Formula Produk:</label>
-                            <div class="col-sm-9">
-                                <div id="recipeFieldContainer">
-                                    <input type="text" class="form-control" id="recipe" name="recipe"
-                                        disabled>
                                 </div>
                             </div>
                         </div>
@@ -363,8 +352,6 @@
         const affectStockContainer = document.getElementById('affectStockContainer');
         const affectStockYes = document.getElementById('affectStockYes');
         const affectStockNo = document.getElementById('affectStockNo');
-        const recipeInputContainer = document.getElementById('recipeFieldContainer');
-        const recipeInput = document.getElementById('recipe');
         const existingInvoices = @json($existingInvoices);
         const storeNames = @json($storeNames);
         const subsidiaries = @json($subsidiariesData);
@@ -373,7 +360,6 @@
         const transferStocks = @json($transferStocks);
         const usedStocks = @json($usedStocks);
         const transactions = @json($transactionsData);
-        const recipes = @json($recipes);
 
         const voucherTypes = {
             PJ: {
@@ -400,16 +386,6 @@
                 value: 'LN',
                 text: 'Lainnya',
                 description: 'Voucher Lainnya digunakan untuk mencatat transaksi khusus atau non-standar yang tidak termasuk dalam kategori voucher lain seperti Penjualan, Pembelian, Pengeluaran, atau Pemasukan. Voucher ini mencakup transaksi seperti donasi, hadiah, penyelesaian sengketa keuangan, atau transaksi internal khusus seperti pemindahan dana antar akun perusahaan tanpa kaitan dengan operasional rutin. Contoh penggunaan termasuk pencatatan penerimaan hibah dari pihak eksternal, pembayaran denda atau penalti, atau transaksi barter barang yang tidak memengaruhi stok. Voucher ini mencatat detail seperti deskripsi transaksi, jumlah, pihak terkait, dan akun yang terpengaruh, memastikan dokumentasi yang jelas untuk pelaporan keuangan dan kepatuhan audit.'
-            },
-            PH: {
-                value: 'PH',
-                text: 'Pemindahan',
-                description: 'Voucher Pemindahan digunakan untuk mencatat perpindahan stok barang dari satu lokasi penyimpanan ke lokasi lain dalam perusahaan, seperti dari gudang pusat ke cabang atau antar departemen. Voucher ini mencatat detail seperti nama barang, ukuran, jumlah, dan lokasi asal serta tujuan. Contoh penggunaan termasuk pemindahan bahan baku ke unit produksi atau pengiriman stok ke toko cabang. Voucher ini membantu melacak pergerakan inventaris tanpa memengaruhi nilai keuangan stok.'
-            },
-            PK: {
-                value: 'PK',
-                text: 'Pemakaian',
-                description: 'Voucher Pemakaian digunakan untuk mencatat penggunaan barang atau bahan dalam operasional perusahaan, seperti bahan baku yang digunakan dalam proses produksi atau barang yang dikonsumsi untuk keperluan operasional. Voucher ini mencatat detail seperti nama barang, ukuran, jumlah, dan tujuan pemakaian. Contoh penggunaan termasuk pemakaian kayu untuk produksi furnitur atau penggunaan bahan kimia dalam proses manufaktur. Voucher ini penting untuk memperbarui stok dan menghitung biaya produksi.'
             },
             PYB: {
                 value: 'PYB',
@@ -541,132 +517,9 @@
             updateVoucherTypeOptionsForAdjustment();
             refreshTransactionTable();
             toggleSizeInputState();
-            updateRecipeField();
         });
         affectStockYes.addEventListener('change', updateVoucherTypeOptionsForAdjustment);
         affectStockNo.addEventListener('change', updateVoucherTypeOptionsForAdjustment);
-
-        function createRecipeDropdown() {
-            const select = document.createElement('select');
-            select.className = 'form-control';
-            select.id = 'recipe';
-            select.name = 'recipe_id';
-
-            const defaultOption = document.createElement('option');
-            defaultOption.value = '';
-            defaultOption.textContent = 'Pilih Formula Produk';
-            select.appendChild(defaultOption);
-
-            if (recipes && Array.isArray(recipes)) {
-                recipes.forEach(recipe => {
-                    if (recipe.id) {
-                        const option = document.createElement('option');
-                        option.value = recipe.id;
-
-                        // Membuat text dengan format: product_name (size)
-                        let displayText = recipe.product_name || 'Unnamed Recipe';
-                        if (recipe.size || recipe.nominal) {
-                            displayText += ' (';
-                            if (recipe.size) {
-                                displayText += recipe.size;
-                            }
-                            if (recipe.nominal) {
-                                // Format nominal to Rp. xxx.xxx.xxx,xx
-                                const formattedNominal = Number(recipe.nominal).toLocaleString(
-                                'id-ID', {
-                                    style: 'currency',
-                                    currency: 'IDR',
-                                    minimumFractionDigits: 2,
-                                    maximumFractionDigits: 2
-                                });
-                                displayText += recipe.size ? `, ${formattedNominal}` : formattedNominal;
-                            }
-                            displayText += ')';
-                        }
-                        option.textContent = displayText;
-
-                        select.appendChild(option);
-                    } else {
-                        console.warn('Recipe missing id:', recipe);
-                    }
-                });
-            } else {
-                console.error('Recipes data is invalid or undefined:', recipes);
-            }
-
-            const existingListener = select._eventListeners?.change;
-            if (existingListener) {
-                select.removeEventListener('change', existingListener);
-            }
-            select.addEventListener('change', handleRecipeChange);
-            select._eventListeners = select._eventListeners || {};
-            select._eventListeners.change = handleRecipeChange;
-
-            return select;
-        }
-
-        function handleRecipeChange() {
-            const selectedRecipeId = this.value;
-            const voucherType = voucherTypeSelect.value;
-            const useStock = document.querySelector('input[name="use_stock"]:checked')?.value || 'no';
-
-            clearTimeout(this._debounceTimeout);
-            this._debounceTimeout = setTimeout(() => {
-                if (selectedRecipeId && voucherType === 'PK' && useStock === 'yes') {
-                    addTransactionRowBtn.disabled = true;
-                    populateTransactionTableFromRecipe(selectedRecipeId);
-                } else {
-                    addTransactionRowBtn.disabled = false;
-                    refreshTransactionTable();
-                }
-            }, 100);
-        }
-
-        function populateTransactionTableFromRecipe(recipeId) {
-            const selectedRecipe = recipes.find(r => r.id == recipeId);
-            if (!selectedRecipe) {
-                transactionTableBody.innerHTML = '<tr><td colspan="6">No valid recipe data available</td></tr>';
-                return;
-            }
-            transactionTableBody.innerHTML = '';
-            const row = generateTransactionTableRow(0);
-            transactionTableBody.appendChild(row);
-
-            const descriptionInput = row.querySelector('.descriptionInput');
-            const sizeInput = row.querySelector('.sizeInput');
-            const quantityInput = row.querySelector('.quantityInput');
-            const nominalInput = row.querySelector('.nominalInput');
-            const totalInput = row.querySelector('.totalInput');
-
-            if (descriptionInput && descriptionInput.tagName === 'INPUT') {
-                descriptionInput.value = selectedRecipe.product_name || '';
-                descriptionInput.readonly = true;
-            }
-            if (sizeInput && sizeInput.tagName === 'INPUT') {
-                sizeInput.value = selectedRecipe.size || '';
-                sizeInput.readonly = true;
-            }
-            if (quantityInput) {
-                quantityInput.value = 1;
-                quantityInput.addEventListener('input', function() {
-                    updateRowTotal(row);
-                    updateAllCalculationsAndValidations();
-                });
-            }
-            if (nominalInput) {
-                const nominalValue = parseFloat(selectedRecipe.nominal) || 0;
-                nominalInput.value = nominalValue.toFixed(2);
-                nominalInput.readonly = true;
-            }
-            if (totalInput) {
-                updateRowTotal(row);
-            }
-
-            attachTransactionRemoveButtonListeners();
-            attachTransactionInputListeners();
-            toggleSizeInputState();
-            updateAllCalculationsAndValidations();
-        }
 
         function updateRowTotal(row) {
             const quantityInput = row.querySelector('.quantityInput');
@@ -684,31 +537,6 @@
             }
         }
 
-        function updateRecipeField() {
-            recipeInputContainer.innerHTML = '';
-            const voucherType = voucherTypeSelect.value;
-            const useStock = document.querySelector('input[name="use_stock"]:checked')?.value || 'no';
-
-            if (voucherType === 'PK' && useStock === 'yes') {
-                const recipeSelect = createRecipeDropdown();
-                recipeInputContainer.appendChild(recipeSelect);
-                if (recipeSelect.value) {
-                    const changeEvent = new Event('change');
-                    recipeSelect.dispatchEvent(changeEvent);
-                }
-            } else {
-                const input = document.createElement('input');
-                input.type = 'text';
-                input.className = 'form-control';
-                input.id = 'recipe';
-                input.name = 'recipe';
-                input.disabled = true;
-                recipeInputContainer.appendChild(input);
-                addTransactionRowBtn.disabled = false;
-            }
-            refreshTransactionTable();
-        }
-
         function updateVoucherTypeOptions() {
             const useStock = document.querySelector('input[name="use_stock"]:checked')?.value || 'no';
             const currentValue = voucherTypeSelect.value;
@@ -720,7 +548,7 @@
             voucherTypeSelect.appendChild(defaultOption);
 
             if (useStock === 'yes') {
-                [voucherTypes.PB, voucherTypes.PJ, voucherTypes.PH, voucherTypes.PK].forEach(type => {
+                [voucherTypes.PB, voucherTypes.PJ].forEach(type => {
                     const option = document.createElement('option');
                     option.value = type.value;
                     option.textContent = type.text;
@@ -748,14 +576,12 @@
             updateAffectStockContainer();
             refreshTransactionTable();
             toggleSizeInputState();
-            updateRecipeField();
         });
         useStockNo.addEventListener('change', () => {
             updateVoucherTypeOptions();
             updateAffectStockContainer();
             refreshTransactionTable();
             toggleSizeInputState();
-            updateRecipeField();
         });
 
         function isSubsidiaryCodeUsed() {
@@ -959,10 +785,6 @@
                 }
             });
 
-            select.addEventListener('change', function() {
-                updateProductDropdownForPK();
-            });
-
             return select;
         }
 
@@ -996,7 +818,6 @@
             invoiceFieldContainer.appendChild(invoiceLabel);
             invoiceFieldContainer.appendChild(invoiceInputDiv);
             updateAccountCodeDatalist();
-            updateProductDropdownForPK();
         }
 
         function updateDueDateField() {
@@ -1051,7 +872,6 @@
             }
             updateDueDateField();
             updateAccountCodeDatalist();
-            updateProductDropdownForPK();
         }
 
         useInvoiceYes.addEventListener('change', updateInvoiceAndStoreFields);
@@ -1059,12 +879,10 @@
         useExistingInvoiceYes.addEventListener('change', function() {
             updateInvoiceField();
             updateDueDateField();
-            updateProductDropdownForPK();
         });
         useExistingInvoiceNo.addEventListener('change', function() {
             updateInvoiceField();
             updateDueDateField();
-            updateProductDropdownForPK();
         });
 
         function createSizeInputWithDropdown(index, selectedItem) {
@@ -1157,10 +975,6 @@
                 stockData = [...(usedStocks || []), ...(stocks || [])];
             } else if (voucherType === 'PYB' || voucherType === 'PYK') {
                 stockData = [...(usedStocks || []), ...(stocks || [])];
-            } else if (voucherType === 'PH') {
-                stockData = stocks;
-            } else if (voucherType === 'PK') {
-                stockData = transferStocks;
             } else if (voucherType === 'PB' || voucherType === 'RPB') {
                 stockData = stocks;
             }
@@ -1298,8 +1112,8 @@
                 'yes') || (useStock === 'return' && (voucherType === 'RPB' || voucherType === 'RPJ'));
             let newSizeElement;
 
-            if (isStockEnabled && (voucherType === 'PB' || voucherType === 'PJ' || voucherType === 'PH' ||
-                    voucherType === 'PK' || voucherType === 'PYB' || voucherType === 'PYK' || voucherType ===
+            if (isStockEnabled && (voucherType === 'PB' || voucherType === 'PJ' || voucherType === 'PYB' ||
+                    voucherType === 'PYK' || voucherType ===
                     'RPB' || voucherType === 'RPJ')) {
                 if (voucherType === 'PB' || voucherType === 'RPB') {
                     newSizeElement = createSizeInputWithDropdown(index, selectedItem);
@@ -1397,10 +1211,8 @@
                 stockData = [...(usedStocks || []), ...(stocks || [])];
             } else if (voucherType === 'PYB' || voucherType === 'PYK') {
                 stockData = [...(usedStocks || []), ...(stocks || [])];
-            } else if (voucherType === 'PH' || voucherType === 'PB' || voucherType === 'RPB') {
+            } else if (voucherType === 'PB' || voucherType === 'RPB') {
                 stockData = stocks || [];
-            } else if (voucherType === 'PK') {
-                stockData = transferStocks || [];
             } else {
                 const invalidOption = document.createElement('option');
                 invalidOption.value = '';
@@ -1617,63 +1429,6 @@
             input.className = 'form-control descriptionInput';
             input.name = `transactions[${index}][description]`;
             return input;
-        }
-
-        function createProductDropdownForPK(index) {
-            const select = document.createElement('select');
-            select.className = 'form-control descriptionInput';
-            select.name = `transactions[${index}][description]`;
-
-            const defaultOption = document.createElement('option');
-            defaultOption.value = '';
-            select.appendChild(defaultOption);
-
-            const invoiceNumber = document.querySelector('#invoice')?.value;
-            if (invoiceNumber) {
-                const relatedStocks = usedStocks.filter(stock => stock.invoice_number === invoiceNumber);
-                const uniqueItems = [...new Set(relatedStocks.map(stock => stock.item))];
-
-                uniqueItems.forEach(item => {
-                    const stock = relatedStocks.find(s => s.item === item);
-                    const option = document.createElement('option');
-                    option.value = item;
-                    option.textContent = `${item}`;
-                    select.appendChild(option);
-                });
-            }
-
-            select.addEventListener('change', function(event) {
-                handleStockChange(index, event);
-                updateSizeDropdown(index, this.value);
-            });
-
-            return select;
-        }
-
-        function updateProductDropdownForPK() {
-            const voucherType = voucherTypeSelect.value;
-            if (voucherType !== 'PK') return;
-
-            const invoiceNumber = document.querySelector('#invoice')?.value;
-            transactionTableBody.querySelectorAll('tr[data-is-new-item="true"]').forEach(row => {
-                const index = parseInt(row.dataset.rowIndex);
-                const descriptionCell = row.querySelector('td:nth-child(1)');
-                if (!descriptionCell) return;
-
-                const currentDescriptionInput = row.querySelector('.descriptionInput');
-                const previousValue = currentDescriptionInput ? currentDescriptionInput.value : '';
-                descriptionCell.innerHTML = '';
-
-                const newDescriptionElement = createProductDropdownForPK(index);
-                descriptionCell.appendChild(newDescriptionElement);
-
-                if (previousValue && newDescriptionElement.querySelector(
-                        `option[value="${previousValue}"]`)) {
-                    newDescriptionElement.value = previousValue;
-                }
-
-                updateSizeDropdown(index, newDescriptionElement.value);
-            });
         }
 
         function calculateAverageHpp(description, size) {
@@ -2070,8 +1825,6 @@
             const voucherType = voucherTypeSelect.value;
             const useStock = document.querySelector('input[name="use_stock"]:checked')?.value || 'no';
             const affectStock = document.querySelector('input[name="affect_stock"]:checked')?.value || 'no';
-            const recipeSelected = document.querySelector('#recipe')?.value && voucherType === 'PK' &&
-                useStock === 'yes';
             const isStockVoucher = useStock === 'yes' ||
                 (useStock === 'adjustment' && affectStock === 'yes' && (voucherType === 'PYB' || voucherType ===
                     'PYK')) ||
@@ -2081,8 +1834,8 @@
                 (useStock === 'return' && (voucherType === 'RPB' || voucherType ===
                     'RPJ')); // Konsisten dengan toggleSizeInputState
 
-            if (isStockVoucher && (voucherType === 'PJ' || voucherType === 'PB' || voucherType === 'PH' ||
-                    voucherType === 'PK' || voucherType === 'PYB' || voucherType === 'PYK' || voucherType ===
+            if (isStockVoucher && (voucherType === 'PJ' || voucherType === 'PB' || voucherType === 'PYB' ||
+                    voucherType === 'PYK' || voucherType ===
                     'RPB' || voucherType === 'RPJ')) {
                 if (voucherType === 'PB' || voucherType === 'RPB') {
                     descriptionElement = document.createElement('div');
@@ -2110,17 +1863,9 @@
 
                     descriptionElement.appendChild(select);
                     descriptionElement.appendChild(input);
-                } else if (voucherType === 'PK') {
-                    descriptionElement = document.createElement('input');
-                    descriptionElement.type = 'text';
-                    descriptionElement.className = 'form-control descriptionInput';
-                    descriptionElement.name = `transactions[${index}][description]`;
                 } else {
                     descriptionElement = createStockDropdown(index, voucherType);
                     descriptionElement.disabled = !isStockEnabled;
-                }
-                if (recipeSelected) {
-                    descriptionElement.readOnly = true;
                 }
             } else {
                 descriptionElement = createDescriptionInput(index);
@@ -2132,16 +1877,8 @@
             let sizeElement;
             if (isStockVoucher && (voucherType === 'PB' || voucherType === 'RPB')) {
                 sizeElement = createSizeInputWithDropdown(index, descriptionElement.value);
-            } else if (isStockVoucher && voucherType === 'PK') {
-                sizeElement = document.createElement('input');
-                sizeElement.type = 'text';
-                sizeElement.className = 'form-control sizeInput';
-                sizeElement.name = `transactions[${index}][size]`;
             } else {
                 sizeElement = createSizeDropdown(index, descriptionElement.value, voucherType);
-            }
-            if (recipeSelected) {
-                sizeElement.readOnly = true;
             }
             sizeElement.disabled = !isStockEnabled; // Gunakan isStockEnabled
             sizeCell.appendChild(sizeElement);
@@ -2169,9 +1906,6 @@
             nominalInput.step = '0.01';
             nominalInput.className = 'form-control nominalInput';
             nominalInput.name = `transactions[${index}][nominal]`;
-            if (recipeSelected) {
-                nominalInput.readOnly = true;
-            }
             nominalCell.appendChild(nominalInput);
             row.appendChild(nominalCell);
 
@@ -2217,15 +1951,11 @@
 
             const descriptionCell = document.createElement('td');
             let descriptionInput;
-            if (voucherTypeSelect.value === 'PK') {
-                descriptionInput = createProductDropdownForPK(index);
-            } else {
-                descriptionInput = document.createElement('input');
-                descriptionInput.type = 'text';
-                descriptionInput.className = 'form-control descriptionInput';
-                descriptionInput.name = `transactions[${index}][description]`;
-                descriptionInput.placeholder = 'Masukkan Nama Barang Baru';
-            }
+            descriptionInput = document.createElement('input');
+            descriptionInput.type = 'text';
+            descriptionInput.className = 'form-control descriptionInput';
+            descriptionInput.name = `transactions[${index}][description]`;
+            descriptionInput.placeholder = 'Masukkan Nama Barang Baru';
             descriptionCell.appendChild(descriptionInput);
             row.appendChild(descriptionCell);
 
@@ -2438,7 +2168,7 @@
             const isHppRow = row.dataset.isHppRow === 'true';
             const isNewItemRow = row.dataset.isNewItem === 'true';
 
-            if (isHppRow || !['PH', 'PK', 'PJ'].includes(voucherType)) {
+            if (isHppRow || !['PJ'].includes(voucherType)) {
                 return {
                     isValid: true,
                     message: ''
@@ -2449,14 +2179,7 @@
             let tableName = '';
             let targetTableName = '';
 
-            if (voucherType === 'PH') {
-                stockData = stocks;
-                tableName = 'Stok';
-            } else if (voucherType === 'PK') {
-                stockData = usedStocks;
-                tableName = 'used_stocks';
-                targetTableName = 'used_stocks';
-            } else if (voucherType === 'PJ') {
+            if (voucherType === 'PJ') {
                 stockData = [...usedStocks, ...stocks];
                 tableName = 'Stok Pemakaian atau Stok Pemindahan';
             }
@@ -2484,36 +2207,7 @@
                         message: validationInput.value
                     };
                 }
-                if (!stock && voucherType !== 'PK') {
-                    validationInput.value =
-                        `Item ${description}${size ? ' (' + size + ')' : ''} tidak ditemukan di tabel ${tableName}.`;
-                    saveVoucherBtn.disabled = true;
-                    return {
-                        isValid: false,
-                        message: validationInput.value
-                    };
-                }
-                if (stock && stock.quantity < quantity && voucherType !== 'PK') {
-                    validationInput.value =
-                        `Kuantitas untuk item ${description}${size ? ' (' + size + ')' : ''} melebihi stok tersedia di tabel ${tableName}. Tersedia: ${stock.quantity}, Dibutuhkan: ${quantity}`;
-                    saveVoucherBtn.disabled = true;
-                    return {
-                        isValid: false,
-                        message: validationInput.value
-                    };
-                }
             }
-
-            if (voucherType === 'PK' && !isNewItemRow && stock && stock.quantity >= quantity) {
-                validationInput.value =
-                    `Stok ${description}${size ? ' (' + size + ')' : ''} cukup untuk dipindahkan ke ${targetTableName}. Tersedia: ${stock.quantity}, Dibutuhkan: ${quantity}`;
-                saveVoucherBtn.disabled = false;
-                return {
-                    isValid: true,
-                    message: validationInput.value
-                };
-            }
-
             return {
                 isValid: true,
                 message: ''
@@ -2608,8 +2302,6 @@
             deskripsiVoucherTextarea.value = voucherTypes[this.value]?.description || '';
             updateAllCalculationsAndValidations();
             toggleSizeInputState();
-            updateProductDropdownForPK();
-            updateRecipeField();
         });
 
         function calculateTotalNominal() {
@@ -2739,7 +2431,6 @@
         //     updateVoucherDay();
         // }
         // Initialize
-        updateRecipeField();
         attachTransactionInputListeners();
         attachTransactionRemoveButtonListeners();
         attachVoucherDetailRemoveButtonListeners();

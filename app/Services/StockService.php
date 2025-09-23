@@ -9,9 +9,6 @@ use Illuminate\Support\Facades\Log;
 use App\Imports\StockImport;
 use App\Models\Company;
 use Maatwebsite\Excel\Facades\Excel;
-use App\Models\UsedStock;
-use App\Models\Recipes;
-use App\Models\TransferStock;
 
 class StockService
 {
@@ -26,7 +23,6 @@ class StockService
         $startDate = $data['start_date'] ?? Carbon::today()->startOfYear()->toDateString();
         $endDate = $data['end_date'] ?? Carbon::today()->toDateString();
         $tableFilter = $data['table_filter'] ?? 'all';
-        $recipes = $data['recipe'] ?? null;
         $startDate = Carbon::parse($startDate)->startOfDay();
         $endDate = Carbon::parse($endDate)->endOfDay();
 
@@ -54,57 +50,17 @@ class StockService
 
         // Fetch stock transactions
         $stockData = $tableFilter === 'all' || $tableFilter === 'stocks' ? $this->getStockTransactions('stocks', $stockKeys, $startDate, $endDate) : collect([]);
-        $transferStockData = $tableFilter === 'all' || $tableFilter === 'transfer_stocks' ? $this->getStockTransactions('transfer_stocks', $stockKeys, $startDate, $endDate) : collect([]);
-        $usedStockData = $tableFilter === 'all' || $tableFilter === 'used_stocks' ? $this->getStockTransactions('used_stocks', $stockKeys, $startDate, $endDate) : collect([]);
 
         // Process grouped stock data
         $stockMap = $this->processGroupedStockData($stockData, $openingBalances, 'stocks', $startDate, $endDate);
-        $transferStockMap = $this->processGroupedStockData($transferStockData, $openingBalances, 'transfer_stocks', $startDate, $endDate);
-        $usedStockMap = $this->processGroupedStockData($usedStockData, $openingBalances, 'used_stocks', $startDate, $endDate);
-
-        // Fetch recipes and their transfer stocks
-        $recipes = DB::table('recipes')
-            ->leftJoin('recipe_transfer_stock', 'recipes.id', '=', 'recipe_transfer_stock.recipe_id')
-            ->leftJoin('transfer_stocks', 'recipe_transfer_stock.transfer_stock_id', '=', 'transfer_stocks.id')
-            ->select(
-                'recipes.id',
-                'recipes.product_name',
-                'recipes.size',
-                DB::raw('COALESCE(SUM(recipe_transfer_stock.nominal), 0) as nominal'),
-                'transfer_stocks.item',
-                'transfer_stocks.size as transfer_stock_size',
-                'recipe_transfer_stock.quantity',
-                'recipe_transfer_stock.nominal as transfer_stock_nominal'
-            )
-            ->groupBy('recipes.id', 'recipes.product_name', 'recipes.size', 'transfer_stocks.item', 'transfer_stocks.size', 'recipe_transfer_stock.quantity', 'recipe_transfer_stock.nominal')
-            ->get()
-            ->groupBy('id')
-            ->map(function ($group) {
-                $recipe = $group->first();
-                $recipe->transferStocks = $group->map(function ($item) {
-                    return (object) [
-                        'item' => $item->item,
-                        'size' => $item->transfer_stock_size,
-                        'quantity' => $item->quantity,
-                        'nominal' => $item->transfer_stock_nominal,
-                    ];
-                })->values(); // Removed unique() to preserve all transfer stocks
-                return $recipe;
-            })->values();
 
         return [
             'stockData' => $stockMap,
-            'transferStockData' => $transferStockMap,
-            'usedStockData' => $usedStockMap,
-            'recipes' => $recipes,
             'startDate' => $startDate,
             'endDate' => $endDate,
         ];
         return [
             'stockData' => $stockMap,
-            'transferStockData' => $transferStockMap,
-            'usedStockData' => $usedStockMap,
-            'recipes' => $recipes,
             'startDate' => $startDate,
             'endDate' => $endDate,
         ];
@@ -194,8 +150,6 @@ class StockService
             // Define opening voucher types based on table
             $openingVoucherType = match ($tableName) {
                 'stocks' => 'PB',
-                'transfer_stocks' => 'PH',
-                'used_stocks' => ['PK', 'PB'],
                 default => null,
             };
 
@@ -229,15 +183,11 @@ class StockService
             // Define incoming and outgoing voucher types based on table
             $incomingVoucherTypes = match ($tableName) {
                 'stocks' => ['PB', 'PYB', 'RPJ'],
-                'transfer_stocks' => ['PH'],
-                'used_stocks' => ['PK', 'PB', 'PYB', 'RPJ'],
                 default => [],
             };
 
             $outgoingVoucherTypes = match ($tableName) {
-                'stocks' => ['PH', 'PJ', 'PYK', 'RPB'],
-                'transfer_stocks' => ['PK'],
-                'used_stocks' => ['PJ', 'PYK'],
+                'stocks' => ['PJ', 'PYK', 'RPB'],
                 default => [],
             };
 
@@ -269,77 +219,28 @@ class StockService
             // Calculate outgoing quantities
             $outgoingQty = 0;
             $outgoingHpp = 0;
-
-            if ($tableName === 'transfer_stocks' && $stockRecord) {
-                // Fetch all PK transactions within the dynamic date range
-                $pkTransactions = DB::table('transactions as t')
-                    ->join('vouchers as v', 't.voucher_id', '=', 'v.id')
-                    ->where('v.voucher_type', 'PK')
-                    ->whereBetween('t.created_at', [$startDate, $endDate])
-                    ->select('t.id', 't.description', 't.quantity as transaction_quantity', 't.size as transaction_size', 't.nominal', 'v.voucher_number', 'v.id as voucher_id')
-                    ->get();
-
-                // Get all recipes that use this transfer_stocks item with standard cost
-                $relevantRecipes = DB::table('recipe_transfer_stock as rts')
-                    ->where('rts.item', $item)
-                    ->where('rts.size', $size)
-                    ->join('recipes as r', 'rts.recipe_id', '=', 'r.id')
-                    ->select('r.id as recipe_id', 'r.product_name', 'r.size as recipe_size', 'rts.quantity as material_quantity', 'rts.nominal as standard_cost')
-                    ->get();
-
-                $outgoingQty = 0;
-                $totalMaterialCost = 0;
-                $totalMaterialQty = 0;
-
-                foreach ($pkTransactions as $transaction) {
-                    foreach ($relevantRecipes as $recipe) {
-                        if ($recipe->product_name === $transaction->description && $recipe->recipe_size === $transaction->transaction_size) {
-                            $materialQty = $recipe->material_quantity ?? 0;
-                            $standardCostTotal = $recipe->standard_cost ?? $incomingHpp; // Total cost for material_quantity
-                            $standardCostPerUnit = $materialQty > 0 ? ($standardCostTotal / $materialQty) : $incomingHpp; // HPP per unit
-                            $outgoingQty += $materialQty * $transaction->transaction_quantity;
-
-                            // Use standard cost per unit as outgoing HPP
-                            $materialCost = $standardCostPerUnit * $materialQty * $transaction->transaction_quantity;
-                            $totalMaterialCost += $materialCost;
-                            $totalMaterialQty += $materialQty * $transaction->transaction_quantity;
-                        }
-                    }
+            // Filter outgoing records with strict voucher_type check and deduplicate
+            $outgoingRecords = $sortedRecords->filter(function ($record) use ($openingBalance, $outgoingVoucherTypes, $openingVoucherType, $sortedRecords) {
+                if (is_array($openingVoucherType)) {
+                    $firstOpeningRecord = $sortedRecords->whereIn('voucher_type', $openingVoucherType)
+                        ->sortBy('created_at')
+                        ->first();
+                } else {
+                    $firstOpeningRecord = $sortedRecords->firstWhere('voucher_type', $openingVoucherType);
                 }
+                $isOpening = $firstOpeningRecord &&
+                    $record->transaction_quantity == $firstOpeningRecord->transaction_quantity &&
+                    $record->nominal == $firstOpeningRecord->nominal &&
+                    $record->created_at == $firstOpeningRecord->created_at &&
+                    (is_array($openingVoucherType) ? in_array($record->voucher_type, $openingVoucherType) : $record->voucher_type == $openingVoucherType);
+                return !$isOpening && in_array($record->voucher_type, $outgoingVoucherTypes);
+            })->unique(function ($record) {
+                return $record->voucher_id . '|' . $record->created_at; // Deduplicate based on voucher_id and created_at
+            });
 
-                // Calculate average outgoing HPP based on standard cost per unit
-                $outgoingHpp = $totalMaterialQty > 0 ? ($totalMaterialCost / $totalMaterialQty) : $incomingHpp;
+            $outgoingQty = $outgoingRecords->sum('transaction_quantity') ?? 0;
+            $outgoingHpp = $outgoingRecords->isNotEmpty() ? ($outgoingRecords->avg('nominal') ?? $incomingHpp) : $incomingHpp;
 
-                // Fallback to quantity change if no recipe data
-                if ($outgoingQty == 0) {
-                    $currentQty = $stockRecord->quantity ?? 0;
-                    $expectedQty = $openingBalance->opening_qty + $incomingQty;
-                    $outgoingQty = max(0, $expectedQty - $currentQty);
-                    $outgoingHpp = $incomingHpp; // Fallback to incoming HPP if no recipe data
-                }
-            } else {
-                // Filter outgoing records with strict voucher_type check and deduplicate
-                $outgoingRecords = $sortedRecords->filter(function ($record) use ($openingBalance, $outgoingVoucherTypes, $openingVoucherType, $sortedRecords) {
-                    if (is_array($openingVoucherType)) {
-                        $firstOpeningRecord = $sortedRecords->whereIn('voucher_type', $openingVoucherType)
-                            ->sortBy('created_at')
-                            ->first();
-                    } else {
-                        $firstOpeningRecord = $sortedRecords->firstWhere('voucher_type', $openingVoucherType);
-                    }
-                    $isOpening = $firstOpeningRecord &&
-                        $record->transaction_quantity == $firstOpeningRecord->transaction_quantity &&
-                        $record->nominal == $firstOpeningRecord->nominal &&
-                        $record->created_at == $firstOpeningRecord->created_at &&
-                        (is_array($openingVoucherType) ? in_array($record->voucher_type, $openingVoucherType) : $record->voucher_type == $openingVoucherType);
-                    return !$isOpening && in_array($record->voucher_type, $outgoingVoucherTypes);
-                })->unique(function ($record) {
-                    return $record->voucher_id . '|' . $record->created_at; // Deduplicate based on voucher_id and created_at
-                });
-
-                $outgoingQty = $outgoingRecords->sum('transaction_quantity') ?? 0;
-                $outgoingHpp = $outgoingRecords->isNotEmpty() ? ($outgoingRecords->avg('nominal') ?? $incomingHpp) : $incomingHpp;
-            }
 
             $outgoingHpp = $outgoingQty > 0 ? $outgoingHpp : 0;
 
@@ -355,35 +256,20 @@ class StockService
 
             $finalHpp = $transactionCount > 0 ? $totalHppValue / $transactionCount : ($incomingHpp > 0 ? $incomingHpp : $openingBalance->opening_hpp);
 
-            // Set nominal for transfer_stocks with improved fallback
-            $nominal = $tableName === 'transfer_stocks' ? ($incomingRecords->avg('nominal') ?? 0) : 0;
-            if ($tableName === 'transfer_stocks' && $nominal == 0) {
-                $pbHpp = DB::table('transactions as t')
-                    ->join('vouchers as v', 't.voucher_id', '=', 'v.id')
-                    ->where('t.description', $item)
-                    ->where('t.size', $size)
-                    ->where('v.voucher_type', 'PH')
-                    ->where('t.description', 'NOT LIKE', 'HPP %')
-                    ->avg('t.nominal') ?? null;
-                $nominal = $pbHpp ?: ($openingBalances->get($stockKey, (object) ['opening_hpp' => 0])->opening_hpp ?: 0);
-            }
-
             $entry = (object) [
                 'id' => $stockRecord ? $stockRecord->id : null,
                 'item' => $item,
                 'size' => $size,
                 'quantity' => $stockRecord ? $stockRecord->quantity : 0,
                 'opening_qty' => $openingBalance->opening_qty,
-                'opening_hpp' => round($openingBalance->opening_hpp),
+                'opening_hpp' => round(floatval($openingBalance->opening_hpp ?? 0), 2),
                 'incoming_qty' => $incomingQty,
-                'incoming_hpp' => round($incomingHpp),
+                'incoming_hpp' => round(floatval($incomingHpp ?? 0), 2),
                 'outgoing_qty' => $outgoingQty,
-                'outgoing_hpp' => round($outgoingHpp),
+                'outgoing_hpp' => round(floatval($outgoingHpp ?? 0), 2),
                 'final_stock_qty' => $finalQty,
-                'final_hpp' => round($finalHpp),
+                'final_hpp' => round(floatval($finalHpp ?? 0), 2),
                 'average_pb_hpp' => round($incomingHpp),
-                'average_ph_hpp' => $tableName === 'transfer_stocks' ? ($incomingRecords->avg('nominal') ?? 0) : 0,
-                'nominal' => $nominal,
                 'transactions' => $records->map(function ($record) {
                     return (object) [
                         'description' => $record->description ?? 'No Description',
@@ -461,7 +347,7 @@ class StockService
                 ->where('transactions.description', $item)
                 ->where('transactions.size', $size)
                 ->where('transactions.description', 'NOT LIKE', 'HPP %')
-                ->whereIn('vouchers.voucher_type', ['PB', 'PH', 'PK'])
+                ->whereIn('vouchers.voucher_type', ['PB'])
                 ->where('transactions.created_at', '<=', $startDate)
                 ->orderBy('transactions.created_at', 'asc')
                 ->first();
@@ -475,132 +361,6 @@ class StockService
         }
 
         return $openingBalances;
-    }
-
-    /**
-     * Store a new recipe
-     */
-    public function storeRecipe(string $productName, array $transferStockIds, array $quantities, string $productSize): void
-    {
-        // Pengecekan duplikasi product_name dan product_size (case-insensitive) di service layer
-        $existingRecipe = Recipes::whereRaw('LOWER(product_name) = ?', [strtolower($productName)])
-            ->whereRaw('LOWER(size) = ?', [strtolower($productSize)])
-            ->first();
-
-        if ($existingRecipe) {
-            throw new \Exception("Kombinasi nama produk dan ukuran sudah ada. Produk \"{$existingRecipe->product_name}\" dengan ukuran \"{$existingRecipe->size}\" sudah terdaftar.");
-        }
-
-        // Validate input
-        foreach ($transferStockIds as $index => $stockId) {
-            $transferStock = TransferStock::find($stockId);
-            if (!$transferStock) {
-                Log::warning('Transfer stock not found:', ['stock_id' => $stockId]);
-                throw new \Exception("Bahan baku dengan ID $stockId tidak ditemukan.");
-            }
-            if ($transferStock->quantity < $quantities[$index]) {
-                Log::warning('Insufficient stock for transfer stock:', [
-                    'stock_id' => $stockId,
-                    'item' => $transferStock->item,
-                    'available_quantity' => $transferStock->quantity,
-                    'requested_quantity' => $quantities[$index],
-                ]);
-                throw new \Exception("Stok untuk {$transferStock->item} ({$transferStock->size}) tidak cukup. Tersedia: {$transferStock->quantity}, diminta: {$quantities[$index]}.");
-            }
-        }
-
-        DB::beginTransaction();
-
-        try {
-            // Create first UsedStock entry for the product
-            $usedStock = UsedStock::create([
-                'item' => $productName,
-                'size' => $productSize,
-                'quantity' => 0,
-            ]);
-
-            // Calculate total nominal for the recipe
-            $totalNominal = 0;
-            $ingredientData = [];
-
-            for ($i = 0; $i < count($transferStockIds); $i++) {
-                $transferStock = TransferStock::find($transferStockIds[$i]);
-
-                // Get the average PH nominal
-                $averagePhHpp = DB::table('transactions')
-                    ->join('vouchers', 'transactions.voucher_id', '=', 'vouchers.id')
-                    ->where('transactions.description', $transferStock->item)
-                    ->where('transactions.size', $transferStock->size)
-                    ->where('vouchers.voucher_type', 'PH')
-                    ->where('transactions.description', 'NOT LIKE', 'HPP %')
-                    ->avg('transactions.nominal') ?? 0;
-
-                // Fallback to average PB nominal
-                $nominal = $averagePhHpp;
-                if ($nominal == 0) {
-                    $averagePbHpp = DB::table('transactions')
-                        ->join('vouchers', 'transactions.voucher_id', '=', 'vouchers.id')
-                        ->where('transactions.description', $transferStock->item)
-                        ->where('transactions.size', $transferStock->size)
-                        ->where('vouchers.voucher_type', 'PB')
-                        ->where('transactions.description', 'NOT LIKE', 'HPP %')
-                        ->avg('transactions.nominal') ?? 0;
-                    $nominal = $averagePbHpp;
-                }
-
-                // Calculate nominal for this ingredient
-                $ingredientNominal = $quantities[$i] * $nominal;
-                $totalNominal += $ingredientNominal;
-
-                $ingredientData[] = [
-                    'transfer_stock_id' => $transferStockIds[$i],
-                    'quantity' => $quantities[$i],
-                    'nominal' => $ingredientNominal,
-                    'item' => $transferStock->item,
-                    'size' => $transferStock->size,
-                ];
-            }
-
-            // Create Recipe entry with total nominal and size
-            $recipe = Recipes::create([
-                'product_name' => $productName,
-                'used_stock_id' => $usedStock->id,
-                'size' => $productSize,
-                'nominal' => $totalNominal,
-            ]);
-
-            // Attach ingredients to recipe
-            foreach ($ingredientData as $data) {
-                $recipe->transferStocks()->attach($data['transfer_stock_id'], [
-                    'quantity' => $data['quantity'],
-                    'nominal' => $data['nominal'],
-                    'item' => $data['item'],
-                    'size' => $data['size'],
-                ]);
-            }
-
-            // Create second UsedStock entry for HPP
-            $hppUsedStock = UsedStock::create([
-                'item' => "HPP {$productName}",
-                'size' => $productSize,
-                'quantity' => 0,
-            ]);
-
-            DB::commit();
-
-            // Log::info('Recipe created successfully:', [
-            //     'recipe_id' => $recipe->id,
-            //     'used_stock_id' => $usedStock->id,
-            //     'hpp_used_stock_id' => $hppUsedStock->id,
-            //     'product_name' => $productName,
-            //     'size' => $productSize,
-            //     'nominal' => $totalNominal,
-            // ]);
-        } catch (\Exception $e) {
-            DB::rollBack();
-            // Log::error('Store Recipe Service Error: ' . $e->getMessage(), ['exception' => $e]);
-            throw $e;
-        }
     }
 
     /**
@@ -622,225 +382,11 @@ class StockService
         $data = $this->prepareStockData(['start_date' => $startDate->toDateString(), 'end_date' => $endDate->toDateString()]);
         return [
             'stockData' => $data['stockData'],
-            'transferStockData' => $data['transferStockData'],
-            'usedStockData' => $data['usedStockData'],
             'startDate' => $data['startDate'],
             'endDate' => $data['endDate'],
         ];
     }
 
-    /**
-     * Prepare data for transfer form PDF
-     */
-    public function prepareTransferFormData(string $tableFilter): array
-    {
-        $companyLogo = Company::value('logo');
-        $company = Company::select('company_name', 'phone', 'director', 'email', 'address')->firstOrFail();
-
-        return [
-            'companyLogo' => $companyLogo,
-            'company' => $company,
-            'date' => Carbon::today()->format('d-m-Y'),
-        ];
-    }
-    /**
-     * Update an existing recipe
-     */
-    public function updateRecipe(int $recipeId, string $productName, array $transferStockIds, array $quantities, string $productSize): void
-    {
-        $recipe = Recipes::findOrFail($recipeId);
-
-        // Check if recipe has been used in transactions
-        $hasTransactions = DB::table('transactions')
-            ->where('description', $recipe->product_name)
-            ->where('size', $recipe->size)
-            ->exists();
-
-        if ($hasTransactions) {
-            throw new \Exception("Recipe sudah digunakan dalam transaksi dan tidak dapat diedit.");
-        }
-
-        // Check for duplicate recipe name and size (excluding current recipe)
-        $existingRecipe = Recipes::where('id', '!=', $recipeId)
-            ->whereRaw('LOWER(product_name) = ?', [strtolower($productName)])
-            ->whereRaw('LOWER(size) = ?', [strtolower($productSize)])
-            ->first();
-
-        if ($existingRecipe) {
-            throw new \Exception("Kombinasi nama produk dan ukuran sudah ada. Produk \"{$existingRecipe->product_name}\" dengan ukuran \"{$existingRecipe->size}\" sudah terdaftar.");
-        }
-
-        // Validate stock availability
-        foreach ($transferStockIds as $index => $stockId) {
-            $transferStock = TransferStock::find($stockId);
-            if (!$transferStock) {
-                Log::warning('Transfer stock not found:', ['stock_id' => $stockId]);
-                throw new \Exception("Bahan baku dengan ID $stockId tidak ditemukan.");
-            }
-            if ($transferStock->quantity < $quantities[$index]) {
-                Log::warning('Insufficient stock for transfer stock:', [
-                    'stock_id' => $stockId,
-                    'item' => $transferStock->item,
-                    'available_quantity' => $transferStock->quantity,
-                    'requested_quantity' => $quantities[$index],
-                ]);
-                throw new \Exception("Stok untuk {$transferStock->item} ({$transferStock->size}) tidak cukup. Tersedia: {$transferStock->quantity}, diminta: {$quantities[$index]}.");
-            }
-        }
-
-        DB::beginTransaction();
-
-        try {
-            // Calculate total nominal for the recipe
-            $totalNominal = 0;
-            $ingredientData = [];
-
-            for ($i = 0; $i < count($transferStockIds); $i++) {
-                $transferStock = TransferStock::find($transferStockIds[$i]);
-
-                // Get the average PH nominal
-                $averagePhHpp = DB::table('transactions')
-                    ->join('vouchers', 'transactions.voucher_id', '=', 'vouchers.id')
-                    ->where('transactions.description', $transferStock->item)
-                    ->where('transactions.size', $transferStock->size)
-                    ->where('vouchers.voucher_type', 'PH')
-                    ->where('transactions.description', 'NOT LIKE', 'HPP %')
-                    ->avg('transactions.nominal') ?? 0;
-
-                // Fallback to average PB nominal
-                $nominal = $averagePhHpp;
-                if ($nominal == 0) {
-                    $averagePbHpp = DB::table('transactions')
-                        ->join('vouchers', 'transactions.voucher_id', '=', 'vouchers.id')
-                        ->where('transactions.description', $transferStock->item)
-                        ->where('transactions.size', $transferStock->size)
-                        ->where('vouchers.voucher_type', 'PB')
-                        ->where('transactions.description', 'NOT LIKE', 'HPP %')
-                        ->avg('transactions.nominal') ?? 0;
-                    $nominal = $averagePbHpp;
-                }
-
-                // Calculate nominal for this ingredient
-                $ingredientNominal = $quantities[$i] * $nominal;
-                $totalNominal += $ingredientNominal;
-
-                $ingredientData[] = [
-                    'transfer_stock_id' => $transferStockIds[$i],
-                    'quantity' => $quantities[$i],
-                    'nominal' => $ingredientNominal,
-                    'item' => $transferStock->item,
-                    'size' => $transferStock->size,
-                ];
-            }
-
-            // Update recipe basic info
-            $recipe->update([
-                'product_name' => $productName,
-                'size' => $productSize,
-                'nominal' => $totalNominal,
-            ]);
-
-            // Update used_stock item name if it changed
-            if ($recipe->usedStock) {
-                $recipe->usedStock->update([
-                    'item' => $productName,
-                    'size' => $productSize,
-                ]);
-            }
-
-            // Find and update HPP used stock if it exists
-            $hppUsedStock = UsedStock::where('item', 'LIKE', 'HPP %')
-                ->where('size', $recipe->size)
-                ->first();
-
-            if ($hppUsedStock) {
-                $hppUsedStock->update([
-                    'item' => "HPP {$productName}",
-                    'size' => $productSize,
-                ]);
-            }
-
-            // Remove existing recipe-transfer stock relationships
-            $recipe->transferStocks()->detach();
-
-            // Attach new ingredients to recipe
-            foreach ($ingredientData as $data) {
-                $recipe->transferStocks()->attach($data['transfer_stock_id'], [
-                    'quantity' => $data['quantity'],
-                    'nominal' => $data['nominal'],
-                    'item' => $data['item'],
-                    'size' => $data['size'],
-                ]);
-            }
-
-            DB::commit();
-
-            Log::info('Recipe updated successfully:', [
-                'recipe_id' => $recipe->id,
-                'product_name' => $productName,
-                'size' => $productSize,
-                'nominal' => $totalNominal,
-            ]);
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Update Recipe Service Error: ' . $e->getMessage(), ['exception' => $e]);
-            throw $e;
-        }
-    }
-
-    /**
-     * Delete a recipe
-     */
-    public function deleteRecipe(int $recipeId): void
-    {
-        $recipe = Recipes::findOrFail($recipeId);
-
-        // Check if recipe has been used in transactions
-        $hasTransactions = DB::table('transactions')
-            ->where('description', $recipe->product_name)
-            ->where('size', $recipe->size)
-            ->exists();
-
-        if ($hasTransactions) {
-            throw new \Exception("Recipe sudah digunakan dalam transaksi dan tidak dapat dihapus.");
-        }
-
-        DB::beginTransaction();
-
-        try {
-            // Remove recipe-transfer stock relationships
-            $recipe->transferStocks()->detach();
-
-            // Delete associated used stocks
-            if ($recipe->usedStock) {
-                $recipe->usedStock->delete();
-            }
-
-            // Find and delete HPP used stock
-            $hppUsedStock = UsedStock::where('item', "HPP {$recipe->product_name}")
-                ->where('size', $recipe->size)
-                ->first();
-
-            if ($hppUsedStock) {
-                $hppUsedStock->delete();
-            }
-
-            // Delete the recipe
-            $recipe->delete();
-
-            DB::commit();
-
-            Log::info('Recipe deleted successfully:', [
-                'recipe_id' => $recipeId,
-                'product_name' => $recipe->product_name,
-                'size' => $recipe->size,
-            ]);
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Delete Recipe Service Error: ' . $e->getMessage(), ['exception' => $e]);
-            throw $e;
-        }
-    }
     /**
      * Apply selected applied cost to stock data
      *
@@ -972,8 +518,6 @@ class StockService
 
         if ($isManagementMode && $appliedCostId) {
             $stockData['stockData'] = $this->applyAppliedCostToStockData($stockData['stockData'], $appliedCostId);
-            $stockData['transferStockData'] = $this->applyAppliedCostToStockData($stockData['transferStockData'], $appliedCostId);
-            $stockData['usedStockData'] = $this->applyAppliedCostToStockData($stockData['usedStockData'], $appliedCostId);
 
             // Add applied cost summary to return data
             $stockData['appliedCostSummary'] = $this->getAppliedCostSummary($appliedCostId);
