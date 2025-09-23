@@ -83,8 +83,8 @@ Route::middleware(['auth:admin,master'])->group(function () {
     Route::get('/subsidiary/utang/pdf', [SubsidiaryController::class, 'generateUtangPdf'])->name('subsidiary_utang_pdf');
     Route::get('/subsidiary/piutang/pdf', [SubsidiaryController::class, 'generatePiutangPdf'])->name('subsidiary_piutang_pdf');
     Route::get('/subsidiary/excel', [SubsidiaryController::class, 'subsidiary_excel'])->name('subsidiary_excel');
-    Route::put('subsidiary/piutang/update/{id}', [SubsidiaryController::class, 'piutang_update'])->name('subsidiary_piutang.update');
-    Route::put('subsidiary/utang/update/{id}', [SubsidiaryController::class, 'utang_update'])->name('subsidiary_utang.update');
+    Route::put('subsidiary_utang/{id}', [SubsidiaryController::class, 'utangUpdate'])->name('utangUpdate');
+    Route::put('subsidiary_piutang/{id}', [SubsidiaryController::class, 'piutangUpdate'])->name('piutangUpdate');
     Route::delete('/subsidiary/{id}', [SubsidiaryController::class, 'subsidiaryDelete'])->name('subsidiary.delete');
     Route::get('/zakat_page', [ZakatController::class, 'zakat_page'])->name('zakat_page');
     Route::post('/zakat.calculate', [ZakatController::class, 'calculateZakat'])->name('zakat.calculate');

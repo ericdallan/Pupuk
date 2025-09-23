@@ -226,17 +226,18 @@ class SubsidiaryController extends Controller
     }
 
     /**
-     * Update Piutang subsidiary
+     * Update a subsidiary for Piutang
      *
      * @param Request $request
+     * @param int $id
      * @return \Illuminate\Http\JsonResponse
      */
-    public function piutangUpdate(Request $request)
+    public function piutangUpdate(Request $request, $id)
     {
         $validator = Validator::make($request->all(), [
             'subsidiary_id' => 'required|exists:subsidiaries,id',
             'store_name' => 'required|string|max:255',
-            'account_name' => 'required|string|max:255',
+            'account_name' => 'required|string|max:255|regex:/^Piutang\s.+$/',
         ]);
 
         if ($validator->fails()) {
@@ -248,31 +249,38 @@ class SubsidiaryController extends Controller
         }
 
         try {
-            $this->subsidiaryService->updateSubsidiary($request->all());
+            $data = $request->all();
+            $data['subsidiary_id'] = $id; // Ensure ID from route is used
+            $this->subsidiaryService->updateSubsidiary($data);
             return response()->json([
                 'success' => true,
                 'message' => 'Akun pembantu piutang berhasil diperbarui.',
             ]);
         } catch (\Exception $e) {
+            Log::error('Error updating piutang subsidiary: ' . $e->getMessage(), [
+                'request_data' => $request->all(),
+                'exception' => $e,
+            ]);
             return response()->json([
                 'success' => false,
-                'message' => 'Gagal memperbarui akun pembantu: ' . $e->getMessage(),
+                'message' => 'Gagal memperbarui akun pembantu piutang: ' . $e->getMessage(),
             ], 500);
         }
     }
 
     /**
-     * Update Utang subsidiary
+     * Update a subsidiary for Utang
      *
      * @param Request $request
+     * @param int $id
      * @return \Illuminate\Http\JsonResponse
      */
-    public function utangUpdate(Request $request)
+    public function utangUpdate(Request $request, $id)
     {
         $validator = Validator::make($request->all(), [
             'subsidiary_id' => 'required|exists:subsidiaries,id',
             'store_name' => 'required|string|max:255',
-            'account_name' => 'required|string|max:255',
+            'account_name' => 'required|string|max:255|regex:/^Utang\s.+$/',
         ]);
 
         if ($validator->fails()) {
@@ -284,15 +292,21 @@ class SubsidiaryController extends Controller
         }
 
         try {
-            $this->subsidiaryService->updateSubsidiary($request->all());
+            $data = $request->all();
+            $data['subsidiary_id'] = $id; // Ensure ID from route is used
+            $this->subsidiaryService->updateSubsidiary($data);
             return response()->json([
                 'success' => true,
-                'message' => 'Akun pembantu piutang berhasil diperbarui.',
+                'message' => 'Akun pembantu utang berhasil diperbarui.',
             ]);
         } catch (\Exception $e) {
+            Log::error('Error updating utang subsidiary: ' . $e->getMessage(), [
+                'request_data' => $request->all(),
+                'exception' => $e,
+            ]);
             return response()->json([
                 'success' => false,
-                'message' => 'Gagal memperbarui akun pembantu: ' . $e->getMessage(),
+                'message' => 'Gagal memperbarui akun pembantu utang: ' . $e->getMessage(),
             ], 500);
         }
     }
@@ -309,6 +323,7 @@ class SubsidiaryController extends Controller
             $this->subsidiaryService->deleteSubsidiary((int) $id);
             return redirect()->back()->with('success', 'Data subsidiary berhasil dihapus.');
         } catch (\Exception $e) {
+            Log::error('Error deleting subsidiary: ' . $e->getMessage());
             return redirect()->back()->with('error', 'Gagal menghapus data subsidiary: ' . $e->getMessage());
         }
     }

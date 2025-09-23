@@ -565,22 +565,55 @@
                                         aria-label="Close"></button>
                                 </div>
                                 <div class="modal-body">
+                                    <!-- Summary Section -->
+                                    @if (isset($stock->transactions) && !empty($stock->transactions))
+                                        <div class="mb-4 p-3 bg-light rounded shadow-sm">
+                                            <h6 class="fw-bold">Ringkasan Transaksi</h6>
+                                            <div class="row">
+                                                <div class="col-md-4">
+                                                    <small class="text-muted">Total Kuantitas</small>
+                                                    <p class="mb-0 fw-bold">
+                                                        {{ collect($stock->transactions)->sum('quantity') ?? (collect($stock->transactions)->sum('transaction_quantity') ?? 0) }}
+                                                    </p>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <small class="text-muted">Total Nominal</small>
+                                                    <p class="mb-0 fw-bold">
+                                                        {{ number_format(collect($stock->transactions)->sum('nominal') ?? 0, 2, ',', '.') }}
+                                                    </p>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <small class="text-muted">Jumlah Transaksi</small>
+                                                    <p class="mb-0 fw-bold">{{ count($stock->transactions) }}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    @endif
+
+                                    <!-- Filter Section -->
                                     <div class="mb-3">
                                         <label for="modal_filter_{{ $tableName }}_{{ $stock->id }}"
-                                            class="form-label">Tampilkan Transaksi</label>
+                                            class="form-label required">Tampilkan Transaksi</label>
                                         <select id="modal_filter_{{ $tableName }}_{{ $stock->id }}"
-                                            class="form-select modal-filter" data-stock-id="{{ $stock->id }}">
+                                            class="form-select modal-filter" data-stock-id="{{ $stock->id }}"
+                                            data-bs-toggle="tooltip"
+                                            title="Pilih rentang waktu untuk menampilkan transaksi">
                                             <option value="all"
                                                 {{ request('filter', 'all') == 'all' ? 'selected' : '' }}>
-                                                Semua Transaksi</option>
+                                                Semua Transaksi
+                                            </option>
                                             <option value="7_days"
                                                 {{ request('filter', 'all') == '7_days' ? 'selected' : '' }}>
-                                                7 Hari Terakhir</option>
+                                                7 Hari Terakhir
+                                            </option>
                                             <option value="1_month"
                                                 {{ request('filter', 'all') == '1_month' ? 'selected' : '' }}>
-                                                1 Bulan Terakhir</option>
+                                                1 Bulan Terakhir
+                                            </option>
                                         </select>
                                     </div>
+
+                                    <!-- Transaction Table -->
                                     <div class="transaction-table"
                                         id="transactionTable_{{ $tableName }}_{{ $stock->id }}">
                                         @if (isset($stock->transactions) && !empty($stock->transactions))
@@ -588,13 +621,21 @@
                                                 <table class="table table-striped table-bordered table-hover text-center">
                                                     <thead class="table-dark">
                                                         <tr>
-                                                            <th>No</th>
-                                                            <th>Nama Item</th>
-                                                            <th>No Voucher</th>
-                                                            <th>Tipe Transaksi</th>
-                                                            <th>Kuantitas</th>
-                                                            <th>Nominal</th>
-                                                            <th>Tanggal</th>
+                                                            <th data-bs-toggle="tooltip" title="Nomor urut transaksi">No
+                                                            </th>
+                                                            <th data-bs-toggle="tooltip"
+                                                                title="Nama item yang ditransaksikan">Nama Item</th>
+                                                            <th data-bs-toggle="tooltip" title="Nomor voucher terkait">No
+                                                                Voucher</th>
+                                                            <th data-bs-toggle="tooltip"
+                                                                title="Jenis transaksi (Penjualan, Pembelian, dll)">Tipe
+                                                                Transaksi</th>
+                                                            <th data-bs-toggle="tooltip"
+                                                                title="Jumlah item yang ditransaksikan">Kuantitas</th>
+                                                            <th data-bs-toggle="tooltip" title="Nilai nominal transaksi">
+                                                                Nominal</th>
+                                                            <th data-bs-toggle="tooltip" title="Tanggal transaksi">Tanggal
+                                                            </th>
                                                         </tr>
                                                     </thead>
                                                     <tbody>
@@ -608,7 +649,9 @@
                                                                     <td>
                                                                         @if ($transaction->voucher_id && $transaction->voucher_number !== 'N/A')
                                                                             <a href="{{ route('voucher_detail', $transaction->voucher_id) }}"
-                                                                                class="text-decoration-none">
+                                                                                class="text-decoration-none text-primary"
+                                                                                data-bs-toggle="tooltip"
+                                                                                title="Lihat detail voucher">
                                                                                 {{ htmlspecialchars($transaction->voucher_number) }}
                                                                             </a>
                                                                         @else
@@ -658,13 +701,23 @@
                                                 </table>
                                             </div>
                                         @else
-                                            <p class="text-center">Tidak ada transaksi terkait untuk barang ini.</p>
+                                            <div class="alert alert-info alert-dismissible fade show" role="alert">
+                                                Tidak ada transaksi terkait untuk barang ini.
+                                                <button type="button" class="btn-close" data-bs-dismiss="alert"
+                                                    aria-label="Close"></button>
+                                            </div>
                                         @endif
+                                    </div>
+                                    <!-- Loading Indicator -->
+                                    <div class="loading-indicator d-none text-center my-3">
+                                        <div class="spinner-border text-primary" role="status">
+                                            <span class="visually-hidden">Memuat...</span>
+                                        </div>
                                     </div>
                                 </div>
                                 <div class="modal-footer">
-                                    <button type="button" class="btn btn-secondary"
-                                        data-bs-dismiss="modal">Tutup</button>
+                                    <button type="button" class="btn cancel-button" data-bs-dismiss="modal"
+                                        data-bs-toggle="tooltip" title="Tutup jendela">Tutup</button>
                                 </div>
                             </div>
                         </div>
@@ -1246,7 +1299,7 @@
                     if (!tableSections || !dropdownButton || !tableFilterInput) return;
                     tableSections.forEach(section => {
                         section.classList.toggle('hidden', filter !== 'all' && filter !== section.dataset
-                        .table);
+                            .table);
                     });
                     applyGlobalFilter();
                 }

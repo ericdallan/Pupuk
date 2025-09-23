@@ -216,11 +216,11 @@
                                     <i class="fas fa-edit"></i> Edit
                                 </button>
                             @else
-                                <button class="btn btn-sm btn-warning edit-button"
-                                    data-subsidiary-id="{{ $subsidiary->id }}"
+                                <button class="btn btn-sm edit-button" data-subsidiary-id="{{ $subsidiary->id }}"
                                     data-store-name="{{ $subsidiary->store_name }}"
-                                    data-account-name="{{ $subsidiary->account_name ?? '' }}" data-bs-toggle="tooltip"
-                                    data-bs-placement="top" title="Edit akun pembantu">
+                                    data-account-name="{{ $subsidiary->account_name ?? '' }}" data-bs-toggle="modal"
+                                    data-bs-target="#editModal" data-bs-toggle="tooltip" data-bs-placement="top"
+                                    title="Edit akun pembantu">
                                     <i class="fas fa-edit"></i> Edit
                                 </button>
                             @endif
@@ -365,7 +365,8 @@
         // Function to populate invoice number dropdown
         function populateInvoiceDropdown(storeName, accountCode) {
             fetch(
-                    `{{ route('subsidiaryPiutang.details') }}?store_name=${encodeURIComponent(storeName)}&account_code=${encodeURIComponent(accountCode)}`)
+                    `{{ route('subsidiaryPiutang.details') }}?store_name=${encodeURIComponent(storeName)}&account_code=${encodeURIComponent(accountCode)}`
+                    )
                 .then(response => {
                     if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
                     return response.json();
@@ -407,7 +408,7 @@
                     if (!response.ok) {
                         throw new Error(
                             `HTTP error! Status: ${response.status}, StatusText: ${response.statusText}`
-                            );
+                        );
                     }
                     return response.json();
                 })

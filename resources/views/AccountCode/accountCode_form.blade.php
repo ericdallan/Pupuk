@@ -1,50 +1,57 @@
 <div class="modal fade" id="accountModal" data-bs-backdrop="static" tabindex="-1" aria-labelledby="accountModalLabel"
     aria-hidden="true">
-    <div class="modal-dialog modal-l">
+    <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
                 <h1 class="modal-title fs-5" id="accountModalLabel">Buat Akun Baru</h1>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
             </div>
             <div class="modal-body">
-                <form id="accountForm" action="{{ route('account_create') }}" method="POST">
+                <form id="accountFormCreate" action="{{ route('account_create') }}" method="POST">
                     @csrf
-                    <div class="mb-3">
-                        <label for="account_type" class="form-label">Tipe Akun</label>
-                        <select class="form-select" id="account_type" name="account_type" required>
-                            <option value="">Pilih Tipe Akun</option>
-                            <option value="ASET">ASET</option>
-                            <option value="KEWAJIBAN">KEWAJIBAN</option>
-                            <option value="EKUITAS">EKUITAS</option>
-                            <option value="PENDAPATAN_USAHA">PENDAPATAN USAHA</option>
-                            <option value="HARGA_POKOK_PRODUKSI_DAN_PENJUALAN">HARGA POKOK PRODUKSI DAN PENJUALAN
-                            </option>
-                            <option value="BEBAN_BEBAN_USAHA">BEBAN-BEBAN USAHA</option>
-                            <option value="PENDAPATAN_DAN_BEBAN_LAIN_LAIN">PENDAPATAN DAN BEBAN LAIN-LAIN</option>
-                        </select>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="account_type" class="form-label required">Tipe Akun</label>
+                            <select class="form-select" id="account_type" name="account_type" required
+                                data-bs-toggle="tooltip" title="Pilih tipe akun yang sesuai">
+                                <option value="">Pilih Tipe Akun</option>
+                                <option value="ASET">ASET</option>
+                                <option value="KEWAJIBAN">KEWAJIBAN</option>
+                                <option value="EKUITAS">EKUITAS</option>
+                                <option value="PENDAPATAN_USAHA">PENDAPATAN USAHA</option>
+                                <option value="HARGA_POKOK_PRODUKSI_DAN_PENJUALAN">HARGA POKOK PRODUKSI DAN PENJUALAN
+                                </option>
+                                <option value="BEBAN_BEBAN_USAHA">BEBAN-BEBAN USAHA</option>
+                                <option value="PENDAPATAN_DAN_BEBAN_LAIN_LAIN">PENDAPATAN DAN BEBAN LAIN-LAIN</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="account_section" class="form-label required">Bagian Akun</label>
+                            <select class="form-select" id="account_section" name="account_section" required
+                                data-bs-toggle="tooltip" title="Pilih bagian akun berdasarkan tipe yang dipilih">
+                                <option value="">Pilih Bagian Akun</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="account_subsection" class="form-label required">Anak Bagian Akun</label>
+                            <select class="form-select" id="account_subsection" name="account_subsection" required
+                                data-bs-toggle="tooltip"
+                                title="Pilih anak bagian akun untuk klasifikasi lebih spesifik">
+                                <option value="">Pilih Anak Bagian Akun</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="account_name" class="form-label required">Nama Akun</label>
+                            <input type="text" class="form-control" id="account_name" name="account_name" required
+                                placeholder="Masukkan nama akun" data-bs-toggle="tooltip"
+                                title="Masukkan nama akun yang deskriptif">
+                        </div>
                     </div>
-
-                    <div class="mb-3">
-                        <label for="account_section" class="form-label">Bagian Akun</label>
-                        <select class="form-select" id="account_section" name="account_section" required>
-                            <option value="">Pilih Bagian Akun</option>
-                        </select>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="account_subsection" class="form-label">Anak Bagian Akun</label>
-                        <select class="form-select" id="account_subsection" name="account_subsection" required>
-                            <option value="">Pilih Anak Bagian Akun</option>
-                        </select>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="account_name" class="form-label">Nama Akun</label>
-                        <input type="text" class="form-control" id="account_name" name="account_name" required>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
-                        <button type="submit" class="btn btn-primary" id="saveAccountBtn">Simpan Akun</button>
+                    <div class="modal-footer mt-4">
+                        <button type="button" class="btn cancel-button" data-bs-dismiss="modal"
+                            data-bs-toggle="tooltip" title="Tutup tanpa menyimpan">Tutup</button>
+                        <button type="submit" class="btn save-button" id="saveAccountBtn" data-bs-toggle="tooltip"
+                            title="Simpan akun baru">Simpan Akun</button>
                     </div>
                 </form>
             </div>
@@ -52,11 +59,73 @@
     </div>
 </div>
 
+<style>
+    /* Enhanced Button Styles */
+    .save-button {
+        background: linear-gradient(45deg, #007bff, #0056b3);
+        border: none;
+        color: white;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .save-button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0, 123, 255, 0.3);
+        background: linear-gradient(45deg, #0056b3, #003d80);
+    }
+
+    .cancel-button {
+        background: linear-gradient(45deg, #6c757d, #5a6268);
+        border: none;
+        color: white;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .cancel-button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(108, 117, 125, 0.3);
+        background: linear-gradient(45deg, #5a6268, #4b5156);
+    }
+
+    /* Form Enhancements */
+    .form-control,
+    .form-select {
+        border-radius: 6px;
+        transition: border-color 0.2s;
+    }
+
+    .form-control:focus,
+    .form-select:focus {
+        border-color: #007bff;
+        box-shadow: 0 0 5px rgba(0, 123, 255, 0.3);
+    }
+
+    /* Modal Styling */
+    .modal-content {
+        border-radius: 8px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    }
+
+    .modal-header {
+        background: linear-gradient(90deg, #343a40, #212529);
+        color: white;
+        border-top-left-radius: 8px;
+        border-top-right-radius: 8px;
+    }
+
+    /* Required Field Indicator */
+    .required:after {
+        content: '*';
+        color: #dc3545;
+        margin-left: 4px;
+    }
+</style>
+
 <script>
     const tipeAkunSelect = document.getElementById('account_type');
     const bagianAkunSelect = document.getElementById('account_section');
     const anakBagianAkunSelect = document.getElementById('account_subsection');
-    const accountForm = document.getElementById('accountForm');
+    const accountForm = document.getElementById('accountFormCreate');
 
     const hierarkiAkun = {
         ASET: {
@@ -225,5 +294,13 @@
                 });
             }
         }
+    });
+
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize tooltips
+        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        tooltipTriggerList.map(function(tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
     });
 </script>

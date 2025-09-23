@@ -71,8 +71,6 @@ class SubsidiaryService
             $voucherQuery->whereYear('voucher_date', $filters['year']);
         }
 
-        $vouchers = $voucherQuery->get();
-
         $voucherDetailsQuery = VoucherDetails::query()
             ->selectRaw('vouchers.store, voucher_details.account_code, SUM(voucher_details.debit - voucher_details.credit) as total_saldo')
             ->join('vouchers', 'voucher_details.voucher_id', '=', 'vouchers.id')
@@ -137,8 +135,6 @@ class SubsidiaryService
         if (!empty($filters['year'])) {
             $voucherQuery->whereYear('voucher_date', $filters['year']);
         }
-
-        $vouchers = $voucherQuery->get();
 
         $voucherDetailsQuery = VoucherDetails::query()
             ->selectRaw('vouchers.store, voucher_details.account_code, SUM(voucher_details.debit - voucher_details.credit) as total_saldo')
@@ -373,27 +369,41 @@ class SubsidiaryService
      *
      * @param array $data
      * @return bool
+     * @throws \Exception
      */
     public function updateSubsidiary(array $data): bool
     {
         DB::beginTransaction();
 
         try {
-            $subsidiary = DB::table('subsidiaries')
-                ->where('id', $data['subsidiary_id'])
-                ->first();
+            $subsidiary = Subsidiary::find($data['subsidiary_id']);
 
             if (!$subsidiary) {
-                throw new \Exception('Akun pembantu piutang tidak ditemukan.');
+                throw new \Exception('Akun pembantu tidak ditemukan.');
             }
 
-            DB::table('subsidiaries')
-                ->where('id', $data['subsidiary_id'])
-                ->update([
-                    'store_name' => $data['store_name'],
-                    'account_name' => $data['account_name'],
-                    'updated_at' => now(),
-                ]);
+            // Validate account_name matches account_code
+            $accountCode = $subsidiary->account_code;
+            $expectedPrefix = ($accountCode === '1.1.03.01') ? 'Piutang' : 'Utang';
+            if (!preg_match("/^$expectedPrefix\s.+$/", $data['account_name'])) {
+                throw new \Exception("Nama akun harus dimulai dengan '$expectedPrefix' untuk kode akun $accountCode.");
+            }
+
+            // Check for duplicate store_name
+            $existingSubsidiary = Subsidiary::where('store_name', $data['store_name'])
+                ->where('account_code', $accountCode)
+                ->where('id', '!=', $data['subsidiary_id'])
+                ->first();
+
+            if ($existingSubsidiary) {
+                throw new \Exception('Nama toko sudah terdaftar untuk akun ini.');
+            }
+
+            $subsidiary->update([
+                'store_name' => $data['store_name'],
+                'account_name' => $data['account_name'],
+                'updated_at' => now(),
+            ]);
 
             DB::commit();
             return true;
@@ -408,6 +418,7 @@ class SubsidiaryService
      *
      * @param int $id
      * @return bool
+     * @throws \Exception
      */
     public function deleteSubsidiary(int $id): bool
     {
