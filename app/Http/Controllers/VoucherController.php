@@ -35,17 +35,6 @@ class VoucherController extends Controller
         try {
             $data = $this->voucherService->prepareVoucherPageData($request);
             $data['stocks'] = Stock::select(['item', 'size', 'quantity'])->get()->toArray();
-            $data['pjStocks'] = collect($data['usedStocks'])
-                ->map(function ($stock) {
-                    return ['item' => $stock['item'], 'size' => $stock['size'], 'quantity' => $stock['quantity'], 'source' => 'used_stocks'];
-                })
-                ->merge(
-                    collect($data['stocks'])
-                        ->map(function ($stock) {
-                            return ['item' => $stock['item'], 'size' => $stock['size'], 'quantity' => $stock['quantity'], 'source' => 'stocks'];
-                        })
-                )->toArray();
-            $data['transactions'] = $data['transactionsData'];
             return view('voucher.voucher_page', $data);
         } catch (\Exception $e) {
             Log::error('Voucher Page Error', [
@@ -432,17 +421,7 @@ class VoucherController extends Controller
         try {
             $data = $this->voucherService->prepareVoucherEditData($id);
             $data['stocks'] = Stock::select(['item', 'size', 'quantity'])->get()->toArray();
-            $data['pjStocks'] = collect($data['usedStocks'])
-                ->map(function ($stock) {
-                    return ['item' => $stock['item'], 'size' => $stock['size'], 'quantity' => $stock['quantity'], 'source' => 'used_stocks'];
-                })
-                ->merge(
-                    collect($data['stocks'])
-                        ->map(function ($stock) {
-                            return ['item' => $stock['item'], 'size' => $stock['size'], 'quantity' => $stock['quantity'], 'source' => 'stocks'];
-                        })
-                )->toArray();
-            return view('voucher.voucher_edit', $data);
+            return view('voucher.voucher_edit', $data); // Ganti 'voucher.edit' dengan nama view yang sesuai
         } catch (\Exception $e) {
             Log::error('Voucher Edit Error', [
                 'voucher_id' => $id,

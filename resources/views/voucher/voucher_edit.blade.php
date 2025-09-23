@@ -79,7 +79,7 @@
                 <div class="col-sm-9">
                     <div class="form-check form-check-inline">
                         <input class="form-check-input" type="radio" id="useStockYes" name="use_stock" value="yes"
-                            {{ in_array($voucher->voucher_type, ['PB', 'PJ', 'PH', 'PK', 'PYK', 'PYB', 'RPB', 'RPJ']) ? 'checked' : '' }}>
+                            {{ in_array($voucher->voucher_type, ['PB', 'PJ', 'PYK', 'PYB', 'RPB', 'RPJ']) ? 'checked' : '' }}>
                         <label class="form-check-label" for="useStockYes">Ya</label>
                     </div>
                     <div class="form-check form-check-inline">
@@ -241,24 +241,6 @@
                     </select>
                 </div>
             </div>
-            <!-- Recipe Dropdown for PK -->
-            @if ($voucher->voucher_type == 'PK')
-                <div class="row mb-3" id="recipeContainer"
-                    style="display: {{ $voucher->use_stock === 'yes' && $voucher->voucher_type === 'PK' ? 'block' : 'none' }};">
-                    <label for="recipe" class="col-sm-3 col-form-label">Formula Produk:</label>
-                    <div class="col-sm-9">
-                        <select class="form-select" id="recipe" name="recipe">
-                            <option value="">Pilih Formula Produk</option>
-                            @foreach ($recipes as $recipe)
-                                <option value="{{ $recipe['id'] }}"
-                                    {{ $voucher->recipe_id == $recipe['id'] ? 'selected' : '' }}>
-                                    {{ $recipe['product_name'] }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-                </div>
-            @endif
             <!-- Transaction Details Table -->
             <div class="mb-3">
                 <h5>Rincian Transaksi</h5>
@@ -292,39 +274,11 @@
                                                     name="transactions[{{ $index }}][description]"
                                                     data-initial-value="{{ $transaction->description }}">
                                                     <option value="">Pilih Nama Stock</option>
-                                                    @foreach (array_merge($stocks, $usedStocks) as $stock)
+                                                    @foreach (array_merge($stocks) as $stock)
                                                         @if (!str_starts_with($stock['item'], 'HPP '))
                                                             <option value="{{ $stock['item'] }}"
                                                                 {{ $transaction->description == $stock['item'] ? 'selected' : '' }}>
                                                                 {{ $stock['item'] }}
-                                                            </option>
-                                                        @endif
-                                                    @endforeach
-                                                </select>
-                                            @elseif ($voucher->voucher_type == 'PH')
-                                                <select class="form-control descriptionInput"
-                                                    name="transactions[{{ $index }}][description]"
-                                                    data-initial-value="{{ $transaction->description }}">
-                                                    <option value="">Pilih Nama Stock</option>
-                                                    @foreach ($stocks as $stock)
-                                                        @if (!str_starts_with($stock['item'], 'HPP '))
-                                                            <option value="{{ $stock['item'] }}"
-                                                                {{ $transaction->description == $stock['item'] ? 'selected' : '' }}>
-                                                                {{ $stock['item'] }}
-                                                            </option>
-                                                        @endif
-                                                    @endforeach
-                                                </select>
-                                            @elseif ($voucher->voucher_type == 'PK')
-                                                <select class="form-control descriptionInput"
-                                                    name="transactions[{{ $index }}][description]"
-                                                    data-initial-value="{{ $transaction->description }}">
-                                                    <option value="">Pilih Nama Stock</option>
-                                                    @foreach ($transferStocks as $transferStock)
-                                                        @if (!str_starts_with($transferStock['item'], 'HPP '))
-                                                            <option value="{{ $transferStock['item'] }}"
-                                                                {{ $transaction->description == $transferStock['item'] ? 'selected' : '' }}>
-                                                                {{ $transferStock['item'] }}
                                                             </option>
                                                         @endif
                                                     @endforeach
@@ -336,7 +290,7 @@
                                                         style="width: 50%;">
                                                         <option value="">Pilih Nama Stock</option>
                                                         @if (in_array($voucher->voucher_type, ['PYB', 'PYK']))
-                                                            @foreach (array_merge($stocks, $usedStocks, $transferStocks) as $stock)
+                                                            @foreach (array_merge($stocks) as $stock)
                                                                 @if (!str_starts_with($stock['item'], 'HPP '))
                                                                     <option value="{{ $stock['item'] }}"
                                                                         {{ $transaction->description == $stock['item'] ? 'selected' : '' }}>
@@ -370,7 +324,7 @@
                                                 <select class="form-control sizeInput"
                                                     name="transactions[{{ $index }}][size]">
                                                     <option value="">Pilih Ukuran</option>
-                                                    @foreach (array_merge($stocks, $usedStocks) as $stock)
+                                                    @foreach (array_merge($stocks) as $stock)
                                                         @if ($stock['item'] == $transaction->description)
                                                             <option value="{{ $stock['size'] }}"
                                                                 {{ $transaction->size == $stock['size'] ? 'selected' : '' }}>
@@ -379,7 +333,7 @@
                                                         @endif
                                                     @endforeach
                                                 </select>
-                                            @elseif (in_array($voucher->voucher_type, ['PH', 'PB', 'RPB']) && !str_starts_with($transaction->description, 'HPP '))
+                                            @elseif (in_array($voucher->voucher_type, ['PB', 'RPB']) && !str_starts_with($transaction->description, 'HPP '))
                                                 <select class="form-control sizeInput"
                                                     name="transactions[{{ $index }}][size]">
                                                     <option value="">Pilih Ukuran</option>
@@ -392,24 +346,11 @@
                                                         @endif
                                                     @endforeach
                                                 </select>
-                                            @elseif ($voucher->voucher_type == 'PK' && !str_starts_with($transaction->description, 'HPP '))
-                                                <select class="form-control sizeInput"
-                                                    name="transactions[{{ $index }}][size]">
-                                                    <option value="">Pilih Ukuran</option>
-                                                    @foreach ($transferStocks as $transferStock)
-                                                        @if ($transferStock['item'] == $transaction->description)
-                                                            <option value="{{ $transferStock['size'] }}"
-                                                                {{ $transaction->size == $transferStock['size'] ? 'selected' : '' }}>
-                                                                {{ $transferStock['size'] }}
-                                                            </option>
-                                                        @endif
-                                                    @endforeach
-                                                </select>
                                             @elseif (in_array($voucher->voucher_type, ['PYB', 'PYK']) && !str_starts_with($transaction->description, 'HPP '))
                                                 <select class="form-control sizeInput"
                                                     name="transactions[{{ $index }}][size]">
                                                     <option value="">Pilih Ukuran</option>
-                                                    @foreach (array_merge($stocks, $usedStocks, $transferStocks) as $stock)
+                                                    @foreach (array_merge($stocks) as $stock)
                                                         @if ($stock['item'] == $transaction->description)
                                                             <option value="{{ $stock['size'] }}"
                                                                 {{ $transaction->size == $stock['size'] ? 'selected' : '' }}>
@@ -440,8 +381,7 @@
                                         <td>
                                             <input type="number" class="form-control totalInput"
                                                 name="transactions[{{ $index }}][total]"
-                                                value="{{ $transaction->quantity * $transaction->nominal }}"
-                                                readonly>
+                                                value="{{ $transaction->quantity * $transaction->nominal }}" readonly>
                                         </td>
                                         <td class="text-center">
                                             <button type="button" class="btn btn-danger removeTransactionRowBtn"
@@ -456,32 +396,10 @@
                                             <select class="form-control descriptionInput"
                                                 name="transactions[0][description]">
                                                 <option value="">Pilih Nama Stock</option>
-                                                @foreach (array_merge($stocks, $usedStocks) as $stock)
+                                                @foreach (array_merge($stocks) as $stock)
                                                     @if (!str_starts_with($stock['item'], 'HPP '))
                                                         <option value="{{ $stock['item'] }}">{{ $stock['item'] }}
                                                         </option>
-                                                    @endif
-                                                @endforeach
-                                            </select>
-                                        @elseif ($voucher->voucher_type == 'PH')
-                                            <select class="form-control descriptionInput"
-                                                name="transactions[0][description]">
-                                                <option value="">Pilih Nama Stock</option>
-                                                @foreach ($stocks as $stock)
-                                                    @if (!str_starts_with($stock['item'], 'HPP '))
-                                                        <option value="{{ $stock['item'] }}">{{ $stock['item'] }}
-                                                        </option>
-                                                    @endif
-                                                @endforeach
-                                            </select>
-                                        @elseif ($voucher->voucher_type == 'PK')
-                                            <select class="form-control descriptionInput"
-                                                name="transactions[0][description]">
-                                                <option value="">Pilih Nama Stock</option>
-                                                @foreach ($transferStocks as $transferStock)
-                                                    @if (!str_starts_with($transferStock['item'], 'HPP '))
-                                                        <option value="{{ $transferStock['item'] }}">
-                                                            {{ $transferStock['item'] }}</option>
                                                     @endif
                                                 @endforeach
                                             </select>
@@ -491,7 +409,7 @@
                                                     name="transactions[0][description_select]" style="width: 50%;">
                                                     <option value="">Pilih Nama Stock</option>
                                                     @if (in_array($voucher->voucher_type, ['PYB', 'PYK']))
-                                                        @foreach (array_merge($stocks, $usedStocks, $transferStocks) as $stock)
+                                                        @foreach (array_merge($stocks) as $stock)
                                                             @if (!str_starts_with($stock['item'], 'HPP '))
                                                                 <option value="{{ $stock['item'] }}">
                                                                     {{ $stock['item'] }}</option>
@@ -518,12 +436,12 @@
                                         @if (in_array($voucher->voucher_type, ['PJ', 'RPJ']))
                                             <select class="form-control sizeInput" name="transactions[0][size]">
                                                 <option value="">Pilih Ukuran</option>
-                                                @foreach (array_merge($stocks, $usedStocks) as $stock)
+                                                @foreach (array_merge($stocks) as $stock)
                                                     <option value="{{ $stock['size'] }}">{{ $stock['size'] }}
                                                     </option>
                                                 @endforeach
                                             </select>
-                                        @elseif (in_array($voucher->voucher_type, ['PH', 'PB', 'RPB']))
+                                        @elseif (in_array($voucher->voucher_type, ['PB', 'RPB']))
                                             <select class="form-control sizeInput" name="transactions[0][size]">
                                                 <option value="">Pilih Ukuran</option>
                                                 @foreach ($stocks as $stock)
@@ -531,18 +449,10 @@
                                                     </option>
                                                 @endforeach
                                             </select>
-                                        @elseif ($voucher->voucher_type == 'PK')
-                                            <select class="form-control sizeInput" name="transactions[0][size]">
-                                                <option value="">Pilih Ukuran</option>
-                                                @foreach ($transferStocks as $transferStock)
-                                                    <option value="{{ $transferStock['size'] }}">
-                                                        {{ $transferStock['size'] }}</option>
-                                                @endforeach
-                                            </select>
                                         @elseif (in_array($voucher->voucher_type, ['PYB', 'PYK']))
                                             <select class="form-control sizeInput" name="transactions[0][size]">
                                                 <option value="">Pilih Ukuran</option>
-                                                @foreach (array_merge($stocks, $usedStocks, $transferStocks) as $stock)
+                                                @foreach (array_merge($stocks) as $stock)
                                                     <option value="{{ $stock['size'] }}">{{ $stock['size'] }}
                                                     </option>
                                                 @endforeach
@@ -704,7 +614,6 @@
             const existingInvoiceContainer = document.getElementById('existingInvoiceContainer');
             const useExistingInvoiceYes = document.getElementById('useExistingInvoiceYes');
             const useExistingInvoiceNo = document.getElementById('useExistingInvoiceNo');
-            const recipeContainer = document.getElementById('recipeContainer');
             const descriptionTextArea = document.getElementById('description');
 
             // --- Data from Laravel ---
@@ -713,13 +622,9 @@
             const subsidiaries = @json($subsidiariesData);
             const accounts = @json($accountsData);
             const stocks = @json($stocks);
-            const transferStocks = @json($transferStocks);
-            const usedStocks = @json($usedStocks);
             const transactionsData = @json($transactionsData);
-            const recipes = @json($recipes);
             const currentVoucherType = @json($voucher->voucher_type);
             const hasInvoice = @json($voucher->invoice ? true : false);
-            const voucherRecipeId = @json($voucher->recipe_id);
             // const voucherCreatedAt = @json($voucher->created_at ? $voucher->created_at : now() . toISOString());
             const voucherCreatedAt = @json($voucherCreatedAt ?? now()->toIso8601String());
             // --- Voucher Types ---
@@ -813,78 +718,12 @@
 
                 updateDescription();
                 refreshTransactionTable();
-                updateRecipeContainer();
                 updateAllCalculationsAndValidations();
             }
             // --- Update Description ---
             function updateDescription() {
                 const selectedType = voucherTypeSelect.value;
                 descriptionTextArea.value = voucherTypes[selectedType]?.description || '';
-            }
-
-            // --- Recipe Handling ---
-            function updateRecipeContainer() {
-                const useStock = useStockYes.checked ? 'yes' : 'no';
-                const voucherType = voucherTypeSelect.value;
-                if (recipeContainer) {
-                    recipeContainer.style.display = (useStock === 'yes' && voucherType === 'PK') ? 'block' : 'none';
-                }
-                const recipeSelect = document.getElementById('recipe');
-                if (recipeSelect) {
-                    recipeSelect.disabled = !(useStock === 'yes' && voucherType === 'PK');
-                    if (useStock === 'yes' && voucherType === 'PK') {
-                        handleRecipeChange();
-                    } else {
-                        refreshTransactionTable();
-                    }
-                }
-            }
-
-            function createRecipeDropdown() {
-                if (!recipeContainer) return;
-                recipeContainer.innerHTML = '';
-                const label = document.createElement('label');
-                label.htmlFor = 'recipe';
-                label.className = 'col-sm-3 col-form-label';
-                label.textContent = 'Formula Produk:';
-                const selectDiv = document.createElement('div');
-                selectDiv.className = 'col-sm-9';
-                const select = document.createElement('select');
-                select.className = 'form-select';
-                select.id = 'recipe';
-                select.name = 'recipe';
-                select.innerHTML = '<option value="">Pilih Formula Produk</option>';
-                recipes.forEach(recipe => {
-                    const option = document.createElement('option');
-                    option.value = recipe.id;
-                    option.textContent = recipe.product_name;
-                    if (recipe.id == voucherRecipeId) option.selected = true;
-                    select.appendChild(option);
-                });
-                selectDiv.appendChild(select);
-                recipeContainer.appendChild(label);
-                recipeContainer.appendChild(selectDiv);
-                select.addEventListener('change', debounce(handleRecipeChange, 300));
-            }
-
-            function handleRecipeChange() {
-                const recipeSelect = document.getElementById('recipe');
-                const useStock = useStockYes.checked ? 'yes' : 'no';
-                const voucherType = voucherTypeSelect.value;
-                if (useStock !== 'yes' || voucherType !== 'PK') return;
-                const selectedRecipeId = recipeSelect.value;
-                if (selectedRecipeId) {
-                    populateTransactionTableFromRecipe(selectedRecipeId);
-                    addTransactionRowBtn.disabled = true;
-                    transactionTableBody.querySelectorAll('.removeTransactionRowBtn').forEach(btn => btn.disabled =
-                        true);
-                } else {
-                    populateTransactionTableFromVoucher();
-                    addTransactionRowBtn.disabled = false;
-                    transactionTableBody.querySelectorAll('.removeTransactionRowBtn').forEach(btn => btn.disabled =
-                        false);
-                }
-                updateAllCalculationsAndValidations();
             }
 
             function populateTransactionTableFromVoucher() {
@@ -903,7 +742,7 @@
                 if (transactionTableBody.querySelectorAll('tr').length === 0) {
                     const newRow = generateTransactionTableRow(0);
                     transactionTableBody.appendChild(newRow);
-                    if (useStockYes.checked && ['PJ', 'PB', 'PH', 'PK', 'PYB', 'PYK', 'RPJ', 'RPB'].includes(
+                    if (useStockYes.checked && ['PJ', 'PB', 'PYB', 'PYK', 'RPJ', 'RPB'].includes(
                             voucherTypeSelect.value)) {
                         updateSizeDropdown(newRow, '');
                     }
@@ -912,55 +751,22 @@
                 attachTransactionInputListeners();
                 updateAllCalculationsAndValidations();
             }
-
-            function populateTransactionTableFromRecipe(recipeId) {
-                const recipe = recipes.find(r => r.id == recipeId);
-                if (!recipe || !recipe.transfer_stocks) {
-                    validationInput.value = 'Formula produk tidak memiliki data stok transfer.';
-                    return;
-                }
-                if (!recipe.transfer_stocks.length) {
-                    validationInput.value = 'Formula produk tidak memiliki stok transfer terkait.';
-                    return;
-                }
-                transactionTableBody.innerHTML = '';
-                recipe.transfer_stocks.forEach((stock, index) => {
-                    const row = generateTransactionTableRow(index, {
-                        description: stock.item,
-                        size: stock.size,
-                        quantity: stock.quantity,
-                        nominal: stock.nominal || 0,
-                        total: (stock.quantity * (stock.nominal || 0)).toFixed(2),
-                        isHppRow: false
-                    });
-                    transactionTableBody.appendChild(row);
-                });
-                attachTransactionRemoveButtonListeners();
-                attachTransactionInputListeners();
-                updateAllCalculationsAndValidations();
-            }
-
             // --- Stock and Size Handling ---
             function getStockSource() {
                 const voucherType = voucherTypeSelect.value;
                 let stockData = []; // Default to empty array
 
                 if (voucherType === 'PJ' || voucherType === 'RPJ') {
-                    const stockItems = [...new Set([...(stocks || []), ...(usedStocks || [])].map(s => s.item + s
+                    const stockItems = [...new Set([...(stocks || [])].map(s => s.item + s
                         .size))];
                     const combinedStocks = [];
                     stockItems.forEach(key => {
-                        const stock = (stocks || []).find(s => (s.item + s.size) === key) ||
-                            (usedStocks || []).find(s => (s.item + s.size) === key);
+                        const stock = (stocks || []).find(s => (s.item + s.size) === key);
                         if (stock) combinedStocks.push(stock);
                     });
                     return combinedStocks;
                 } else if (voucherType === 'PYB' || voucherType === 'PYK') {
-                    stockData = [...(usedStocks || []), ...(stocks || []), ...(transferStocks || [])];
-                } else if (voucherType === 'PH') {
-                    stockData = stocks || [];
-                } else if (voucherType === 'PK') {
-                    stockData = transferStocks || [];
+                    stockData = [...(stocks || [])];
                 } else if (voucherType === 'PB' || voucherType === 'RPB') {
                     stockData = stocks || [];
                 }
@@ -1008,22 +814,6 @@
                             optgroupBahanBaku.appendChild(option);
                         });
                         select.appendChild(optgroupBahanBaku);
-                    }
-
-                    // Add Barang Jadi (usedStocks)
-                    const barangJadiItems = [...new Set(usedStocks.filter(s => !s.item.startsWith('HPP ')).map(s =>
-                        s.item))];
-                    if (barangJadiItems.length > 0) {
-                        const optgroupBarangJadi = document.createElement('optgroup');
-                        optgroupBarangJadi.label = '--Barang Jadi--';
-                        barangJadiItems.forEach(item => {
-                            const option = document.createElement('option');
-                            option.value = item;
-                            option.textContent = item;
-                            if (item === initialValue) option.selected = true;
-                            optgroupBarangJadi.appendChild(option);
-                        });
-                        select.appendChild(optgroupBarangJadi);
                     }
                 } else {
                     uniqueItems.forEach(item => {
@@ -1428,7 +1218,7 @@
             // --- Stock Validation ---
             function validateStockQuantity(item, size, quantity) {
                 const voucherType = voucherTypeSelect.value;
-                if (!['PJ', 'PH', 'PK'].includes(voucherType)) {
+                if (!['PJ'].includes(voucherType)) {
                     return true;
                 }
                 const stockSource = getStockSource();
@@ -1466,7 +1256,7 @@
                     descriptionElement.name = `transactions[${index}][description]`;
                     descriptionElement.value = transactionData?.description || '';
                     descriptionElement.readOnly = true;
-                } else if (useStock === 'yes' && ['PJ', 'PH', 'PK', 'PYB', 'PYK', 'RPB', 'RPJ'].includes(
+                } else if (useStock === 'yes' && ['PJ', 'PYB', 'PYK', 'RPB', 'RPJ'].includes(
                         voucherType)) {
                     descriptionElement = createStockDropdown(index, transactionData?.description);
                     descriptionElement.addEventListener('change', (e) => {
@@ -1525,7 +1315,7 @@
                 // Size Cell
                 const sizeCell = document.createElement('td');
                 let sizeElement;
-                if (isHppRow || useStock !== 'yes' || !['PJ', 'PB', 'PH', 'PK', 'PYB', 'PYK', 'RPB', 'RPJ']
+                if (isHppRow || useStock !== 'yes' || !['PJ', 'PB', 'PYB', 'PYK', 'RPB', 'RPJ']
                     .includes(voucherType)) {
                     sizeElement = document.createElement('input');
                     sizeElement.type = 'text';
@@ -1623,8 +1413,6 @@
                 deleteButton.type = 'button';
                 deleteButton.className = 'btn btn-danger removeTransactionRowBtn';
                 deleteButton.textContent = 'Hapus';
-                deleteButton.disabled = isHppRow || (useStock === 'yes' && voucherType === 'PK' && document
-                    .getElementById('recipe')?.value);
                 actionCell.appendChild(deleteButton);
                 row.appendChild(actionCell);
 
@@ -1750,27 +1538,19 @@
                 transactionTableBody.innerHTML = '';
                 const useStock = useStockYes.checked ? 'yes' : 'no';
                 const voucherType = voucherTypeSelect.value;
-                const recipeSelected = document.getElementById('recipe')?.value;
-
-                if (useStock === 'yes' && voucherType === 'PK' && recipeSelected) {
-                    populateTransactionTableFromRecipe(recipeSelected);
-                } else {
-                    transactionsData.forEach((data, index) => {
-                        const newRow = generateTransactionTableRow(index, data);
-                        transactionTableBody.appendChild(newRow);
-                        if (useStock === 'yes' && ['PJ', 'PB', 'PH', 'PK', 'PYB', 'PYK', 'RPJ', 'RPB']
-                            .includes(voucherType) && !data
-                            .isHppRow) {
-                            updateSizeDropdown(newRow, data.description || data.description_select);
-                        }
-                    });
-                    if (transactionTableBody.querySelectorAll('tr').length === 0) {
-                        const newRow = generateTransactionTableRow(0);
-                        transactionTableBody.appendChild(newRow);
-                        if (useStock === 'yes' && ['PJ', 'PB', 'PH', 'PK', 'PYB', 'PYK', 'RPJ', 'RPB'].includes(
-                                voucherType)) {
-                            updateSizeDropdown(newRow, '');
-                        }
+                transactionsData.forEach((data, index) => {
+                    const newRow = generateTransactionTableRow(index, data);
+                    transactionTableBody.appendChild(newRow);
+                    if (useStock === 'yes' && ['PJ', 'PB', 'PYB', 'PYK', 'RPJ', 'RPB'].includes(
+                        voucherType) && !data.isHppRow) {
+                        updateSizeDropdown(newRow, data.description || data.description_select);
+                    }
+                });
+                if (transactionTableBody.querySelectorAll('tr').length === 0) {
+                    const newRow = generateTransactionTableRow(0);
+                    transactionTableBody.appendChild(newRow);
+                    if (useStock === 'yes' && ['PJ', 'PB', 'PYB', 'PYK', 'RPJ', 'RPB'].includes(voucherType)) {
+                        updateSizeDropdown(newRow, '');
                     }
                 }
                 updateTransactionRowIndices();
@@ -2196,9 +1976,9 @@
                     dueDateInput.classList.remove('is-invalid');
                 }
 
-                // Validate stock quantities for PJ, PH, PK
+                // Validate stock quantities for PJ
                 const voucherType = voucherTypeSelect.value;
-                if (['PJ', 'PH', 'PK', 'PYB', 'PYK', 'RPB', 'RPJ'].includes(voucherType)) {
+                if (['PJ', 'PYB', 'PYK', 'RPB', 'RPJ'].includes(voucherType)) {
                     const stockDescriptions = new Set();
                     transactionTableBody.querySelectorAll('tr').forEach(row => {
                         const description = row.querySelector('.descriptionInput')?.value || '';
@@ -2307,13 +2087,13 @@
 
             voucherTypeSelect.addEventListener('change', () => {
                 updateDescription();
-                updateRecipeContainer();
                 refreshTransactionTable();
                 updateAllCalculationsAndValidations();
             });
 
             useInvoiceYes.addEventListener('change', updateInvoiceAndStoreFields);
-            useInvoiceNo.addEventListener('change', updateInvoiceAndStoreFields);
+            useInvoiceNo.addEventListener(
+                'change', updateInvoiceAndStoreFields);
             useExistingInvoiceYes.addEventListener('change', () => {
                 updateInvoiceField();
                 updateDueDateField();
@@ -2330,15 +2110,10 @@
             addTransactionRowBtn.addEventListener('click', () => {
                 const useStock = useStockYes.checked ? 'yes' : 'no';
                 const voucherType = voucherTypeSelect.value;
-                const recipeSelected = document.getElementById('recipe')?.value;
-                if (useStock === 'yes' && voucherType === 'PK' && recipeSelected) {
-                    alert("Tidak dapat menambah baris transaksi saat formula produk dipilih.");
-                    return;
-                }
                 const newIndex = transactionTableBody.querySelectorAll('tr').length;
                 const newRow = generateTransactionTableRow(newIndex);
                 transactionTableBody.appendChild(newRow);
-                if (useStock === 'yes' && ['PJ', 'PB', 'PH', 'PK', 'PYK', 'PYB', 'RPJ', 'RPB'].includes(
+                if (useStock === 'yes' && ['PJ', 'PB', 'PYK', 'PYB', 'RPJ', 'RPB'].includes(
                         voucherType)) {
                     updateSizeDropdown(newRow, '');
                 }
@@ -2395,24 +2170,14 @@
 
             function initializePage() {
                 // Set initial useStock based on voucher type
-                const isStockVoucher = ['PJ', 'PB', 'PH', 'PK', 'RPJ', 'RPB', 'PYJ', 'PYB'].includes(
+                const isStockVoucher = ['PJ', 'PB', 'RPJ', 'RPB', 'PYJ', 'PYB'].includes(
                     currentVoucherType);
                 useStockYes.checked = isStockVoucher;
                 useStockNo.checked = !isStockVoucher;
 
                 updateVoucherTypeOptions();
-                if (recipeContainer) createRecipeDropdown();
                 updateInvoiceAndStoreFields();
                 updateAccountCodeDatalist();
-                if (currentVoucherType === 'PK' && useStockYes.checked && voucherRecipeId) {
-                    const recipeSelect = document.getElementById('recipe');
-                    if (recipeSelect) {
-                        recipeSelect.value = voucherRecipeId;
-                        handleRecipeChange();
-                    }
-                } else {
-                    refreshTransactionTable();
-                }
                 initializeHppRows();
                 updateAllCalculationsAndValidations();
                 updateVoucherDay();
@@ -2431,7 +2196,6 @@
             // --- Initialization ---
             initializePage();
             updateVoucherTypeOptions();
-            if (recipeContainer) createRecipeDropdown();
             updateInvoiceAndStoreFields();
             updateAccountCodeDatalist();
             refreshTransactionTable();

@@ -186,7 +186,6 @@ class VoucherService
             'accountsData',
             'stocksData',
             'transactionsData',
-            'recipes'
         );
     }
 
@@ -315,11 +314,10 @@ class VoucherService
      * @param float $quantity
      * @param string $voucherType
      * @param ?string $size
-     * @param ?int $recipeId
      * @return void
      * @throws \Exception
      */
-    private function reverseStock(string $item, float $quantity, string $voucherType, ?string $size = null, ?int $recipeId = null): void
+    private function reverseStock(string $item, float $quantity, string $voucherType, ?string $size = null): void
     {
         if (str_starts_with($item, 'HPP ')) {
             return; // Skip direct HPP items as they are not stored in transactions for PJ
@@ -424,46 +422,6 @@ class VoucherService
 
             $transactionsToCreate = [];
             $hppStockUpdates = [];
-            // Handle both 'recipe_id' and 'recipe' for compatibility
-            $recipeId = $request->recipe_id ?? $request->recipe ?? null;
-            if ($request->has('transactions') && is_array($request->transactions)) {
-                Log::info('Processing non-recipe transactions for voucher:', ['voucher_id' => $voucher->id]);
-                foreach ($request->transactions as $index => $transaction) {
-                    if (!empty($transaction['description']) && isset($transaction['quantity'])) {
-                        $quantity = floatval($transaction['quantity'] ?? 1);
-                        if ($quantity <= 0) {
-                            Log::error('Invalid transaction quantity:', ['voucher_id' => $voucher->id, 'description' => $transaction['description'], 'quantity' => $quantity]);
-                            throw new \Exception("Kuantitas tidak valid untuk transaksi: {$transaction['description']}.");
-                        }
-                        $isHpp = str_starts_with($transaction['description'], 'HPP ');
-
-                        // Add all transactions (including HPP for PJ) to $transactionsToCreate
-                        $transactionsToCreate[] = [
-                            'voucher_id' => $voucher->id,
-                            'description' => $transaction['description'],
-                            'quantity' => $quantity,
-                            'size' => $transaction['size'] ?? null,
-                            'nominal' => floatval($transaction['nominal'] ?? 0.00),
-                            'is_hpp' => $isHpp,
-                            'index' => $index,
-                        ];
-
-                        // Keep HPP transactions in $hppStockUpdates for PJ voucher stock updates
-                        if ($request->voucher_type === 'PJ' && $isHpp) {
-                            $hppStockUpdates[] = [
-                                'description' => $transaction['description'],
-                                'quantity' => $quantity,
-                                'size' => $transaction['size'] ?? null,
-                                'index' => $index,
-                            ];
-                        }
-                    }
-                }
-            } else {
-                Log::info('No non-recipe transactions provided for voucher:', ['voucher_id' => $voucher->id]);
-                throw new \Exception('Tidak ada transaksi valid atau kondisi PK tidak terpenuhi.');
-            }
-
             // Create transaction records
             foreach ($transactionsToCreate as $transaction) {
                 Transactions::create([
@@ -787,7 +745,6 @@ class VoucherService
             'stocks',
             'transactionsData',
             'dueDate',
-            'recipes',
             'voucherCreatedAt'
         );
     }
@@ -824,7 +781,6 @@ class VoucherService
             $totalNominal = 0;
             $transactionItems = [];
             $hppStockUpdates = [];
-            $recipeId = $request->recipe_id ?? null;
 
             if (!empty($transactionsData)) {
                 foreach ($transactionsData as $index => $transaction) {
@@ -966,7 +922,6 @@ class VoucherService
                             floatval($transaction->quantity),
                             $voucher->voucher_type,
                             $transaction->size,
-                            $recipeId
                         );
                     }
                 }
