@@ -24,7 +24,7 @@ class StockController extends Controller
     }
 
     /**
-     * Display the Stock page
+     * Display the Stock page with applied cost support
      *
      * @param Request $request
      * @return \Illuminate\View\View|\Illuminate\Http\RedirectResponse
@@ -32,7 +32,28 @@ class StockController extends Controller
     public function stock_page(Request $request)
     {
         try {
-            $data = $this->stockService->prepareStockData($request->all());
+            // Get request data
+            $requestData = $request->all();
+
+            // Check if applied cost should be applied (management mode)
+            $mode = $request->get('mode', 'accounting');
+            $appliedCostId = $request->get('applied_cost_id', null);
+
+            // Add mode and applied cost to request data
+            $requestData['mode'] = $mode;
+            $requestData['applied_cost_id'] = $appliedCostId;
+
+            // Use the enhanced method if applied cost is requested
+            if ($mode === 'management' && $appliedCostId) {
+                $data = $this->stockService->prepareStockDataWithAppliedCost($requestData);
+            } else {
+                $data = $this->stockService->prepareStockData($requestData);
+            }
+
+            // Add mode and applied cost info to view data
+            $data['currentMode'] = $mode;
+            $data['selectedAppliedCostId'] = $appliedCostId;
+
             return view('stock.stock_page', $data);
         } catch (\Exception $e) {
             Log::error('Stock Page Error: ' . $e->getMessage(), ['exception' => $e]);

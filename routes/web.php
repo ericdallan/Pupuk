@@ -58,6 +58,9 @@ Route::middleware(['auth:admin,master'])->group(function () {
     Route::put('/recipe/{id}', [StockController::class, 'updateRecipe'])->name('recipe.update');
     Route::delete('/recipe/{id}', [StockController::class, 'deleteRecipe'])->name('recipe.delete');
     Route::post('/applied-cost/store', [AppliedCostController::class, 'store'])->name('applied_cost.store');
+    Route::get('/api/applied-cost/history', [AppliedCostController::class, 'getHistory'])->name('applied_cost.history');
+    Route::get('/api/applied-cost/{id}', [AppliedCostController::class, 'getDetail'])->name('applied_cost.detail');
+    Route::delete('/api/applied-cost/{id}', [AppliedCostController::class, 'delete'])->name('applied_cost.delete');
     Route::get('/generalLedger_page', [generalLedgerController::class, 'generalledger_page'])->name('generalledger_page');
     Route::get('/general-ledger/print', [ExportController::class, 'generalledger_print'])->name('generalledger_print');
     Route::get('/trialBalance_page', [generalLedgerController::class, 'trialBalance_page'])->name('trialBalance_page');
@@ -68,7 +71,7 @@ Route::middleware(['auth:admin,master'])->group(function () {
     Route::get('/export/balance-sheet', [ExportController::class, 'exportBalanceSheet'])->name('export_BalanceSheet');
     Route::get('/account_page', [AccountCodeController::class, 'account_page'])->name('account_page');
     Route::post('/account/create', [AccountCodeController::class, 'create_account'])->name('account_create');
-    Route::get('/account_page/edit/{accountCode}', [AccountCodeController::class, 'edit_account'])->name('accoundeCode_edit');
+    Route::get('/account_page/edit/{accountCode}', [AccountCodeController::class, 'edit_account'])->name('accountCode_edit');
     Route::put('/account_update/{accountCode}', [AccountCodeController::class, 'update_account'])->name('account_update');
     Route::get('/account-codes/pdf', [AccountCodeController::class, 'generatePdf'])->name('account-codes.pdf');
     Route::get('/account-codes/excel', [AccountCodeController::class, 'exportExcel'])->name('account-codes.excel');

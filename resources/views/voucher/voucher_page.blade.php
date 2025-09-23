@@ -4,26 +4,31 @@
 @section('title', 'Transaksi Akuntansi')
 
 <style>
+    /* Enhanced Button Styles */
     .filter-button {
-        background-color: #007bff;
-        border-color: #007bff;
+        background: linear-gradient(45deg, #007bff, #0056b3);
+        border: none;
         color: white;
+        transition: transform 0.2s, box-shadow 0.2s;
     }
 
     .filter-button:hover {
-        background-color: table#0056b3;
-        border-color: #0056b3;
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0, 123, 255, 0.3);
+        background: linear-gradient(45deg, #0056b3, #003d80);
     }
 
     .create-voucher-button {
-        background-color: #28a745;
-        border-color: #28a745;
+        background: linear-gradient(45deg, #28a745, #1e7e34);
+        border: none;
         color: white;
+        transition: transform 0.2s, box-shadow 0.2s;
     }
 
     .create-voucher-button:hover {
-        background-color: #218838;
-        border-color: #1e7e34;
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(40, 167, 69, 0.3);
+        background: linear-gradient(45deg, #218838, #1a6030);
     }
 
     .btn-disabled {
@@ -31,28 +36,100 @@
         border-color: #6c757d;
         cursor: not-allowed;
         opacity: 0.65;
+        transition: opacity 0.2s;
     }
 
     .search-button {
-        background-color: #17a2b8;
-        border-color: #17a2b8;
+        background: linear-gradient(45deg, #17a2b8, #117a8b);
+        border: none;
         color: white;
+        transition: transform 0.2s, box-shadow 0.2s;
     }
 
     .search-button:hover {
-        background-color: #138496;
-        border-color: #117a8b;
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(23, 162, 184, 0.3);
+        background: linear-gradient(45deg, #138496, #0d5d6b);
     }
 
-    /* Ensure pagination is visible */
+    /* Table Enhancements */
+    .table {
+        background-color: #fff;
+        border-radius: 8px;
+        overflow: hidden;
+    }
+
+    .table thead {
+        background: linear-gradient(90deg, #343a40, #212529);
+        color: white;
+        position: sticky;
+        top: 0;
+        z-index: 1;
+    }
+
+    .table tbody tr:nth-child(even) {
+        background-color: #f8f9fa;
+    }
+
+    .table tbody tr:hover {
+        background-color: #e9ecef;
+        transition: background-color 0.2s;
+    }
+
+    /* Pagination Styling */
     .pagination {
         margin-top: 20px;
         justify-content: center;
     }
 
-    .create-voucher-button[disabled] {
-        opacity: 0.6;
-        cursor: not-allowed;
+    .pagination .page-item .page-link {
+        background: linear-gradient(45deg, #f8f9fa, #e9ecef);
+        border: none;
+        color: #007bff;
+        transition: background-color 0.2s, transform 0.2s;
+    }
+
+    .pagination .page-item.active .page-link {
+        background: linear-gradient(45deg, #007bff, #0056b3);
+        color: white;
+    }
+
+    .pagination .page-item .page-link:hover {
+        transform: translateY(-2px);
+        background: linear-gradient(45deg, #0056b3, #003d80);
+        color: white;
+    }
+
+    /* Alert Animations */
+    .alert {
+        animation: fadeIn 0.5s;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+        }
+
+        to {
+            opacity: 1;
+        }
+    }
+
+    /* Badge Styles */
+    .voucher-type-badge {
+        font-size: 0.9em;
+        padding: 4px 8px;
+        border-radius: 12px;
+    }
+
+    /* Date Color Based on Recency */
+    .recent-date {
+        color: #28a745;
+        font-weight: bold;
+    }
+
+    .old-date {
+        color: #6c757d;
     }
 </style>
 
@@ -78,9 +155,10 @@
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
 @endif
-<div class="mt-4">
+
+<div class="mt-2">
     <form action="{{ route('voucher_page') }}" method="GET" class="mb-3">
-        <div class="row">
+        <div class="row g-3">
             <div class="col-md-3">
                 <label for="search" class="form-label">Cari Voucher/Invoice:</label>
                 <input type="text" name="search" id="search" class="form-control" value="{{ request('search') }}"
@@ -90,18 +168,16 @@
                 <label for="voucher_type" class="form-label">Tipe Voucher:</label>
                 <select name="voucher_type" id="voucher_type" class="form-select">
                     <option value="">Semua</option>
-
                     <optgroup label="Stok">
                         <option value="PJ" {{ request('voucher_type') == 'PJ' ? 'selected' : '' }}>Penjualan
                         </option>
                         <option value="PB" {{ request('voucher_type') == 'PB' ? 'selected' : '' }}>Pembelian
                         </option>
-                        <option value="PH" {{ request('voucher_type') == 'PH' ? 'selected' : '' }}>Pemindahan
+                        <option value="PH" {{ request('voucher_type') == 'PH' ? 'selected' : '' }} hidden>Pemindahan
                         </option>
-                        <option value="PK" {{ request('voucher_type') == 'PK' ? 'selected' : '' }}>Pemakaian
+                        <option value="PK" {{ request('voucher_type') == 'PK' ? 'selected' : '' }} hidden>Pemakaian
                         </option>
                     </optgroup>
-
                     <optgroup label="Keuangan">
                         <option value="PG" {{ request('voucher_type') == 'PG' ? 'selected' : '' }}>Pengeluaran
                         </option>
@@ -109,7 +185,6 @@
                         </option>
                         <option value="LN" {{ request('voucher_type') == 'LN' ? 'selected' : '' }}>Lainnya</option>
                     </optgroup>
-
                     <optgroup label="Penyesuaian">
                         <option value="PYB" {{ request('voucher_type') == 'PYB' ? 'selected' : '' }}>Penyesuaian
                             Bertambah</option>
@@ -148,12 +223,19 @@
             </div>
         </div>
         <div class="row mt-3">
-            <div class="col-md-12" style="display: flex; align-items: flex-end;">
-                <button type="submit" class="btn btn-primary me-2 filter-button">Filter</button>
-                <button type="submit" class="btn btn-info me-2 search-button">Cari</button>
-                <button type="button" class="btn btn-primary create-voucher-button" data-bs-toggle="modal"
-                    data-bs-target="#voucherModal" @if (Auth::guard('master')->check()) disabled @endif>
-                    Buat Voucher
+            <div class="col-md-12 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary me-2 filter-button" data-bs-toggle="tooltip"
+                    data-bs-placement="top" title="Terapkan filter berdasarkan kriteria yang dipilih">
+                    <i class="fas fa-filter me-1"></i> Filter
+                </button>
+                <button type="submit" class="btn btn-info me-2 search-button" data-bs-toggle="tooltip"
+                    data-bs-placement="top" title="Cari voucher atau invoice berdasarkan nomor">
+                    <i class="fas fa-search me-1"></i> Cari
+                </button>
+                <button type="button" class="btn btn-success create-voucher-button" data-bs-toggle="modal"
+                    data-bs-target="#voucherModal" data-bs-toggle="tooltip" data-bs-placement="top"
+                    title="Create a new voucher">
+                    <i class="fas fa-plus me-1"></i> Create Voucher
                 </button>
             </div>
         </div>
@@ -185,6 +267,16 @@
                 </thead>
                 <tbody>
                     @foreach ($vouchers as $voucher_item)
+                        @php
+                            $carbonDate = $voucher_item->voucher_date
+                                ? \Carbon\Carbon::parse($voucher_item->voucher_date)
+                                : null;
+                            $dateStr = $carbonDate ? $carbonDate->format('d-m-Y') : 'N/A';
+                            $dayNameId = $carbonDate ? $carbonDate->locale('id')->isoFormat('dddd') : 'N/A';
+                            $dayNameEn = $carbonDate ? $carbonDate->locale('en')->format('l') : 'N/A';
+                            $isRecent = $carbonDate && $carbonDate->diffInDays(now()) <= 7;
+                            $dateClass = $isRecent ? 'recent-date' : 'old-date';
+                        @endphp
                         <tr>
                             <td>{{ $voucher_item->voucher_number }}</td>
                             <td>
@@ -198,16 +290,20 @@
                                     Pembelian
                                 @elseif($voucher_item->voucher_type == 'LN')
                                     Lainnya
-                                @elseif($voucher_item->voucher_type == 'PK')
-                                    Pemakaian
                                 @elseif($voucher_item->voucher_type == 'PH')
                                     Pemindahan
+                                @elseif($voucher_item->voucher_type == 'PK')
+                                    Pemakaian
                                 @elseif($voucher_item->voucher_type == 'PYB')
                                     Penyesuaian Bertambah
                                 @elseif($voucher_item->voucher_type == 'PYK')
                                     Penyesuaian Berkurang
                                 @elseif($voucher_item->voucher_type == 'PYL')
                                     Penyesuaian Lainnya
+                                @elseif($voucher_item->voucher_type == 'RPB')
+                                    Retur Pembelian
+                                @elseif($voucher_item->voucher_type == 'RPJ')
+                                    Retur Penjualan
                                 @else
                                     {{ $voucher_item->voucher_type }}
                                 @endif
@@ -220,21 +316,28 @@
                                     -
                                 @endif
                             </td>
-                            <td>{{ \Carbon\Carbon::parse($voucher_item->voucher_date)->isoFormat('dddd, DD MMMM') }}
+                            <td class="{{ $dateClass }}" data-date="{{ $dateStr }}"
+                                data-day-id="{{ $dayNameId }}" data-day-en="{{ $dayNameEn }}">
+                                {{ $carbonDate ? $carbonDate->locale('id')->isoFormat('dddd, DD MMMM YYYY') : 'N/A' }}
                             </td>
                             <td>{{ $voucher_item->transaction }}</td>
-                            <td>{{ number_format($voucher_item->total_debit, 2) }}</td>
+                            <td>Rp {{ number_format($voucher_item->total_debit, 2, ',', '.') }}</td>
                             <td><a href="{{ route('voucher_detail', $voucher_item->id) }}"
-                                    class="btn btn-info btn-sm">Rincian</a></td>
+                                    class="btn btn-info btn-sm" data-bs-toggle="tooltip" data-bs-placement="top"
+                                    title="Lihat detail voucher"><i class="fas fa-eye"></i></a></td>
                             <td>
                                 @if (
                                     $voucher_item->invoices()->exists() &&
                                         $voucher_item->invoices()->whereIn('id', DB::table('invoice_payments')->pluck('invoice_id'))->exists())
                                     <button class="btn btn-warning btn-sm btn-disabled" disabled
-                                        title="Tidak dapat mengedit karena voucher memiliki invoices yang terkait dengan pembayaran">Edit</button>
+                                        data-bs-toggle="tooltip" data-bs-placement="top"
+                                        title="Tidak dapat diedit karena terkait pembayaran invoice">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
                                 @else
                                     <a href="{{ route('voucher_edit', $voucher_item->id) }}"
-                                        class="btn btn-warning btn-sm">Edit</a>
+                                        class="btn btn-warning btn-sm" data-bs-toggle="tooltip"
+                                        data-bs-placement="top" title="Edit voucher"><i class="fas fa-edit"></i></a>
                                 @endif
                             </td>
                             <td>
@@ -244,25 +347,45 @@
                                     @method('DELETE')
                                     @if ($voucher_item->has_stock)
                                         <button type="button" class="btn btn-danger btn-sm" disabled
-                                            title="Tidak dapat menghapus karena voucher memiliki data stok">Hapus</button>
+                                            data-bs-toggle="tooltip" data-bs-placement="top"
+                                            title="Tidak dapat dihapus karena memiliki data stok">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
                                     @elseif ($voucher_item->invoices()->exists() && $voucher_item->invoices()->whereHas('invoice_payments')->exists())
                                         <button type="button" class="btn btn-danger btn-sm" disabled
-                                            title="Tidak dapat menghapus karena voucher memiliki invoice yang terkait dengan pembayaran">Hapus</button>
+                                            data-bs-toggle="tooltip" data-bs-placement="top"
+                                            title="Tidak dapat dihapus karena terkait pembayaran invoice">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
                                     @elseif ($voucher_item->invoices()->exists() && !$voucher_item->invoice_payments()->exists())
                                         <button type="submit" class="btn btn-danger btn-sm"
-                                            onclick="return confirm('Apakah Anda yakin ingin menghapus voucher ini? Data invoice terkait akan dihapus.')">Hapus</button>
+                                            onclick="return confirm('Apakah Anda yakin ingin menghapus voucher ini? Data invoice terkait akan dihapus.')"
+                                            data-bs-toggle="tooltip" data-bs-placement="top"
+                                            title="Hapus voucher dengan konfirmasi">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
                                     @elseif (!$voucher_item->invoices()->exists() && $voucher_item->invoice_payments()->exists())
                                         <button type="submit" class="btn btn-danger btn-sm"
-                                            onclick="return confirm('Apakah Anda yakin ingin menghapus voucher ini? Data pembayaran terkait akan dihapus.')">Hapus</button>
+                                            onclick="return confirm('Apakah Anda yakin ingin menghapus voucher ini? Data pembayaran terkait akan dihapus.')"
+                                            data-bs-toggle="tooltip" data-bs-placement="top"
+                                            title="Hapus voucher dengan konfirmasi">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
                                     @else
                                         <button type="submit" class="btn btn-danger btn-sm"
-                                            onclick="return confirm('Apakah Anda yakin ingin menghapus voucher ini?')">Hapus</button>
+                                            onclick="return confirm('Apakah Anda yakin ingin menghapus voucher ini?')"
+                                            data-bs-toggle="tooltip" data-bs-placement="top"
+                                            title="Hapus voucher dengan konfirmasi">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
                                     @endif
                                 </form>
                             </td>
                             <td>
                                 <a href="{{ route('voucher_pdf', $voucher_item->id) }}"
-                                    class="btn btn-secondary btn-sm" target="_blank">PDF</a>
+                                    class="btn btn-secondary btn-sm" target="_blank" data-bs-toggle="tooltip"
+                                    data-bs-placement="top" title="Unduh voucher sebagai PDF"><i
+                                        class="fas fa-file-pdf"></i></a>
                             </td>
                         </tr>
                     @endforeach
@@ -278,7 +401,7 @@
             </nav>
         @else
             <div class="alert alert-info mt-3">Tidak ada halaman tambahan untuk ditampilkan karena data vouchers kurang
-                dari 10.</div>
+                dari {{ $vouchers->perPage() }}.</div>
         @endif
     @else
         <div class="alert alert-info">Data Transaksi belum ditemukan, silahkan membuat voucher.</div>
@@ -289,12 +412,18 @@
     document.addEventListener('DOMContentLoaded', function() {
         const successMessage = document.getElementById('success-message');
         if (successMessage) {
-            // Bootstrap alert handling
+            setTimeout(() => successMessage.classList.add('fade'), 3000);
         }
         const errorMessage = document.getElementById('error-message');
         if (errorMessage) {
-            // Bootstrap alert handling
+            setTimeout(() => errorMessage.classList.add('fade'), 5000);
         }
+
+        // Initialize tooltips
+        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        tooltipTriggerList.map(function(tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
     });
 </script>
 @endsection

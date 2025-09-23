@@ -215,6 +215,108 @@
             font-size: 0.875em;
             color: #dc3545;
         }
+
+        .mode-switch-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .btn-check:checked+.btn-outline-primary {
+            background-color: #0d6efd;
+            border-color: #0d6efd;
+            color: white;
+        }
+
+        .btn-check:checked+.btn-outline-success {
+            background-color: #198754;
+            border-color: #198754;
+            color: white;
+        }
+
+        .mode-switch-container .btn {
+            transition: all 0.3s ease;
+            font-size: 0.875rem;
+            padding: 0.375rem 0.75rem;
+        }
+
+        .mode-switch-container .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        #mode-indicator {
+            white-space: nowrap;
+        }
+
+        /* Animation for mode switch */
+        .table {
+            transition: all 0.3s ease;
+        }
+
+        @media (max-width: 768px) {
+            .d-flex.justify-content-between {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1rem;
+            }
+
+            .mode-switch-container {
+                width: 100%;
+                justify-content: space-between;
+            }
+
+            .mode-switch-container .btn {
+                flex: 1;
+                font-size: 0.8rem;
+            }
+        }
+
+        .applied-cost-detail {
+            max-height: 100px;
+            overflow-y: auto;
+            font-size: 0.875rem;
+        }
+
+        .applied-cost-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 2px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .applied-cost-item:last-child {
+            border-bottom: none;
+        }
+
+        .status-badge {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+        }
+
+        .table tbody tr:hover {
+            background-color: rgba(0, 123, 255, 0.05);
+        }
+
+        input[name="appliedCostSelection"]:checked+td {
+            background-color: rgba(255, 193, 7, 0.2);
+        }
+
+        #appliedCostModeSelection {
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
     </style>
 
     @if (session('success'))
@@ -290,10 +392,17 @@
                             <button type="button" class="btn btn-info" data-bs-toggle="modal"
                                 data-bs-target="#createRecipeModal" hidden>Buat Formula</button>
                             <!-- New Button: Perhitungan Beban -->
-                            <button type="button" class="btn btn-warning" data-bs-toggle="modal"
-                                data-bs-target="#loadCalculationModal">
-                                Perhitungan Beban
-                            </button>
+                            @if (App\Http\Controllers\Auth\AuthController::isMaster())
+                                <button type="button" class="btn btn-warning" data-bs-toggle="modal"
+                                    data-bs-target="#loadCalculationModal">
+                                    Perhitungan Beban
+                                </button>
+                                <button type="button" class="btn btn-outline-warning" data-bs-toggle="modal"
+                                    data-bs-target="#appliedCostHistoryModal">
+                                    <i class="fas fa-history me-1"></i>
+                                    Riwayat Perhitungan Beban
+                                </button>
+                            @endif
                         </div>
                     </form>
                 </div>
@@ -303,7 +412,8 @@
         <!-- Global Search Filter -->
         <div class="mb-4">
             <div class="input-group">
-                <input type="text" id="globalSearch" class="form-control" placeholder="Cari nama barang atau ukuran...">
+                <input type="text" id="globalSearch" class="form-control"
+                    placeholder="Cari nama barang atau ukuran...">
                 <button class="btn btn-outline-secondary" type="button" id="clearSearch">Clear</button>
             </div>
             <small id="searchCount" class="form-text text-muted mt-2"></small>
@@ -313,7 +423,36 @@
         <div class="table-container">
             <!-- Stocks Table -->
             <div class="table-section mb-4" data-table="stocks">
-                <h3>Stok Barang Dagangan</h3>
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h3 class="mb-0">Stok Barang Dagangan</h3>
+
+                    <!-- Toggle Switch for Accounting/Management Mode -->
+                    @if (App\Http\Controllers\Auth\AuthController::isMaster())
+                        <div class="mode-switch-container">
+                            <div class="btn-group" role="group" aria-label="Mode Selection">
+                                <input type="radio" class="btn-check" name="stockMode" id="accounting-mode"
+                                    value="accounting" checked>
+                                <label class="btn btn-outline-primary" for="accounting-mode">
+                                    <i class="fas fa-calculator me-1"></i>
+                                    Akuntansi
+                                </label>
+
+                                <input type="radio" class="btn-check" name="stockMode" id="management-mode"
+                                    value="management">
+                                <label class="btn btn-outline-success" for="management-mode">
+                                    <i class="fas fa-chart-line me-1"></i>
+                                    Manajemen
+                                </label>
+                            </div>
+
+                            <!-- Mode Indicator -->
+                            <small class="text-muted ms-2" id="mode-indicator">
+                                Mode: <span class="fw-bold text-primary">Akuntansi</span>
+                            </small>
+                        </div>
+                    @endif
+                </div>
+
                 <div class="table-responsive">
                     <table class="table table-striped table-bordered table-hover text-center">
                         <thead class="table-dark">
@@ -332,13 +471,13 @@
                                 <th></th>
                                 <th></th>
                                 <th>Qty</th>
-                                <th>HPP</th>
+                                <th class="hpp-column">HPP</th>
                                 <th>Qty</th>
-                                <th>HPP</th>
+                                <th class="hpp-column">HPP</th>
                                 <th>Qty</th>
-                                <th>HPP</th>
+                                <th class="hpp-column">HPP</th>
                                 <th>Qty</th>
-                                <th>HPP</th>
+                                <th class="hpp-column">HPP</th>
                                 <th></th>
                             </tr>
                         </thead>
@@ -360,13 +499,17 @@
                                             <td class="item-size">{{ htmlspecialchars($stock->size ?? 'Unknown Size') }}
                                             </td>
                                             <td>{{ $stock->opening_qty ?? 0 }}</td>
-                                            <td>Rp. {{ number_format($stock->opening_hpp ?? 0, 2, ',', '.') }}</td>
+                                            <td class="hpp-column">Rp.
+                                                {{ number_format($stock->opening_hpp ?? 0, 2, ',', '.') }}</td>
                                             <td>{{ $stock->incoming_qty ?? 0 }}</td>
-                                            <td>Rp. {{ number_format($stock->incoming_hpp ?? 0, 2, ',', '.') }}</td>
+                                            <td class="hpp-column">Rp.
+                                                {{ number_format($stock->incoming_hpp ?? 0, 2, ',', '.') }}</td>
                                             <td>{{ $stock->outgoing_qty ?? 0 }}</td>
-                                            <td>Rp. {{ number_format($stock->outgoing_hpp ?? 0, 2, ',', '.') }}</td>
+                                            <td class="hpp-column">Rp.
+                                                {{ number_format($stock->outgoing_hpp ?? 0, 2, ',', '.') }}</td>
                                             <td>{{ $stock->final_stock_qty ?? 0 }}</td>
-                                            <td>Rp. {{ number_format($stock->final_hpp ?? 0, 2, ',', '.') }}</td>
+                                            <td class="hpp-column">Rp.
+                                                {{ number_format($stock->final_hpp ?? 0, 2, ',', '.') }}</td>
                                             <td>
                                                 @if ($stock->id)
                                                     <button class="btn btn-sm btn-primary detail-btn"
@@ -384,7 +527,7 @@
                                 @endforeach
                             @else
                                 <tr>
-                                    <td colspan="14" class="text-center">
+                                    <td colspan="12" class="text-center">
                                         <div class="alert alert-info mb-0">Data stok belum ditemukan.</div>
                                     </td>
                                 </tr>
@@ -1054,6 +1197,117 @@
                 </div>
             </div>
         </div>
+
+        <!-- Applied Cost History Modal -->
+        <div class="modal fade" id="appliedCostHistoryModal" tabindex="-1"
+            aria-labelledby="appliedCostHistoryModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-xl">
+                <div class="modal-content">
+                    <div class="modal-header bg-warning text-dark">
+                        <h5 class="modal-title" id="appliedCostHistoryModalLabel">
+                            <i class="fas fa-history me-2"></i>
+                            Riwayat Perhitungan Beban
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <!-- Mode Selection for Applied Cost -->
+                        <div class="row mb-3" id="appliedCostModeSelection" style="display: none;">
+                            <div class="col-12">
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    <strong>Mode Manajemen Aktif:</strong> Pilih riwayat perhitungan beban untuk diterapkan
+                                    pada perhitungan HPP.
+                                </div>
+                                <div class="d-flex gap-2 align-items-center">
+                                    <label class="form-label mb-0">Pilih Riwayat yang Digunakan:</label>
+                                    <select class="form-select w-auto" id="selectedAppliedCostId">
+                                        <option value="">Pilih Riwayat...</option>
+                                    </select>
+                                    <button type="button" class="btn btn-sm btn-success" id="applySelectedCost">
+                                        <i class="fas fa-check me-1"></i>
+                                        Terapkan
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-secondary" id="clearSelectedCost">
+                                        <i class="fas fa-times me-1"></i>
+                                        Reset
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Search and Filter -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <input type="text" class="form-control" id="historySearch"
+                                    placeholder="Cari berdasarkan tanggal atau deskripsi...">
+                            </div>
+                            <div class="col-md-3">
+                                <select class="form-select" id="historyDateFilter">
+                                    <option value="">Semua Tanggal</option>
+                                    <option value="today">Hari Ini</option>
+                                    <option value="week">Minggu Ini</option>
+                                    <option value="month">Bulan Ini</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <button type="button" class="btn btn-outline-primary w-100" id="refreshHistory">
+                                    <i class="fas fa-sync-alt me-1"></i>
+                                    Refresh
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- History Table -->
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover" id="appliedCostHistoryTable">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th width="5%">
+                                            <input type="radio" name="appliedCostSelection" value=""
+                                                id="noCostSelection" checked>
+                                        </th>
+                                        <th width="10%">ID</th>
+                                        <th width="15%">Tanggal</th>
+                                        <th width="15%">Total Nominal</th>
+                                        <th width="40%">Detail Beban</th>
+                                        <th width="10%">Status</th>
+                                        <th width="5%">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="historyTableBody">
+                                    <!-- Data will be loaded via AJAX -->
+                                    <tr>
+                                        <td colspan="7" class="text-center">
+                                            <div class="spinner-border text-primary" role="status">
+                                                <span class="visually-hidden">Loading...</span>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Pagination -->
+                        <nav aria-label="History pagination" id="historyPagination" style="display: none;">
+                            <ul class="pagination justify-content-center mb-0">
+                                <!-- Pagination items will be generated dynamically -->
+                            </ul>
+                        </nav>
+                    </div>
+                    <div class="modal-footer">
+                        <div class="d-flex justify-content-between w-100">
+                            <div>
+                                <span class="text-muted" id="historyCount">Total: 0 riwayat</span>
+                            </div>
+                            <div>
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- JavaScript -->
@@ -1077,6 +1331,46 @@
             const totalHidden = document.getElementById('totalHidden');
             const loadCalculationForm = document.getElementById('loadCalculationForm');
             const errorMessage = document.getElementById('errorMessage');
+            const accountingMode = document.getElementById('accounting-mode');
+            const managementMode = document.getElementById('management-mode');
+            const modeIndicator = document.getElementById('mode-indicator');
+            const tableContainer = document.querySelector('[data-table="stocks"]');
+            document.getElementById('appliedCostHistoryModal').addEventListener('shown.bs.modal', function() {
+                loadAppliedCostHistory();
+
+                // Show mode selection if in management mode
+                const isManagementMode = document.querySelector('.management-mode');
+                if (isManagementMode) {
+                    document.getElementById('appliedCostModeSelection').style.display = 'block';
+                }
+            });
+
+            // Search functionality
+            document.getElementById('historySearch').addEventListener('input', debounce(filterHistory, 300));
+
+            // Date filter
+            document.getElementById('historyDateFilter').addEventListener('change', filterHistory);
+
+            // Refresh button
+            document.getElementById('refreshHistory').addEventListener('click', loadAppliedCostHistory);
+
+            // Apply selected cost
+            document.getElementById('applySelectedCost').addEventListener('click', applySelectedAppliedCost);
+
+            // Clear selected cost
+            document.getElementById('clearSelectedCost').addEventListener('click', clearSelectedAppliedCost);
+
+            // Listen for stock mode changes
+            window.addEventListener('stockModeChanged', function(e) {
+                const modeSelection = document.getElementById('appliedCostModeSelection');
+                if (e.detail.mode === 'management') {
+                    modeSelection.style.display = 'block';
+                } else {
+                    modeSelection.style.display = 'none';
+                    clearSelectedAppliedCost();
+                }
+            });
+
 
             let ingredientCount = document.querySelectorAll('.ingredient-row').length - 1;
             let editIngredientCount = 0;
@@ -2075,7 +2369,397 @@
             // Initialize
             renumberRows();
             updateTotal();
+
+            function updateMode(mode) {
+                const indicatorSpan = modeIndicator.querySelector('span');
+
+                if (mode === 'accounting') {
+                    indicatorSpan.textContent = 'Akuntansi';
+                    indicatorSpan.className = 'fw-bold text-primary';
+                    tableContainer.classList.remove('management-mode');
+
+                    // Show all HPP columns
+                    document.querySelectorAll('.hpp-column').forEach(col => {
+                        col.style.display = '';
+                    });
+
+                    // Update colspan for empty data row
+                    const emptyRow = document.querySelector('td[colspan="12"]');
+                    if (emptyRow) {
+                        emptyRow.setAttribute('colspan', '12');
+                    }
+
+                } else if (mode === 'management') {
+                    indicatorSpan.textContent = 'Manajemen';
+                    indicatorSpan.className = 'fw-bold text-success';
+                    tableContainer.classList.add('management-mode');
+
+                    // Ensure HPP columns are visible
+                    document.querySelectorAll('.hpp-column').forEach(col => {
+                        col.style.display = ''; // Show HPP columns
+                    });
+
+                    // Update colspan for empty data row (keep all columns, so use 12 instead of 8)
+                    const emptyRow = document.querySelector('td[colspan="12"]');
+                    if (emptyRow) {
+                        emptyRow.setAttribute('colspan', '12'); // Adjust to match total columns
+                    }
+                }
+
+                // Save mode preference
+                localStorage.setItem('stockViewMode', mode);
+
+                // Trigger custom event for other scripts
+                window.dispatchEvent(new CustomEvent('stockModeChanged', {
+                    detail: {
+                        mode: mode
+                    }
+                }));
+            }
+
+            // Event listeners
+            accountingMode.addEventListener('change', function() {
+                if (this.checked) {
+                    updateMode('accounting');
+                }
+            });
+
+            managementMode.addEventListener('change', function() {
+                if (this.checked) {
+                    updateMode('management');
+                }
+            });
+
+            // Load saved mode preference
+            const savedMode = localStorage.getItem('stockViewMode') || 'accounting';
+            if (savedMode === 'management') {
+                managementMode.checked = true;
+                updateMode('management');
+            } else {
+                accountingMode.checked = true;
+                updateMode('accounting');
+            }
+
+            // Add smooth transition effect
+            const table = document.querySelector('.table');
+            if (table) {
+                table.style.transition = 'all 0.3s ease';
+            }
+
+            function loadAppliedCostHistory() {
+                // Simulate API call - replace with actual endpoint
+                fetch('/api/applied-cost/history')
+                    .then(response => response.json())
+                    .then(data => {
+                        appliedCostHistory = data.data || [];
+                        populateHistoryOptions();
+                        renderHistoryTable();
+                        updateHistoryCount();
+                    })
+                    .catch(error => {
+                        console.error('Error loading history:', error);
+                        // Mock data for demonstration
+                        loadMockData();
+                    });
+            }
+
+            function loadMockData() {
+                // Mock data for demonstration
+                appliedCostHistory = [{
+                        id: 1,
+                        created_at: '2024-01-15 10:30:00',
+                        total_nominal: 150000,
+                        details: [{
+                                description: 'Biaya Listrik',
+                                nominal: 75000
+                            },
+                            {
+                                description: 'Biaya Air',
+                                nominal: 25000
+                            },
+                            {
+                                description: 'Biaya Transportasi',
+                                nominal: 50000
+                            }
+                        ],
+                        status: 'active'
+                    },
+                    {
+                        id: 2,
+                        created_at: '2024-01-14 15:20:00',
+                        total_nominal: 200000,
+                        details: [{
+                                description: 'Biaya Tenaga Kerja',
+                                nominal: 120000
+                            },
+                            {
+                                description: 'Biaya Overhead',
+                                nominal: 80000
+                            }
+                        ],
+                        status: 'inactive'
+                    },
+                    {
+                        id: 3,
+                        created_at: '2024-01-13 09:15:00',
+                        total_nominal: 300000,
+                        details: [{
+                                description: 'Biaya Bahan Bakar',
+                                nominal: 150000
+                            },
+                            {
+                                description: 'Biaya Pemeliharaan',
+                                nominal: 100000
+                            },
+                            {
+                                description: 'Biaya Operasional',
+                                nominal: 50000
+                            }
+                        ],
+                        status: 'inactive'
+                    }
+                ];
+
+                populateHistoryOptions();
+                renderHistoryTable();
+                updateHistoryCount();
+            }
+
+            function populateHistoryOptions() {
+                const select = document.getElementById('selectedAppliedCostId');
+                select.innerHTML = '<option value="">Pilih Riwayat...</option>';
+
+                appliedCostHistory.forEach(item => {
+                    const option = document.createElement('option');
+                    option.value = item.id;
+                    option.textContent =
+                        `#${item.id} - ${formatCurrency(item.total_nominal)} (${formatDate(item.created_at)})`;
+                    select.appendChild(option);
+                });
+            }
+
+            function renderHistoryTable() {
+                const tbody = document.getElementById('historyTableBody');
+
+                if (appliedCostHistory.length === 0) {
+                    tbody.innerHTML = `
+            <tr>
+                <td colspan="7" class="text-center text-muted py-4">
+                    <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
+                    Tidak ada riwayat perhitungan beban
+                </td>
+            </tr>
+        `;
+                    return;
+                }
+
+                tbody.innerHTML = appliedCostHistory.map(item => `
+        <tr>
+            <td>
+                <input type="radio" name="appliedCostSelection" value="${item.id}" 
+                       ${currentSelectedCostId == item.id ? 'checked' : ''}>
+            </td>
+            <td><strong>#${item.id}</strong></td>
+            <td>${formatDate(item.created_at)}</td>
+            <td><strong class="text-success">${formatCurrency(item.total_nominal)}</strong></td>
+            <td>
+                <div class="applied-cost-detail">
+                    ${item.details.map(detail => `
+                                        <div class="applied-cost-item">
+                                            <span>${detail.description}</span>
+                                            <span class="text-success">${formatCurrency(detail.nominal)}</span>
+                                        </div>
+                                    `).join('')}
+                </div>
+            </td>
+            <td>
+                <span class="badge status-badge ${item.status === 'active' ? 'bg-success' : 'bg-secondary'}">
+                    ${item.status === 'active' ? 'Aktif' : 'Tidak Aktif'}
+                </span>
+            </td>
+            <td>
+                <button type="button" class="btn btn-sm btn-outline-primary" 
+                        onclick="viewAppliedCostDetail(${item.id})" title="Lihat Detail">
+                    <i class="fas fa-eye"></i>
+                </button>
+            </td>
+        </tr>
+    `).join('');
+
+                // Add event listeners for radio buttons
+                document.querySelectorAll('input[name="appliedCostSelection"]').forEach(radio => {
+                    radio.addEventListener('change', function() {
+                        if (this.value) {
+                            document.getElementById('selectedAppliedCostId').value = this.value;
+                        }
+                    });
+                });
+            }
+
+            function filterHistory() {
+                // This would normally filter the data
+                // For now, just re-render the existing data
+                renderHistoryTable();
+            }
+
+            function applySelectedAppliedCost() {
+                const selectedId = document.getElementById('selectedAppliedCostId').value;
+                if (!selectedId) {
+                    alert('Silakan pilih riwayat perhitungan beban terlebih dahulu.');
+                    return;
+                }
+
+                const selectedCost = appliedCostHistory.find(item => item.id == selectedId);
+                if (!selectedCost) {
+                    alert('Riwayat tidak ditemukan.');
+                    return;
+                }
+
+                currentSelectedCostId = selectedId;
+
+                // Update all HPP calculations in the table
+                updateHppWithAppliedCost(selectedCost.total_nominal);
+
+                // Update UI to show applied cost
+                showAppliedCostNotification(selectedCost);
+
+                // Close modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('appliedCostHistoryModal'));
+                modal.hide();
+
+                // Update status in history
+                appliedCostHistory.forEach(item => {
+                    item.status = item.id == selectedId ? 'active' : 'inactive';
+                });
+
+                renderHistoryTable();
+            }
+
+            function clearSelectedAppliedCost() {
+                currentSelectedCostId = null;
+                document.getElementById('selectedAppliedCostId').value = '';
+                document.querySelectorAll('input[name="appliedCostSelection"]').forEach(radio => {
+                    radio.checked = false;
+                });
+
+                // Reset HPP calculations
+                resetHppCalculations();
+
+                // Hide notification
+                hideAppliedCostNotification();
+
+                // Update status in history
+                appliedCostHistory.forEach(item => {
+                    item.status = 'inactive';
+                });
+
+                renderHistoryTable();
+            }
+
+            function updateHppWithAppliedCost(appliedCostTotal) {
+                const hppCells = document.querySelectorAll('.hpp-column');
+                const totalStockItems = document.querySelectorAll('tbody tr').length;
+
+                if (totalStockItems === 0) return;
+
+                const appliedCostPerItem = appliedCostTotal / totalStockItems;
+
+                hppCells.forEach(cell => {
+                    if (cell.textContent.includes('Rp.')) {
+                        const originalValue = parseFloat(cell.textContent.replace(/[Rp.,\s]/g, ''));
+                        if (!isNaN(originalValue)) {
+                            const newValue = originalValue + appliedCostPerItem;
+                            cell.innerHTML =
+                                `Rp. ${formatNumber(newValue)} <small class="text-success">+${formatCurrency(appliedCostPerItem)}</small>`;
+                        }
+                    }
+                });
+            }
+
+            function resetHppCalculations() {
+                // This would reset HPP calculations to original values
+                // For now, reload the page or reset the table data
+                const hppCells = document.querySelectorAll('.hpp-column');
+                hppCells.forEach(cell => {
+                    if (cell.innerHTML.includes('<small')) {
+                        // Remove the applied cost addition
+                        const text = cell.textContent.split('+')[0].trim();
+                        cell.textContent = text;
+                    }
+                });
+            }
+
+            function showAppliedCostNotification(selectedCost) {
+                // Create or update notification
+                let notification = document.getElementById('appliedCostNotification');
+                if (!notification) {
+                    notification = document.createElement('div');
+                    notification.id = 'appliedCostNotification';
+                    notification.className = 'alert alert-success alert-dismissible fade show position-fixed';
+                    notification.style.cssText = 'top: 20px; right: 20px; z-index: 1050; max-width: 400px;';
+                    document.body.appendChild(notification);
+                }
+
+                notification.innerHTML = `
+        <strong><i class="fas fa-check-circle me-2"></i>Perhitungan Beban Diterapkan</strong>
+        <br>
+        <small>Total: ${formatCurrency(selectedCost.total_nominal)} telah ditambahkan ke perhitungan HPP</small>
+        <button type="button" class="btn-close" onclick="hideAppliedCostNotification()"></button>
+    `;
+
+                // Auto hide after 5 seconds
+                setTimeout(hideAppliedCostNotification, 5000);
+            }
+
+            function hideAppliedCostNotification() {
+                const notification = document.getElementById('appliedCostNotification');
+                if (notification) {
+                    notification.remove();
+                }
+            }
+
+            function viewAppliedCostDetail(id) {
+                const item = appliedCostHistory.find(cost => cost.id === id);
+                if (!item) return;
+
+                alert(`Detail Perhitungan Beban #${id}\n\n` +
+                    item.details.map(d => `${d.description}: ${formatCurrency(d.nominal)}`).join('\n') +
+                    `\n\nTotal: ${formatCurrency(item.total_nominal)}`);
+            }
+
+            function updateHistoryCount() {
+                document.getElementById('historyCount').textContent = `Total: ${appliedCostHistory.length} riwayat`;
+            }
+
+            function formatDate(dateString) {
+                return new Date(dateString).toLocaleDateString('id-ID', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            }
+
+            function formatCurrency(amount) {
+                return 'Rp. ' + formatNumber(amount);
+            }
+
+            function formatNumber(number) {
+                return new Intl.NumberFormat('id-ID').format(number);
+            }
+
+            function debounce(func, wait) {
+                let timeout;
+                return function executedFunction(...args) {
+                    const later = () => {
+                        clearTimeout(timeout);
+                        func(...args);
+                    };
+                    clearTimeout(timeout);
+                    timeout = setTimeout(later, wait);
+                };
+            }
         });
-        
     </script>
 @endsection

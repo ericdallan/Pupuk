@@ -841,4 +841,144 @@ class StockService
             throw $e;
         }
     }
+    /**
+     * Apply selected applied cost to stock data
+     *
+     * @param array $stockData
+     * @param int|null $appliedCostId
+     * @return array
+     */
+    public function applyAppliedCostToStockData(array $stockData, ?int $appliedCostId = null): array
+    {
+        if (!$appliedCostId) {
+            return $stockData;
+        }
+
+        try {
+            $appliedCost = \App\Models\AppliedCost::find($appliedCostId);
+            if (!$appliedCost) {
+                return $stockData;
+            }
+
+            // Calculate total number of stock items across all categories
+            $totalStockItems = $this->countTotalStockItems($stockData);
+
+            if ($totalStockItems === 0) {
+                return $stockData;
+            }
+
+            // Distribute applied cost evenly across all items
+            $appliedCostPerItem = $appliedCost->total_nominal / $totalStockItems;
+
+            // Apply to each stock category
+            foreach ($stockData as $category => &$categoryData) {
+                if (is_array($categoryData)) {
+                    foreach ($categoryData as $itemName => &$itemSizes) {
+                        if (is_array($itemSizes)) {
+                            foreach ($itemSizes as &$stockItem) {
+                                if (is_object($stockItem)) {
+                                    // Add applied cost to HPP calculations
+                                    $stockItem->opening_hpp += $appliedCostPerItem;
+                                    $stockItem->incoming_hpp += $appliedCostPerItem;
+                                    $stockItem->outgoing_hpp += $appliedCostPerItem;
+                                    $stockItem->final_hpp += $appliedCostPerItem;
+
+                                    // Store applied cost info for display
+                                    $stockItem->applied_cost_per_item = $appliedCostPerItem;
+                                    $stockItem->applied_cost_id = $appliedCostId;
+                                    $stockItem->applied_cost_total = $appliedCost->total_nominal;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            return $stockData;
+        } catch (\Exception $e) {
+            Log::error('Error applying applied cost to stock data: ' . $e->getMessage());
+            return $stockData;
+        }
+    }
+
+    /**
+     * Count total stock items across all categories
+     *
+     * @param array $stockData
+     * @return int
+     */
+    private function countTotalStockItems(array $stockData): int
+    {
+        $count = 0;
+
+        foreach ($stockData as $categoryData) {
+            if (is_array($categoryData)) {
+                foreach ($categoryData as $itemSizes) {
+                    if (is_array($itemSizes)) {
+                        $count += count($itemSizes);
+                    }
+                }
+            }
+        }
+
+        return $count;
+    }
+
+    /**
+     * Get applied cost summary for display
+     *
+     * @param int $appliedCostId
+     * @return array|null
+     */
+    public function getAppliedCostSummary(int $appliedCostId): ?array
+    {
+        try {
+            $appliedCost = \App\Models\AppliedCost::with('details')->find($appliedCostId);
+
+            if (!$appliedCost) {
+                return null;
+            }
+
+            return [
+                'id' => $appliedCost->id,
+                'total_nominal' => $appliedCost->total_nominal,
+                'created_at' => $appliedCost->created_at->format('d/m/Y H:i'),
+                'details_count' => $appliedCost->details->count(),
+                'details' => $appliedCost->details->map(function ($detail) {
+                    return [
+                        'description' => $detail->description,
+                        'nominal' => $detail->nominal
+                    ];
+                })->toArray()
+            ];
+        } catch (\Exception $e) {
+            Log::error('Error getting applied cost summary: ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Prepare stock data with applied cost support
+     * Modified version of existing prepareStockData method
+     */
+    public function prepareStockDataWithAppliedCost(array $data): array
+    {
+        // Get base stock data using existing method
+        $stockData = $this->prepareStockData($data);
+
+        // Apply selected applied cost if in management mode and cost is selected
+        $appliedCostId = $data['applied_cost_id'] ?? null;
+        $isManagementMode = ($data['mode'] ?? 'accounting') === 'management';
+
+        if ($isManagementMode && $appliedCostId) {
+            $stockData['stockData'] = $this->applyAppliedCostToStockData($stockData['stockData'], $appliedCostId);
+            $stockData['transferStockData'] = $this->applyAppliedCostToStockData($stockData['transferStockData'], $appliedCostId);
+            $stockData['usedStockData'] = $this->applyAppliedCostToStockData($stockData['usedStockData'], $appliedCostId);
+
+            // Add applied cost summary to return data
+            $stockData['appliedCostSummary'] = $this->getAppliedCostSummary($appliedCostId);
+        }
+
+        return $stockData;
+    }
 }

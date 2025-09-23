@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Services\AppliedCostService;
+use App\Models\AppliedCost;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
@@ -70,6 +71,162 @@ class AppliedCostController extends Controller
                 'request' => $request->all()
             ]);
             return redirect()->back()->with('error', 'Terjadi kesalahan saat menyimpan beban: ' . $e->getMessage())->withInput()->with('modal_open', true);
+        }
+    }
+    /**
+     * Get applied cost history for the modal
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getHistory(Request $request)
+    {
+        try {
+            $masterId = Auth::guard('master')->id();
+            if (!$masterId) {
+                return response()->json(['error' => 'Unauthorized'], 401);
+            }
+
+            $query = AppliedCost::with(['details', 'master'])
+                ->where('master_id', $masterId)
+                ->orderBy('created_at', 'desc');
+
+            // Apply date filter if provided
+            if ($request->has('date_filter') && $request->date_filter) {
+                $dateFilter = $request->date_filter;
+                $now = now();
+
+                switch ($dateFilter) {
+                    case 'today':
+                        $query->whereDate('created_at', $now->toDateString());
+                        break;
+                    case 'week':
+                        $query->whereBetween('created_at', [$now->startOfWeek(), $now->endOfWeek()]);
+                        break;
+                    case 'month':
+                        $query->whereMonth('created_at', $now->month)
+                            ->whereYear('created_at', $now->year);
+                        break;
+                }
+            }
+
+            // Apply search if provided
+            if ($request->has('search') && $request->search) {
+                $search = $request->search;
+                $query->where(function ($q) use ($search) {
+                    $q->whereHas('details', function ($detailQuery) use ($search) {
+                        $detailQuery->where('description', 'LIKE', '%' . $search . '%');
+                    })->orWhere('total_nominal', 'LIKE', '%' . $search . '%')
+                        ->orWhere('created_at', 'LIKE', '%' . $search . '%');
+                });
+            }
+
+            $appliedCosts = $query->paginate($request->get('per_page', 10));
+
+            $data = $appliedCosts->map(function ($appliedCost) {
+                return [
+                    'id' => $appliedCost->id,
+                    'created_at' => $appliedCost->created_at->toDateTimeString(),
+                    'total_nominal' => $appliedCost->total_nominal,
+                    'details' => $appliedCost->details->map(function ($detail) {
+                        return [
+                            'description' => $detail->description,
+                            'nominal' => $detail->nominal,
+                        ];
+                    }),
+                    'status' => 'inactive', // You can add logic to determine active status
+                    'master_name' => $appliedCost->master->name ?? 'Unknown',
+                ];
+            });
+
+            return response()->json([
+                'success' => true,
+                'data' => $data,
+                'pagination' => [
+                    'current_page' => $appliedCosts->currentPage(),
+                    'last_page' => $appliedCosts->lastPage(),
+                    'per_page' => $appliedCosts->perPage(),
+                    'total' => $appliedCosts->total(),
+                ]
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error fetching applied cost history: ' . $e->getMessage());
+            return response()->json(['error' => 'Failed to fetch history'], 500);
+        }
+    }
+
+    /**
+     * Get specific applied cost details
+     *
+     * @param int $id
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getDetail($id)
+    {
+        try {
+            $masterId = Auth::guard('master')->id();
+            if (!$masterId) {
+                return response()->json(['error' => 'Unauthorized'], 401);
+            }
+
+            $appliedCost = AppliedCost::with(['details', 'master'])
+                ->where('id', $id)
+                ->where('master_id', $masterId)
+                ->firstOrFail();
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'id' => $appliedCost->id,
+                    'created_at' => $appliedCost->created_at->toDateTimeString(),
+                    'total_nominal' => $appliedCost->total_nominal,
+                    'details' => $appliedCost->details->map(function ($detail) {
+                        return [
+                            'id' => $detail->id,
+                            'description' => $detail->description,
+                            'nominal' => $detail->nominal,
+                        ];
+                    }),
+                    'master_name' => $appliedCost->master->name ?? 'Unknown',
+                ]
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error fetching applied cost detail: ' . $e->getMessage());
+            return response()->json(['error' => 'Applied cost not found'], 404);
+        }
+    }
+
+    /**
+     * Delete applied cost record (optional)
+     *
+     * @param int $id
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function delete($id)
+    {
+        try {
+            $masterId = Auth::guard('master')->id();
+            if (!$masterId) {
+                return response()->json(['error' => 'Unauthorized'], 401);
+            }
+
+            $appliedCost = AppliedCost::where('id', $id)
+                ->where('master_id', $masterId)
+                ->firstOrFail();
+
+            // Delete related details first
+            $appliedCost->details()->delete();
+
+            // Delete the main record
+            $appliedCost->delete();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Applied cost deleted successfully'
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error deleting applied cost: ' . $e->getMessage());
+            return response()->json(['error' => 'Failed to delete applied cost'], 500);
         }
     }
 }
