@@ -231,12 +231,11 @@
                 <button type="button" class="btn btn-success create-voucher-button" data-bs-toggle="modal"
                     data-bs-target="#voucherModal" data-bs-toggle="tooltip" data-bs-placement="bottom"
                     title="Create a new voucher">
-                    <i class="fas fa-plus me-1"></i> Create Voucher
+                    <i class="fas fa-receipt me-1"></i> Buat Voucher
                 </button>
             </div>
         </div>
     </form>
-    @extends('voucher/voucher_form')
 
     <!-- Debug Pagination Info -->
     <div class="alert alert-info mt-3">
@@ -329,7 +328,8 @@
                                 @else
                                     <a href="{{ route('voucher_edit', $voucher_item->id) }}"
                                         class="btn btn-warning btn-sm" data-bs-toggle="tooltip"
-                                        data-bs-placement="bottom" title="Edit voucher"><i class="fas fa-edit"></i></a>
+                                        data-bs-placement="bottom" title="Edit voucher"><i
+                                            class="fas fa-edit"></i></a>
                                 @endif
                             </td>
                             <td>
@@ -399,7 +399,7 @@
         <div class="alert alert-info">Data Transaksi belum ditemukan, silahkan membuat voucher.</div>
     @endif
 </div>
-
+@include('voucher.voucher_form')
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const successMessage = document.getElementById('success-message');

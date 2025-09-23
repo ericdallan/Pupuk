@@ -319,6 +319,8 @@ class VoucherController extends Controller
         $transactions = $this->filterTransactions($request->transactions);
         $voucherDetails = $this->filterVoucherDetails($request->voucher_details);
 
+        Log::info('Filtered transactions:', ['transactions' => $transactions]);
+
         $validator = $this->validateVoucherRequest($request, $transactions, $voucherDetails);
         $this->validateStockAndHpp($request, $transactions, $validator);
 

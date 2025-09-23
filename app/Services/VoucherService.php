@@ -420,8 +420,29 @@ class VoucherService
             $voucher = Voucher::create($voucherData);
             Log::info('Voucher created:', ['voucher_id' => $voucher->id, 'voucher_number' => $voucherNumber, 'voucher_type' => $request->voucher_type]);
 
-            $transactionsToCreate = [];
+            // Inisialisasi dan isi transactionsToCreate dari request->transactions
+            $transactionsToCreate = collect($request->transactions ?? [])
+                ->filter(function ($transaction) {
+                    $hasDescription = !empty($transaction['description']);
+                    $isHpp = str_starts_with($transaction['description'], 'HPP ');
+                    $hasQuantity = isset($transaction['quantity']) && floatval($transaction['quantity']) > 0;
+                    $hasNominal = isset($transaction['nominal']) && floatval($transaction['nominal']) >= 0;
+                    return $hasDescription && ($isHpp || ($hasQuantity && $hasNominal));
+                })
+                ->map(function ($transaction) {
+                    return [
+                        'description' => $transaction['description'],
+                        'size' => $transaction['size'] ?? null,
+                        'quantity' => floatval($transaction['quantity']),
+                        'nominal' => floatval($transaction['nominal']),
+                        'is_hpp' => str_starts_with($transaction['description'], 'HPP '),
+                    ];
+                })
+                ->values()
+                ->toArray();
+
             $hppStockUpdates = [];
+
             // Create transaction records
             foreach ($transactionsToCreate as $transaction) {
                 Transactions::create([
@@ -451,6 +472,7 @@ class VoucherService
                             return $hpp['description'] === "HPP {$item}" && $hpp['size'] === $size;
                         });
 
+                        // Validasi HPP untuk PJ (jika diperlukan)
                         // if (!$hppItem) {
                         //     throw new \Exception("Transaksi HPP untuk item {$item} dengan ukuran {$size} tidak ditemukan.");
                         // }
@@ -561,7 +583,7 @@ class VoucherService
                     ]);
                 }
             }
-            // Clear cache for the voucher's period
+
             $this->dashboardService->clearCacheForPeriod(
                 $voucher->voucher_date->year,
                 $voucher->voucher_date->month

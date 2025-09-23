@@ -1,86 +1,198 @@
-<style>
-    input:disabled,
-    select:disabled {
-        background-color: #f0f0f0;
-        cursor: not-allowed;
-    }
-</style>
 <div class="modal fade" id="voucherModal" data-bs-backdrop="static" tabindex="-1" aria-labelledby="voucherModalLabel"
     aria-hidden="true">
     <div class="modal-dialog modal-xl">
         <div class="modal-content">
-            <div class="modal-header">
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+            <div class="modal-header" style="background: linear-gradient(90deg, #343a40, #212529); color: white;">
+                <h5 class="modal-title" id="voucherModalLabel">
+                    <i class="fas fa-receipt"></i> Form Voucher Keuangan
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                    aria-label="Tutup"></button>
             </div>
             <form id="voucherForm" method="POST" action="/voucher_form" enctype="multipart/form-data">
                 @csrf
                 <div class="modal-body">
-                    <div class="container">
-                        <h2 class="text-center">Voucher Form</h2>
-                        <div class="row mb-3">
-                            <label for="voucherNumber" class="col-sm-3 col-form-label">Nomor Voucher:</label>
-                            <div class="col-sm-9">
+                    <div class="container-fluid">
+                        <!-- Styling for the form -->
+                        <style>
+                            /* Section Header Styling */
+                            .section-header {
+                                font-size: 1.2em;
+                                font-weight: bold;
+                                color: #343a40;
+                                padding: 10px 0;
+                                margin-bottom: 15px;
+                                border-bottom: 2px solid #007bff;
+                                display: flex;
+                                align-items: center;
+                                gap: 8px;
+                            }
+
+                            /* Form Control Enhancements */
+                            .form-control,
+                            .form-select {
+                                border-radius: 6px;
+                                transition: border-color 0.2s, box-shadow 0.2s;
+                            }
+
+                            .form-control:focus,
+                            .form-select:focus {
+                                border-color: #007bff;
+                                box-shadow: 0 0 8px rgba(0, 123, 255, 0.3);
+                            }
+
+                            /* Button Styles */
+                            .btn-primary {
+                                background: linear-gradient(45deg, #007bff, #0056b3);
+                                border: none;
+                                color: white;
+                                transition: transform 0.2s, box-shadow 0.2s;
+                            }
+
+                            .btn-primary:hover {
+                                transform: translateY(-2px);
+                                box-shadow: 0 5px 15px rgba(0, 123, 255, 0.3);
+                                background: linear-gradient(45deg, #0056b3, #003d80);
+                            }
+
+                            /* Improved Radio Button Layout */
+                            .radio-group {
+                                display: flex;
+                                flex-wrap: wrap;
+                                gap: 15px;
+                                align-items: center;
+                            }
+
+                            .radio-group .form-check {
+                                margin-bottom: 0;
+                                min-width: 120px;
+                            }
+
+                            .form-check-input:checked {
+                                background-color: #007bff;
+                                border-color: #007bff;
+                            }
+
+                            .form-check-label {
+                                cursor: pointer;
+                                font-weight: 500;
+                                margin-left: 5px;
+                            }
+
+                            /* Better responsive behavior */
+                            @media (max-width: 768px) {
+                                .radio-group {
+                                    flex-direction: column;
+                                    align-items: flex-start;
+                                }
+
+                                .radio-group .form-check {
+                                    min-width: auto;
+                                    width: 100%;
+                                }
+                            }
+
+                            /* Consistent field spacing */
+                            .field-group {
+                                background: #f8f9fa;
+                                padding: 15px;
+                                border-radius: 8px;
+                                margin-bottom: 15px;
+                            }
+
+                            .field-group .form-label {
+                                font-weight: 600;
+                                margin-bottom: 10px;
+                                display: block;
+                            }
+                        </style>
+
+                        <!-- Basic Information Section -->
+                        <div class="section-header">
+                            <i class="fas fa-info-circle"></i> Informasi Dasar Voucher
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="voucherNumber" class="form-label">
+                                    <i class="fas fa-hashtag"></i> Nomor Voucher
+                                </label>
                                 <input type="text" class="form-control" id="voucherNumber" name="voucher_number"
                                     value="[Auto Generate Number]" readonly>
                             </div>
+                            <div class="col-md-6">
+                                <label for="companyName" class="form-label">
+                                    <i class="fas fa-building"></i> Nama Perusahaan
+                                </label>
+                                <input type="text" class="form-control" id="companyName" name="companyName"
+                                    value="{{ $company->company_name }}" readonly>
+                            </div>
                         </div>
-                        <div class="row mb-3">
-                            <label for="companyName" class="col-sm-3 col-form-label">Nama Perusahaan:</label>
-                            @if ($company && $company->company_name)
-                                <div class="col-sm-9">
-                                    <input type="text" class="form-control" id="companyName" name="companyName"
-                                        value="{{ $company->company_name }}" readonly>
+
+                        <!-- Improved Voucher Category Section -->
+                        <div class="row g-3 mt-2">
+                            <div class="col-md-8">
+                                <div class="field-group">
+                                    <label class="form-label">
+                                        <i class="fas fa-tags"></i> Kategori Voucher
+                                    </label>
+                                    <div class="radio-group">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" id="useStockYes"
+                                                name="use_stock" value="yes">
+                                            <label class="form-check-label" for="useStockYes">
+                                                <i class="fas fa-boxes"></i> Stok
+                                            </label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" id="useStockNo"
+                                                name="use_stock" value="no">
+                                            <label class="form-check-label" for="useStockNo">
+                                                <i class="fas fa-dollar-sign"></i> Keuangan
+                                            </label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" id="adjustment"
+                                                name="use_stock" value="adjustment">
+                                            <label class="form-check-label" for="adjustment">
+                                                <i class="fas fa-adjust"></i> Penyesuaian
+                                            </label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" id="return"
+                                                name="use_stock" value="return">
+                                            <label class="form-check-label" for="return">
+                                                <i class="fas fa-undo"></i> Retur Barang
+                                            </label>
+                                        </div>
+                                    </div>
                                 </div>
-                            @else
-                                <div class="col-sm-9">
-                                    <input type="text" class="form-control" id="companyName" name="companyName"
-                                        value="Not Found" readonly>
-                                </div>
-                            @endif
-                        </div>
-                        <div class="row mb-3">
-                            <label for="useStock" class="col-sm-3 col-form-label">Kategori Voucher?</label>
-                            <div class="col-sm-9">
-                                <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="radio" id="useStockYes" name="use_stock"
-                                        value="yes">
-                                    <label class="form-check-label" for="useStockYes">Stok</label>
-                                </div>
-                                <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="radio" id="useStockNo" name="use_stock"
-                                        value="no">
-                                    <label class="form-check-label" for="useStockNo">Keuangan</label>
-                                </div>
-                                <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="radio" id="adjustment" name="use_stock"
-                                        value="adjustment">
-                                    <label class="form-check-label" for="adjustment">Penyesuaian</label>
-                                </div>
-                                <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="radio" id="return" name="use_stock"
-                                        value="return">
-                                    <label class="form-check-label" for="return">Retur Barang</label>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="field-group" id="affectStockContainer" style="display: none;">
+                                    <label class="form-label">
+                                        <i class="fas fa-warehouse"></i> Mempengaruhi Stok?
+                                    </label>
+                                    <div class="radio-group">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" id="affectStockYes"
+                                                name="affect_stock" value="yes" disabled>
+                                            <label class="form-check-label" for="affectStockYes">Ya</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" id="affectStockNo"
+                                                name="affect_stock" value="no" disabled>
+                                            <label class="form-check-label" for="affectStockNo">Tidak</label>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                        <div class="row mb-3" id="affectStockContainer">
-                            <label class="col-sm-3 col-form-label">Apakah Memengaruhi Stok?</label>
-                            <div class="col-sm-9">
-                                <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="radio" id="affectStockYes"
-                                        name="affect_stock" value="yes" disabled>
-                                    <label class="form-check-label" for="affectStockYes">Ya</label>
-                                </div>
-                                <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="radio" id="affectStockNo"
-                                        name="affect_stock" value="no" disabled>
-                                    <label class="form-check-label" for="affectStockNo">Tidak</label>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row mb-3">
-                            <label for="voucherType" class="col-sm-3 col-form-label">Tipe Voucher:</label>
-                            <div class="col-sm-3">
+                        <div class="row g-3 mt-2">
+                            <div class="col-md-4">
+                                <label for="voucherType" class="form-label">
+                                    <i class="fas fa-list"></i> Tipe Voucher
+                                </label>
                                 <select class="form-select" id="voucherType" name="voucher_type">
                                     <option value="">Pilih Tipe Voucher</option>
                                     <option value="PJ">Penjualan</option>
@@ -88,235 +200,320 @@
                                     <option value="PM">Pemasukan</option>
                                     <option value="PB">Pembelian</option>
                                     <option value="LN">Lainnya</option>
-                                    <option value="PYB">Penyesuaian Bertambah</option>
-                                    <option value="PYK">Penyesuaian Berkurang</option>
-                                    <option value="PYL">Penyesuaian Lainnya</option>
-                                    <option value="RPB">Retur Pembelian</option>
-                                    <option value="RPJ">Retur Penjualan</option>
                                 </select>
                             </div>
-                            <label for="voucherDate" class="col-sm-2 col-form-label">Tanggal:</label>
-                            <div class="col-sm-2">
+                            <div class="col-md-4">
+                                <label for="voucherDate" class="form-label">
+                                    <i class="fas fa-calendar"></i> Tanggal
+                                </label>
                                 <input type="date" class="form-control" id="voucherDate" name="voucher_date"
                                     required>
                             </div>
-                            <div class="col-sm-2">
+                            <div class="col-md-4">
+                                <label for="voucherDay" class="form-label">
+                                    <i class="fas fa-calendar-day"></i> Hari
+                                </label>
                                 <input type="text" class="form-control" id="voucherDay" name="voucher_day"
                                     readonly>
                             </div>
                         </div>
-                        <div class="row mb-3">
-                            <label for="deskripsi_voucher" class="col-sm-3 col-form-label">Deskripsi Voucher</label>
-                            <div class="col-sm-9">
-                                <textarea class="form-control" id="deskripsi_voucher" name="deskripsi_voucher" rows="5" readonly></textarea>
+                        <!-- Description Section -->
+                        <div class="row g-3 mt-2">
+                            <div class="col-12">
+                                <label for="deskripsi_voucher" class="form-label">
+                                    <i class="fas fa-file-text"></i> Deskripsi Voucher
+                                </label>
+                                <textarea class="form-control" id="deskripsi_voucher" name="deskripsi_voucher" rows="3" readonly
+                                    placeholder="Deskripsi akan muncul secara otomatis berdasarkan tipe voucher"></textarea>
                             </div>
                         </div>
-                        <div class="row mb-3">
-                            <label for="preparedBy" class="col-sm-3 col-form-label">Disiapkan Oleh:</label>
-                            <div class="col-sm-9">
-                                <input type="text" class="form-control" id="preparedBy" name="prepared_by"
-                                    value="{{ $admin ? $admin->name : 'N/A' }}" readonly>
-                            </div>
+                        <!-- Invoice Section -->
+                        <div class="section-header">
+                            <i class="fas fa-file-invoice"></i> Pengaturan Invoice
                         </div>
-                        <div class="row mb-3">
-                            <label for="given_to" class="col-sm-3 col-form-label">Diberikan Kepada:</label>
-                            <div class="col-sm-9">
-                                <input type="text" class="form-control" id="given_to" name="given_to" required>
-                            </div>
-                        </div>
-                        <div class="row mb-3">
-                            <label for="approvedBy" class="col-sm-3 col-form-label">Disetujui Oleh:</label>
-                            <div class="col-sm-9">
-                                <input type="text" class="form-control" id="approvedBy" name="approved_by"
-                                    value="{{ $company->director }}" readonly>
-                            </div>
-                        </div>
-                        <div class="row mb-3">
-                            <label for="transaction" class="col-sm-3 col-form-label">Transaksi:</label>
-                            <div class="col-sm-9">
-                                <input type="text" class="form-control" id="transaction" name="transaction"
-                                    required>
-                            </div>
-                        </div>
-                        <div class="row mb-3">
-                            <label for="useInvoice" class="col-sm-3 col-form-label">Gunakan Invoice?</label>
-                            <div class="col-sm-9">
-                                <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="radio" id="useInvoiceYes"
-                                        name="use_invoice" value="yes" required>
-                                    <label class="form-check-label" for="useInvoiceYes">Ya</label>
-                                </div>
-                                <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="radio" type="radio" id="useInvoiceNo"
-                                        name="use_invoice" value="no" required>
-                                    <label class="form-check-label" for="useInvoiceNo">Tidak</label>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="field-group">
+                                    <label class="form-label">
+                                        <i class="fas fa-file-invoice-dollar"></i> Gunakan Invoice?
+                                    </label>
+                                    <div class="radio-group">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" id="useInvoiceYes"
+                                                name="use_invoice" value="yes" required>
+                                            <label class="form-check-label" for="useInvoiceYes">Ya</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" id="useInvoiceNo"
+                                                name="use_invoice" value="no" required>
+                                            <label class="form-check-label" for="useInvoiceNo">Tidak</label>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                        <div class="row mb-3" id="existingInvoiceContainer">
-                            <label class="col-sm-3 col-form-label">Gunakan Invoice yang Sudah Ada?</label>
-                            <div class="col-sm-9">
-                                <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="radio" id="useExistingInvoiceYes"
-                                        name="use_existing_invoice" value="yes" disabled>
-                                    <label class="form-check-label" for="useExistingInvoiceYes">Ya</label>
-                                </div>
-                                <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="radio" id="useExistingInvoiceNo"
-                                        name="use_existing_invoice" value="no" disabled>
-                                    <label class="form-check-label" for="useExistingInvoiceNo">Tidak</label>
+                            <div class="col-md-6">
+                                <div class="field-group" id="existingInvoiceContainer">
+                                    <label class="form-label">
+                                        <i class="fas fa-archive"></i> Invoice yang Sudah Ada?
+                                    </label>
+                                    <div class="radio-group">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" id="useExistingInvoiceYes"
+                                                name="use_existing_invoice" value="yes" disabled>
+                                            <label class="form-check-label" for="useExistingInvoiceYes">Ya</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" id="useExistingInvoiceNo"
+                                                name="use_existing_invoice" value="no" disabled>
+                                            <label class="form-check-label" for="useExistingInvoiceNo">Tidak</label>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                        <div class="row mb-3" id="dueDateContainer">
-                            <label for="dueDate" class="col-sm-3 col-form-label">Tanggal Jatuh Tempo:</label>
-                            <div class="col-sm-9">
+                        <div class="row g-3 mt-2">
+                            <div class="col-md-6" id="invoiceFieldContainer">
+                                <label for="invoice" class="form-label">
+                                    <i class="fas fa-file-invoice"></i> Nomor Invoice
+                                </label>
+                                <input type="text" class="form-control" id="invoice" name="invoice" disabled>
+                            </div>
+                            <div class="col-md-6" id="dueDateContainer">
+                                <label for="dueDate" class="form-label">
+                                    <i class="fas fa-calendar-times"></i> Tanggal Jatuh Tempo
+                                </label>
                                 <input type="date" class="form-control" id="dueDate" name="dueDate" disabled>
                             </div>
                         </div>
-                        <div class="row mb-3" id="invoiceFieldContainer">
-                            <label for="invoice" class="col-sm-3 col-form-label">Nomor Invoice:</label>
-                            <div class="col-sm-9">
-                                <input type="text" class="form-control" id="invoice" name="invoice" disabled>
+
+                        <!-- Personnel Information Section -->
+                        <div class="section-header">
+                            <i class="fas fa-users"></i> Informasi Personel
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label for="preparedBy" class="form-label">
+                                    <i class="fas fa-user-edit"></i> Disiapkan Oleh
+                                </label>
+                                <input type="text" class="form-control" id="preparedBy" name="prepared_by"
+                                    value="{{ $admin ? $admin->name : 'N/A' }}" readonly>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="given_to" class="form-label">
+                                    <i class="fas fa-user-check"></i> Diberikan Kepada
+                                </label>
+                                <input type="text" class="form-control" id="given_to" name="given_to" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="approvedBy" class="form-label">
+                                    <i class="fas fa-user-shield"></i> Disetujui Oleh
+                                </label>
+                                <input type="text" class="form-control" id="approvedBy" name="approved_by"
+                                    value="{{ $company ? $company->director : 'N/A' }}" readonly>
                             </div>
                         </div>
-                        <div class="row mb-3">
-                            <label for="store" class="col-sm-3 col-form-label">Nama Toko:</label>
-                            <div class="col-sm-9">
+
+                        <!-- Transaction Information Section -->
+                        <div class="section-header">
+                            <i class="fas fa-exchange-alt"></i> Informasi Transaksi
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="transaction" class="form-label">
+                                    <i class="fas fa-clipboard-list"></i> Transaksi
+                                </label>
+                                <input type="text" class="form-control" id="transaction" name="transaction"
+                                    required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="store" class="form-label">
+                                    <i class="fas fa-store"></i> Nama Toko
+                                </label>
                                 <div id="storeFieldContainer">
                                     <input type="text" class="form-control" id="store" name="store">
                                 </div>
                             </div>
                         </div>
-                        <div class="mb-3">
-                            <h5>Rincian Transaksi</h5>
-                            <div class="table-responsive">
-                                <table class="table table-bordered" id="transactionTable">
-                                    <thead>
-                                        <tr class="text-center">
-                                            <th colspan="5">Rincian Transaksi</th>
-                                            <th style="width: 80px;">Action</th>
-                                        </tr>
-                                        <tr class="text-center">
-                                            <th>Deskripsi</th>
-                                            <th>Ukuran</th>
-                                            <th>Kuantitas</th>
-                                            <th>Nominal</th>
-                                            <th>Total</th>
-                                            <th></th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr data-row-index="0">
-                                            <td>
-                                                <input type="text" class="form-control descriptionInput"
-                                                    name="transactions[0][description]">
-                                            </td>
-                                            <td>
-                                                <input type="text" class="form-control sizeInput"
-                                                    name="transactions[0][size]">
-                                            </td>
-                                            <td>
-                                                <input type="number" min="0" step="1"
-                                                    class="form-control quantityInput"
-                                                    name="transactions[0][quantity]" value="1">
-                                            </td>
-                                            <td>
+
+                        <!-- Transaction Details Section -->
+                        <div class="section-header">
+                            <i class="fas fa-list-alt"></i> Rincian Transaksi
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="table table-bordered" id="transactionTable">
+                                <thead class="table-primary">
+                                    <tr class="text-center">
+                                        <th><i class="fas fa-align-left"></i> Deskripsi</th>
+                                        <th><i class="fas fa-ruler"></i> Ukuran</th>
+                                        <th><i class="fas fa-sort-numeric-up"></i> Kuantitas</th>
+                                        <th><i class="fas fa-money-bill"></i> Nominal</th>
+                                        <th><i class="fas fa-calculator"></i> Total</th>
+                                        <th style="width: 100px;"><i class="fas fa-cogs"></i> Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr data-row-index="0">
+                                        <td>
+                                            <input type="text" class="form-control descriptionInput"
+                                                name="transactions[0][description]">
+                                        </td>
+                                        <td>
+                                            <input type="text" class="form-control sizeInput"
+                                                name="transactions[0][size]">
+                                        </td>
+                                        <td>
+                                            <input type="number" min="0" step="1"
+                                                class="form-control quantityInput" name="transactions[0][quantity]"
+                                                value="1">
+                                        </td>
+                                        <td>
+                                            <input type="number" min="0" step="0.01"
+                                                class="form-control nominalInput" name="transactions[0][nominal]">
+                                        </td>
+                                        <td>
+                                            <input type="text" class="form-control totalInput"
+                                                name="transactions[0][total]" readonly>
+                                        </td>
+                                        <td class="text-center">
+                                            <button type="button"
+                                                class="btn btn-danger btn-sm removeTransactionRowBtn">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <div class="p-3">
+                                <button type="button" id="addTransactionRowBtn" class="btn btn-primary">
+                                    <i class="fas fa-plus"></i> Tambah Transaksi
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="totalNominal" class="form-label">
+                                    <i class="fas fa-coins"></i> Total Nominal
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text">Rp</span>
+                                    <input type="text" class="form-control" id="totalNominal"
+                                        name="total_nominal" value="[Auto Calculate]" readonly>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Voucher Details Section -->
+                        <div class="section-header">
+                            <i class="fas fa-clipboard-check"></i> Rincian Voucher
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="table table-bordered" id="voucherDetailsTable">
+                                <thead class="table-success">
+                                    <tr class="text-center">
+                                        <th><i class="fas fa-code"></i> Kode Akun</th>
+                                        <th><i class="fas fa-tag"></i> Nama Akun</th>
+                                        <th><i class="fas fa-plus-circle text-success"></i> Debit</th>
+                                        <th><i class="fas fa-minus-circle text-danger"></i> Kredit</th>
+                                        <th style="width: 100px;"><i class="fas fa-cogs"></i> Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr data-row-index="0">
+                                        <td>
+                                            <input type="text" class="form-control accountCodeInput"
+                                                name="voucher_details[0][account_code]" list="dynamicAccountCodes"
+                                                placeholder="Ketik atau pilih kode akun">
+                                            <datalist id="dynamicAccountCodes"></datalist>
+                                        </td>
+                                        <td>
+                                            <input type="text" class="form-control accountName"
+                                                name="voucher_details[0][account_name]" readonly>
+                                        </td>
+                                        <td>
+                                            <div class="input-group">
+                                                <span class="input-group-text">Rp</span>
                                                 <input type="number" min="0" step="0.01"
-                                                    class="form-control nominalInput" name="transactions[0][nominal]">
-                                            </td>
-                                            <td>
-                                                <input type="text" class="form-control totalInput"
-                                                    name="transactions[0][total]" readonly>
-                                            </td>
-                                            <td class="text-center">
-                                                <button type="button"
-                                                    class="btn btn-danger removeTransactionRowBtn">Hapus</button>
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                                <button type="button" id="addTransactionRowBtn" class="btn btn-primary">Tambah
-                                    Transaksi</button>
-                            </div>
-                        </div>
-                        <div class="row mb-3">
-                            <label for="totalNominal" class="col-sm-3 col-form-label">Total Nominal:</label>
-                            <div class="col-sm-9">
-                                <input type="text" class="form-control" id="totalNominal" name="total_nominal"
-                                    value="[Auto Calculate]" readonly>
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <h5>Rincian Voucher</h5>
-                            <div class="table-responsive">
-                                <table class="table table-bordered" id="voucherDetailsTable">
-                                    <thead>
-                                        <tr class="text-center">
-                                            <th colspan="4">Rincian Voucher</th>
-                                            <th style="width: 80px;">Action</th>
-                                        </tr>
-                                        <tr class="text-center">
-                                            <th>Kode Akun</th>
-                                            <th>Nama Akun</th>
-                                            <th>Debit</th>
-                                            <th>Kredit</th>
-                                            <th></th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr data-row-index="0">
-                                            <td>
-                                                <input type="text" class="form-control accountCodeInput"
-                                                    name="voucher_details[0][account_code]" list="dynamicAccountCodes"
-                                                    placeholder="Ketik atau pilih kode akun">
-                                                <datalist id="dynamicAccountCodes"></datalist>
-                                            </td>
-                                            <td><input type="text" class="form-control accountName"
-                                                    name="voucher_details[0][account_name]" readonly></td>
-                                            <td><input type="number" min="0" step="0.01"
                                                     class="form-control debitInput" name="voucher_details[0][debit]">
-                                            </td>
-                                            <td><input type="number" min="0" step="0.01"
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="input-group">
+                                                <span class="input-group-text">Rp</span>
+                                                <input type="number" min="0" step="0.01"
                                                     class="form-control creditInput"
-                                                    name="voucher_details[0][credit]"></td>
-                                            <td class="text-center">
-                                                <button type="button"
-                                                    class="btn btn-danger removeVoucherDetailRowBtn">Hapus</button>
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                                <button type="button" id="addVoucherDetailRowBtn" class="btn btn-primary">Tambah
-                                    Kode Akun</button>
+                                                    name="voucher_details[0][credit]">
+                                            </div>
+                                        </td>
+                                        <td class="text-center">
+                                            <button type="button"
+                                                class="btn btn-danger btn-sm removeVoucherDetailRowBtn">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <div class="p-3">
+                                <button type="button" id="addVoucherDetailRowBtn" class="btn btn-primary">
+                                    <i class="fas fa-plus"></i> Tambah Kode Akun
+                                </button>
                             </div>
                         </div>
-                        <div class="row mb-3">
-                            <label for="totalDebit" class="col-sm-3 col-form-label">Total Debit:</label>
-                            <div class="col-sm-3">
-                                <input type="text" class="form-control" id="totalDebit"
-                                    name="total_debit_formatted" value="[Dihitung]" readonly>
-                                <input type="hidden" name="total_debit" id="totalDebitRaw">
+
+                        <!-- Summary Section -->
+                        <div class="section-header">
+                            <i class="fas fa-chart-line"></i> Ringkasan & Validasi
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="totalDebit" class="form-label">
+                                    <i class="fas fa-plus-circle text-success"></i> Total Debit
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text">Rp</span>
+                                    <input type="text" class="form-control" id="totalDebit"
+                                        name="total_debit_formatted" value="[Dihitung]" readonly>
+                                    <input type="hidden" name="total_debit" id="totalDebitRaw">
+                                </div>
                             </div>
-                            <label for="totalCredit" class="col-sm-3 col-form-label">Total Kredit:</label>
-                            <div class="col-sm-3">
-                                <input type="text" class="form-control" id="totalCredit"
-                                    name="total_credit_formatted" value="[Dihitung]" readonly>
-                                <input type="hidden" name="total_credit" id="totalCreditRaw">
+                            <div class="col-md-6">
+                                <label for="totalCredit" class="form-label">
+                                    <i class="fas fa-minus-circle text-danger"></i> Total Kredit
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text">Rp</span>
+                                    <input type="text" class="form-control" id="totalCredit"
+                                        name="total_credit_formatted" value="[Dihitung]" readonly>
+                                    <input type="hidden" name="total_credit" id="totalCreditRaw">
+                                </div>
                             </div>
                         </div>
-                        <div class="row mb-3">
-                            <label for="validation" class="col-sm-3 col-form-label">Pesan:</label>
-                            <div class="col-sm-9">
-                                <input type="text" class="form-control" id="validation" name="validation"
-                                    value="[Pesan]" readonly>
+
+                        <div class="row g-3 mt-2">
+                            <div class="col-12">
+                                <label for="validation" class="form-label">
+                                    <i class="fas fa-check-circle"></i> Status Validasi
+                                </label>
+                                <input type="text" class="form-control validation-message" id="validation"
+                                    name="validation" value="[Pesan]" readonly>
                             </div>
                         </div>
                     </div>
                 </div>
+
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="submit" class="btn btn-primary" id="saveVoucherBtn">Simpan Voucher</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times"></i> Tutup
+                    </button>
+                    <button type="submit" class="btn btn-primary" id="saveVoucherBtn">
+                        <i class="fas fa-save"></i> Simpan Voucher
+                    </button>
                 </div>
             </form>
         </div>
@@ -445,8 +642,9 @@
 
         function updateAffectStockContainer() {
             const useStock = document.querySelector('input[name="use_stock"]:checked')?.value || 'no';
+
             if (useStock === 'adjustment') {
-                affectStockContainer.style.display = 'flex';
+                affectStockContainer.style.display = 'block';
                 affectStockYes.disabled = false;
                 affectStockNo.disabled = false;
             } else {
@@ -455,9 +653,7 @@
                 affectStockNo.disabled = true;
                 affectStockYes.checked = false;
                 affectStockNo.checked = false;
-                updateVoucherTypeOptions();
             }
-            updateVoucherTypeOptionsForAdjustment();
         }
 
         function updateVoucherTypeOptionsForAdjustment() {
@@ -735,7 +931,7 @@
 
         function createStoreDropdown() {
             const select = document.createElement('select');
-            select.className = 'form-control';
+            select.className = 'form-select';
             select.id = 'store';
             select.name = 'store';
 
@@ -823,54 +1019,118 @@
             const useExistingInvoice = document.querySelector('input[name="use_existing_invoice"]:checked')
                 ?.value || 'no';
             dueDateContainer.innerHTML = '';
+            const dueDateField = document.createElement('div');
+            dueDateField.className = 'mb-3';
             const dueDateLabel = document.createElement('label');
             dueDateLabel.htmlFor = 'dueDate';
-            dueDateLabel.className = 'col-sm-3 col-form-label';
-            dueDateLabel.textContent = 'Tanggal Jatuh Tempo:';
-            const dueDateInputDiv = document.createElement('div');
-            dueDateInputDiv.className = 'col-sm-9';
+            dueDateLabel.className = 'form-label';
+            dueDateLabel.innerHTML = '<i class="fas fa-calendar-times"></i> Tanggal Jatuh Tempo';
             const dueDateInput = document.createElement('input');
             dueDateInput.type = 'date';
             dueDateInput.className = 'form-control';
             dueDateInput.id = 'dueDate';
             dueDateInput.name = 'dueDate';
             dueDateInput.disabled = useInvoice !== 'yes' || useExistingInvoice === 'yes';
-            dueDateInputDiv.appendChild(dueDateInput);
-            dueDateContainer.appendChild(dueDateLabel);
-            dueDateContainer.appendChild(dueDateInputDiv);
+            dueDateField.appendChild(dueDateLabel);
+            dueDateField.appendChild(dueDateInput);
+            dueDateContainer.appendChild(dueDateField);
             if (useInvoice === 'yes' && useExistingInvoice === 'no') setTodayDueDate();
         }
 
         function updateInvoiceAndStoreFields() {
             const useInvoice = document.querySelector('input[name="use_invoice"]:checked')?.value || 'no';
-            storeFieldContainer.innerHTML = '';
 
+            // Disable existing invoice options when not using invoice
             useExistingInvoiceYes.disabled = useInvoice !== 'yes';
             useExistingInvoiceNo.disabled = useInvoice !== 'yes';
 
+            // Update Store field - check if it already exists to avoid duplication
+            let existingStoreInput = storeFieldContainer.querySelector('#store');
+
             if (useInvoice === 'yes') {
-                storeFieldContainer.appendChild(createStoreDropdown());
-                updateInvoiceField();
+                // If we need dropdown but current input is text input, replace it
+                if (existingStoreInput && existingStoreInput.tagName !== 'SELECT') {
+                    const currentValue = existingStoreInput.value;
+                    const newStoreDropdown = createStoreDropdown();
+                    newStoreDropdown.value = currentValue; // Preserve current value if valid
+                    existingStoreInput.parentNode.replaceChild(newStoreDropdown, existingStoreInput);
+                } else if (!existingStoreInput) {
+                    // Create new dropdown if no input exists
+                    const newStoreDropdown = createStoreDropdown();
+                    storeFieldContainer.appendChild(newStoreDropdown);
+                }
             } else {
-                storeFieldContainer.appendChild(createStoreInput());
-                invoiceFieldContainer.innerHTML = '';
-                const invoiceLabel = document.createElement('label');
-                invoiceLabel.htmlFor = 'invoice';
-                invoiceLabel.className = 'col-sm-3 col-form-label';
-                invoiceLabel.textContent = 'Nomor Invoice:';
-                const invoiceInputDiv = document.createElement('div');
-                invoiceInputDiv.className = 'col-sm-9';
-                const invoiceInput = createInvoiceInput();
-                invoiceInput.disabled = true;
-                invoiceInputDiv.appendChild(invoiceInput);
-                invoiceFieldContainer.appendChild(invoiceLabel);
-                invoiceFieldContainer.appendChild(invoiceInputDiv);
+                // If we need text input but current input is dropdown, replace it
+                if (existingStoreInput && existingStoreInput.tagName === 'SELECT') {
+                    const currentValue = existingStoreInput.value;
+                    const newStoreInput = createStoreInput();
+                    newStoreInput.value = currentValue; // Preserve current value
+                    existingStoreInput.parentNode.replaceChild(newStoreInput, existingStoreInput);
+                } else if (!existingStoreInput) {
+                    // Create new text input if no input exists
+                    const newStoreInput = createStoreInput();
+                    storeFieldContainer.appendChild(newStoreInput);
+                }
+            }
+
+            // Update Invoice field - similar approach
+            let existingInvoiceInput = invoiceFieldContainer.querySelector('#invoice');
+            const useExistingInvoice = document.querySelector('input[name="use_existing_invoice"]:checked')
+                ?.value || 'no';
+
+            if (useInvoice === 'yes') {
+                if (useExistingInvoice === 'yes') {
+                    // Need dropdown for existing invoices
+                    if (existingInvoiceInput && existingInvoiceInput.tagName !== 'SELECT') {
+                        const currentValue = existingInvoiceInput.value;
+                        const newInvoiceDropdown = createInvoiceDropdown();
+                        newInvoiceDropdown.value = currentValue;
+                        existingInvoiceInput.parentNode.replaceChild(newInvoiceDropdown, existingInvoiceInput);
+                    } else if (!existingInvoiceInput) {
+                        const newInvoiceDropdown = createInvoiceDropdown();
+                        invoiceFieldContainer.appendChild(newInvoiceDropdown);
+                    }
+                } else {
+                    // Need text input for new invoice
+                    if (existingInvoiceInput && existingInvoiceInput.tagName === 'SELECT') {
+                        const currentValue = existingInvoiceInput.value;
+                        const newInvoiceInput = createInvoiceInput();
+                        newInvoiceInput.value = currentValue;
+                        existingInvoiceInput.parentNode.replaceChild(newInvoiceInput, existingInvoiceInput);
+                    } else if (!existingInvoiceInput) {
+                        const newInvoiceInput = createInvoiceInput();
+                        invoiceFieldContainer.appendChild(newInvoiceInput);
+                    }
+                }
+
+                // Enable the invoice input
+                const currentInvoiceInput = invoiceFieldContainer.querySelector('#invoice');
+                if (currentInvoiceInput) {
+                    currentInvoiceInput.disabled = false;
+                }
+            } else {
+                // Disable invoice input when not using invoice
+                if (existingInvoiceInput) {
+                    existingInvoiceInput.disabled = true;
+                    existingInvoiceInput.value = '';
+                } else {
+                    // Create disabled input if none exists
+                    const newInvoiceInput = createInvoiceInput();
+                    newInvoiceInput.disabled = true;
+                    invoiceFieldContainer.appendChild(newInvoiceInput);
+                }
+            }
+
+            // Reset existing invoice radio buttons when not using invoice
+            if (useInvoice !== 'yes') {
                 useExistingInvoiceYes.checked = false;
                 useExistingInvoiceNo.checked = false;
             }
+
+            // Update due date field accordingly
             updateDueDateField();
-            updateAccountCodeDatalist();
         }
+
 
         useInvoiceYes.addEventListener('change', updateInvoiceAndStoreFields);
         useInvoiceNo.addEventListener('change', updateInvoiceAndStoreFields);

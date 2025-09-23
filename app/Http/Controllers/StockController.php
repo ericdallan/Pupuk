@@ -62,13 +62,29 @@ class StockController extends Controller
                     ->where('master_id', $masterId)
                     ->orderBy('created_at', 'desc')
                     ->paginate(10); // Paginasi untuk performa
-
-                // Check if user already has an applied cost (limit to 1)
                 $data['hasExistingAppliedCost'] = AppliedCost::where('master_id', $masterId)->exists();
             } else {
-                $data['appliedCostHistory'] = collect([]);
-                $data['hasExistingAppliedCost'] = false;
+                // Untuk admin, izinkan akses ke applied cost history tanpa filter master_id
+                $data['appliedCostHistory'] = AppliedCost::with('details')
+                    ->orderBy('created_at', 'desc')
+                    ->paginate(10); // Paginasi untuk performa
+                $data['hasExistingAppliedCost'] = AppliedCost::exists();
             }
+
+            // Tambahkan pengecekan untuk stockData
+            if (empty($data['stockData'])) {
+                $data['stockData'] = [];
+                Log::warning('No stock data available', ['request' => $requestData]);
+            }
+
+            // Log data yang dikirim ke view untuk debugging
+            Log::info('Stock page data prepared', [
+                'mode' => $mode,
+                'appliedCostId' => $appliedCostId,
+                'stockDataCount' => count($data['stockData']),
+                'appliedCostHistoryCount' => $data['appliedCostHistory']->count(),
+                'userType' => $masterId ? 'master' : 'admin',
+            ]);
 
             return view('stock.stock_page', $data);
         } catch (\Exception $e) {
@@ -90,10 +106,14 @@ class StockController extends Controller
             $masterId = Auth::guard('master')->id();
             $appliedCostId = $request->applied_cost_id;
 
-            // Verify the applied cost belongs to the current master
-            $appliedCost = AppliedCost::where('id', $appliedCostId)
-                ->where('master_id', $masterId)
-                ->first();
+            // Verifikasi applied cost
+            $query = AppliedCost::where('id', $appliedCostId);
+            if ($masterId) {
+                // Untuk master, batasi ke applied cost milik mereka
+                $query->where('master_id', $masterId);
+            }
+            // Untuk admin, izinkan akses ke semua applied cost
+            $appliedCost = $query->first();
 
             if (!$appliedCost) {
                 return redirect()->back()->withErrors(['error' => 'Applied cost tidak ditemukan atau tidak memiliki akses.']);
