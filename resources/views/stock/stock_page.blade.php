@@ -281,6 +281,19 @@
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         }
 
+        .detail-button {
+            background: linear-gradient(45deg, #17a2b8, #117a8b);
+            border: none;
+            color: white;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .detail-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(23, 162, 184, 0.3);
+            background: linear-gradient(45deg, #138496, #0d5d6b);
+        }
+
         #mode-indicator {
             white-space: nowrap;
         }
@@ -539,13 +552,14 @@
                                             </td>
                                             <td>
                                                 @if ($stock->id)
-                                                    <button class="btn btn-sm btn-info detail-btn" data-bs-toggle="modal"
+                                                    <button class="btn btn-sm detail-button" data-bs-toggle="modal"
                                                         data-bs-target="#detailModal_stocks_{{ $stock->id }}"
                                                         data-stock-id="{{ $stock->id }}"
                                                         data-item="{{ htmlspecialchars($stock->item ?? 'Unknown Item') }}"
                                                         data-table-name="stocks" data-bs-toggle="tooltip"
-                                                        data-bs-placement="top" title="Lihat detail stok">
-                                                        <i class="fas fa-eye"></i>
+                                                        data-bs-placement="top"
+                                                        title="Lihat detail transaksi untuk item ini">
+                                                        <i class="fas fa-eye me-1"></i> Detail
                                                     </button>
                                                 @else
                                                     <span>Tidak Ada Detail</span>
