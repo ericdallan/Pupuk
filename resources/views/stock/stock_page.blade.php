@@ -1,10 +1,10 @@
-@extends('layouts/app')
+@extends('layouts.app')
 
 @section('title', 'Stock Barang Dagangan')
 
 @section('content')
     <style>
-        /* Enhanced Button Styles */
+        /* Existing Button Styles */
         .filter-button {
             background: linear-gradient(45deg, #007bff, #0056b3);
             border: none;
@@ -83,6 +83,7 @@
             background-color: #fff;
             border-radius: 8px;
             overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
         }
 
         .table thead {
@@ -90,7 +91,15 @@
             color: white;
             position: sticky;
             top: 0;
-            z-index: 1;
+            z-index: 15;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            /* Subtle shadow for elevation */
+        }
+
+        .table thead th {
+            border-bottom: 2px solid #dee2e6;
+            padding: 12px;
+            font-size: 0.95rem;
         }
 
         .table tbody tr:nth-child(even) {
@@ -100,6 +109,32 @@
         .table tbody tr:hover {
             background-color: #e9ecef;
             transition: background-color 0.2s;
+        }
+
+        /* Ensure table-responsive supports sticky header */
+        .table-responsive {
+            max-height: 500px;
+            overflow-y: auto;
+            position: relative;
+            -webkit-overflow-scrolling: touch;
+            /* Smooth scrolling on mobile */
+        }
+
+        /* Responsive Adjustments */
+        @media (max-width: 768px) {
+            .table-responsive {
+                max-height: 400px;
+                /* Smaller height for mobile */
+            }
+
+            .table thead th {
+                font-size: 0.85rem;
+                padding: 8px;
+            }
+
+            .table tbody td {
+                font-size: 0.85rem;
+            }
         }
 
         /* Alert Animations */
@@ -131,15 +166,6 @@
 
         .table-section.hidden {
             display: none;
-        }
-
-        .table-responsive {
-            max-height: 500px;
-            overflow-y: auto;
-        }
-
-        .table thead th {
-            border-bottom: 2px solid #dee2e6;
         }
 
         .highlight {
@@ -442,7 +468,6 @@
                         </div>
                     @endif
                 </div>
-
                 <div class="table-responsive">
                     <table class="table table-striped table-bordered table-hover text-center">
                         <thead class="table-dark">
@@ -614,99 +639,96 @@
                                     </div>
 
                                     <!-- Transaction Table -->
-                                    <div class="transaction-table"
-                                        id="transactionTable_{{ $tableName }}_{{ $stock->id }}">
-                                        @if (isset($stock->transactions) && !empty($stock->transactions))
-                                            <div class="table-responsive">
-                                                <table class="table table-striped table-bordered table-hover text-center">
-                                                    <thead class="table-dark">
-                                                        <tr>
-                                                            <th data-bs-toggle="tooltip" title="Nomor urut transaksi">No
-                                                            </th>
-                                                            <th data-bs-toggle="tooltip"
-                                                                title="Nama item yang ditransaksikan">Nama Item</th>
-                                                            <th data-bs-toggle="tooltip" title="Nomor voucher terkait">No
-                                                                Voucher</th>
-                                                            <th data-bs-toggle="tooltip"
-                                                                title="Jenis transaksi (Penjualan, Pembelian, dll)">Tipe
-                                                                Transaksi</th>
-                                                            <th data-bs-toggle="tooltip"
-                                                                title="Jumlah item yang ditransaksikan">Kuantitas</th>
-                                                            <th data-bs-toggle="tooltip" title="Nilai nominal transaksi">
-                                                                Nominal</th>
-                                                            <th data-bs-toggle="tooltip" title="Tanggal transaksi">Tanggal
-                                                            </th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        @foreach ($stock->transactions as $transaction)
-                                                            @if (!str_starts_with($transaction->description ?? '', 'HPP '))
-                                                                <tr
-                                                                    data-transaction-date="{{ $transaction->created_at }}">
-                                                                    <td>{{ $loop->iteration }}</td>
-                                                                    <td>{{ htmlspecialchars($transaction->description ?? 'No Description') }}
-                                                                    </td>
-                                                                    <td>
-                                                                        @if ($transaction->voucher_id && $transaction->voucher_number !== 'N/A')
-                                                                            <a href="{{ route('voucher_detail', $transaction->voucher_id) }}"
-                                                                                class="text-decoration-none text-primary"
-                                                                                data-bs-toggle="tooltip"
-                                                                                title="Lihat detail voucher">
-                                                                                {{ htmlspecialchars($transaction->voucher_number) }}
-                                                                            </a>
-                                                                        @else
-                                                                            {{ htmlspecialchars($transaction->voucher_number ?? 'No Voucher') }}
-                                                                        @endif
-                                                                    </td>
-                                                                    <td>
-                                                                        @switch($transaction->voucher_type)
-                                                                            @case('PJ')
-                                                                                Penjualan
-                                                                            @break
+                                    <div class="table-responsive">
+                                        <table class="table table-striped table-bordered table-hover text-center">
+                                            <thead class="table-dark">
+                                                <tr>
+                                                    <th data-bs-toggle="tooltip" title="Nomor urut transaksi">No
+                                                    </th>
+                                                    <th data-bs-toggle="tooltip" title="Nama item yang ditransaksikan">
+                                                        Nama Item</th>
+                                                    <th data-bs-toggle="tooltip" title="Nomor voucher terkait">No
+                                                        Voucher</th>
+                                                    <th data-bs-toggle="tooltip"
+                                                        title="Jenis transaksi (Penjualan, Pembelian, dll)">Tipe
+                                                        Transaksi</th>
+                                                    <th data-bs-toggle="tooltip" title="Jumlah item yang ditransaksikan">
+                                                        Kuantitas</th>
+                                                    <th data-bs-toggle="tooltip" title="Nilai nominal transaksi">
+                                                        Nominal</th>
+                                                    <th data-bs-toggle="tooltip" title="Tanggal transaksi">Tanggal
+                                                    </th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @if (isset($stock->transactions) && !empty($stock->transactions))
+                                                    @foreach ($stock->transactions as $transaction)
+                                                        @if (!str_starts_with($transaction->description ?? '', 'HPP '))
+                                                            <tr data-transaction-date="{{ $transaction->created_at }}">
+                                                                <td>{{ $loop->iteration }}</td>
+                                                                <td>{{ htmlspecialchars($transaction->description ?? 'No Description') }}
+                                                                </td>
+                                                                <td>
+                                                                    @if ($transaction->voucher_id && $transaction->voucher_number !== 'N/A')
+                                                                        <a href="{{ route('voucher_detail', $transaction->voucher_id) }}"
+                                                                            class="text-decoration-none text-primary"
+                                                                            data-bs-toggle="tooltip"
+                                                                            title="Lihat detail voucher">
+                                                                            {{ htmlspecialchars($transaction->voucher_number) }}
+                                                                        </a>
+                                                                    @else
+                                                                        {{ htmlspecialchars($transaction->voucher_number ?? 'No Voucher') }}
+                                                                    @endif
+                                                                </td>
+                                                                <td>
+                                                                    @switch($transaction->voucher_type)
+                                                                        @case('PJ')
+                                                                            Penjualan
+                                                                        @break
 
-                                                                            @case('PB')
-                                                                                Pembelian
-                                                                            @break
+                                                                        @case('PB')
+                                                                            Pembelian
+                                                                        @break
 
-                                                                            @case('PYK')
-                                                                                Penyesuaian Berkurang
-                                                                            @break
+                                                                        @case('PYK')
+                                                                            Penyesuaian Berkurang
+                                                                        @break
 
-                                                                            @case('PYB')
-                                                                                Penyesuaian Bertambah
-                                                                            @break
+                                                                        @case('PYB')
+                                                                            Penyesuaian Bertambah
+                                                                        @break
 
-                                                                            @case('RPB')
-                                                                                Retur Pembelian
-                                                                            @break
+                                                                        @case('RPB')
+                                                                            Retur Pembelian
+                                                                        @break
 
-                                                                            @case('RPJ')
-                                                                                Retur Penjualan
-                                                                            @break
+                                                                        @case('RPJ')
+                                                                            Retur Penjualan
+                                                                        @break
 
-                                                                            @default
-                                                                                {{ htmlspecialchars($transaction->voucher_type ?? 'Unknown') }}
-                                                                        @endswitch
-                                                                    </td>
-                                                                    <td>{{ $transaction->quantity ?? ($transaction->transaction_quantity ?? 0) }}
-                                                                    </td>
-                                                                    <td>{{ number_format($transaction->nominal ?? 0, 2, ',', '.') }}
-                                                                    </td>
-                                                                    <td>{{ \Carbon\Carbon::parse($transaction->created_at ?? now())->format('d-m-Y') }}
-                                                                    </td>
-                                                                </tr>
-                                                            @endif
-                                                        @endforeach
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                        @else
-                                            <div class="alert alert-info alert-dismissible fade show" role="alert">
-                                                Tidak ada transaksi terkait untuk barang ini.
-                                                <button type="button" class="btn-close" data-bs-dismiss="alert"
-                                                    aria-label="Close"></button>
-                                            </div>
-                                        @endif
+                                                                        @default
+                                                                            {{ htmlspecialchars($transaction->voucher_type ?? 'Unknown') }}
+                                                                    @endswitch
+                                                                </td>
+                                                                <td>{{ $transaction->quantity ?? ($transaction->transaction_quantity ?? 0) }}
+                                                                </td>
+                                                                <td>{{ number_format($transaction->nominal ?? 0, 2, ',', '.') }}
+                                                                </td>
+                                                                <td>{{ \Carbon\Carbon::parse($transaction->created_at ?? now())->format('d-m-Y') }}
+                                                                </td>
+                                                            </tr>
+                                                        @endif
+                                                    @endforeach
+                                                @else
+                                                    <tr>
+                                                        <td colspan="7" class="text-center">
+                                                            <div class="alert alert-info mb-0">Tidak ada transaksi terkait
+                                                                untuk barang ini.</div>
+                                                        </td>
+                                                    </tr>
+                                                @endif
+                                            </tbody>
+                                        </table>
                                     </div>
                                     <!-- Loading Indicator -->
                                     <div class="loading-indicator d-none text-center my-3">
