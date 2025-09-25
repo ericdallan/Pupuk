@@ -5,188 +5,122 @@ namespace App\Services;
 use App\Models\AppliedCost;
 use App\Models\AppliedCostDetail;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\Auth;
 
 class AppliedCostService
 {
     /**
-     * Store the accumulated beban and its details.
-     * Each user can only have one applied cost record.
+     * Create a new applied cost record with its details.
      *
-     * @param float $total
-     * @param array $riwayat
+     * @param array $data
      * @param int $masterId
-     * @return void
-     * @throws ValidationException
+     * @return AppliedCost
      */
-    public function storeBeban(float $total, array $riwayat, int $masterId): void
+    public function createAppliedCost(array $data, $masterId)
     {
-        // Check if user already has an applied cost
-        $existingAppliedCost = AppliedCost::where('master_id', $masterId)->first();
-
-        if ($existingAppliedCost) {
-            throw ValidationException::withMessages([
-                'master_id' => 'Anda sudah memiliki perhitungan beban. Hapus perhitungan sebelumnya terlebih dahulu jika ingin membuat yang baru.'
-            ]);
-        }
-
-        // Validate that riwayat contains valid entries
-        if (empty($riwayat)) {
-            throw ValidationException::withMessages(['riwayat' => 'Riwayat tidak boleh kosong.']);
-        }
-
-        foreach ($riwayat as $beban) {
-            if (!isset($beban['description']) || !isset($beban['nominal']) || !is_numeric($beban['nominal']) || $beban['nominal'] < 0) {
-                throw ValidationException::withMessages(['riwayat' => 'Setiap beban harus memiliki deskripsi dan nominal yang valid.']);
-            }
-        }
-
-        // Verify total matches sum of nominals
-        $calculatedTotal = array_sum(array_column($riwayat, 'nominal'));
-        if (abs($calculatedTotal - $total) > 0.01) {
-            throw ValidationException::withMessages(['total' => 'Total tidak sesuai dengan jumlah nominal beban.']);
-        }
-
-        DB::beginTransaction();
-        try {
-            // Create AppliedCost record
+        return DB::transaction(function () use ($data, $masterId) {
             $appliedCost = AppliedCost::create([
-                'total_nominal' => $total,
+                'total_nominal' => $data['total'],
                 'master_id' => $masterId,
             ]);
 
-            // Create AppliedCostDetail records
-            foreach ($riwayat as $beban) {
+            foreach ($data['beban_description'] as $index => $description) {
                 AppliedCostDetail::create([
                     'applied_cost_id' => $appliedCost->id,
-                    'nominal' => floatval($beban['nominal']),
-                    'description' => $beban['description'],
+                    'description' => $description,
+                    'nominal' => $data['beban_nominal'][$index],
                 ]);
             }
 
-            DB::commit();
-        } catch (\Exception $e) {
-            DB::rollBack();
-            throw $e;
-        }
+            return $appliedCost;
+        });
     }
 
     /**
-     * Update existing applied cost (replace the single record)
+     * Update an existing applied cost record with its details.
      *
-     * @param float $total
-     * @param array $riwayat
+     * @param int $id
+     * @param array $data
      * @param int $masterId
-     * @return void
-     * @throws ValidationException
+     * @return AppliedCost
+     * @throws \Exception
      */
-    public function updateBeban(float $total, array $riwayat, int $masterId): void
+    public function updateAppliedCost($id, array $data, $masterId)
     {
-        // Find existing applied cost
-        $existingAppliedCost = AppliedCost::where('master_id', $masterId)->first();
+        return DB::transaction(function () use ($id, $data, $masterId) {
+            $appliedCost = AppliedCost::where('id', $id)->where('master_id', $masterId)->firstOrFail();
 
-        if (!$existingAppliedCost) {
-            throw ValidationException::withMessages([
-                'master_id' => 'Tidak ditemukan perhitungan beban untuk diupdate.'
+            $appliedCost->update([
+                'total_nominal' => $data['total'],
             ]);
-        }
 
-        // Validate that riwayat contains valid entries
-        if (empty($riwayat)) {
-            throw ValidationException::withMessages(['riwayat' => 'Riwayat tidak boleh kosong.']);
-        }
-
-        foreach ($riwayat as $beban) {
-            if (!isset($beban['description']) || !isset($beban['nominal']) || !is_numeric($beban['nominal']) || $beban['nominal'] < 0) {
-                throw ValidationException::withMessages(['riwayat' => 'Setiap beban harus memiliki deskripsi dan nominal yang valid.']);
-            }
-        }
-
-        // Verify total matches sum of nominals
-        $calculatedTotal = array_sum(array_column($riwayat, 'nominal'));
-        if (abs($calculatedTotal - $total) > 0.01) {
-            throw ValidationException::withMessages(['total' => 'Total tidak sesuai dengan jumlah nominal beban.']);
-        }
-
-        DB::beginTransaction();
-        try {
             // Delete existing details
-            $existingAppliedCost->details()->delete();
+            AppliedCostDetail::where('applied_cost_id', $appliedCost->id)->delete();
 
-            // Update the applied cost total
-            $existingAppliedCost->update([
-                'total_nominal' => $total,
-            ]);
-
-            // Create new AppliedCostDetail records
-            foreach ($riwayat as $beban) {
+            // Create new details
+            foreach ($data['beban_description'] as $index => $description) {
                 AppliedCostDetail::create([
-                    'applied_cost_id' => $existingAppliedCost->id,
-                    'nominal' => floatval($beban['nominal']),
-                    'description' => $beban['description'],
+                    'applied_cost_id' => $appliedCost->id,
+                    'description' => $description,
+                    'nominal' => $data['beban_nominal'][$index],
                 ]);
             }
 
-            DB::commit();
-        } catch (\Exception $e) {
-            DB::rollBack();
-            throw $e;
-        }
+            return $appliedCost;
+        });
     }
 
     /**
-     * Delete applied cost for a master
+     * Delete an applied cost record and its details.
      *
+     * @param int $id
      * @param int $masterId
      * @return void
-     * @throws ValidationException
+     * @throws \Exception
      */
-    public function deleteBeban(int $masterId): void
+    public function deleteAppliedCost($id, $masterId)
     {
-        $appliedCost = AppliedCost::where('master_id', $masterId)->first();
-
-        if (!$appliedCost) {
-            throw ValidationException::withMessages([
-                'master_id' => 'Tidak ditemukan perhitungan beban untuk dihapus.'
-            ]);
-        }
-
-        DB::beginTransaction();
-        try {
-            // Delete details first
-            $appliedCost->details()->delete();
-
-            // Delete the applied cost
+        DB::transaction(function () use ($id, $masterId) {
+            $appliedCost = AppliedCost::where('id', $id)->where('master_id', $masterId)->firstOrFail();
+            AppliedCostDetail::where('applied_cost_id', $appliedCost->id)->delete();
             $appliedCost->delete();
+        });
+    }
 
-            DB::commit();
-        } catch (\Exception $e) {
-            DB::rollBack();
-            throw $e;
+    /**
+     * Get the history of applied costs with their details, with pagination.
+     *
+     * @param int|null $perPage
+     * @return \Illuminate\Pagination\LengthAwarePaginator
+     */
+    public function getAppliedCostHistory($perPage = 10)
+    {
+        $query = AppliedCost::with('details')->orderBy('created_at', 'desc');
+        
+        if (Auth::guard('master')->check()) {
+            $query->where('master_id', Auth::guard('master')->id());
         }
+        // If admin, no master_id filter is applied, allowing access to all records
+
+        return $query->paginate($perPage);
     }
 
     /**
-     * Get applied cost for a master
+     * Get details of a specific applied cost.
      *
-     * @param int $masterId
-     * @return AppliedCost|null
+     * @param int $id
+     * @return AppliedCost
+     * @throws \Exception
      */
-    public function getAppliedCostForMaster(int $masterId): ?AppliedCost
+    public function getAppliedCostDetail($id)
     {
-        return AppliedCost::with('details')
-            ->where('master_id', $masterId)
-            ->first();
-    }
+        $query = AppliedCost::with('details')->where('id', $id);
+        
+        if (Auth::guard('master')->check()) {
+            $query->where('master_id', Auth::guard('master')->id());
+        }
+        // If admin, no master_id filter is applied
 
-    /**
-     * Check if master has applied cost
-     *
-     * @param int $masterId
-     * @return bool
-     */
-    public function hasAppliedCost(int $masterId): bool
-    {
-        return AppliedCost::where('master_id', $masterId)->exists();
+        return $query->firstOrFail();
     }
 }

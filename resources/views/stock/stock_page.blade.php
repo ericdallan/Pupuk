@@ -4,7 +4,6 @@
 
 @section('content')
     <style>
-        /* Existing Button Styles */
         .filter-button {
             background: linear-gradient(45deg, #007bff, #0056b3);
             border: none;
@@ -78,7 +77,6 @@
             transition: opacity 0.2s;
         }
 
-        /* Table Enhancements */
         .table {
             background-color: #fff;
             border-radius: 8px;
@@ -93,7 +91,6 @@
             top: 0;
             z-index: 15;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-            /* Subtle shadow for elevation */
         }
 
         .table thead th {
@@ -111,20 +108,16 @@
             transition: background-color 0.2s;
         }
 
-        /* Ensure table-responsive supports sticky header */
         .table-responsive {
             max-height: 500px;
             overflow-y: auto;
             position: relative;
             -webkit-overflow-scrolling: touch;
-            /* Smooth scrolling on mobile */
         }
 
-        /* Responsive Adjustments */
         @media (max-width: 768px) {
             .table-responsive {
                 max-height: 400px;
-                /* Smaller height for mobile */
             }
 
             .table thead th {
@@ -137,7 +130,6 @@
             }
         }
 
-        /* Alert Animations */
         .alert {
             animation: fadeIn 0.5s;
         }
@@ -152,20 +144,10 @@
             }
         }
 
-        /* Badge Styles */
         .status-badge {
             font-size: 0.9em;
             padding: 4px 8px;
             border-radius: 12px;
-        }
-
-        /* Table Section */
-        .table-section {
-            display: block;
-        }
-
-        .table-section.hidden {
-            display: none;
         }
 
         .highlight {
@@ -355,6 +337,51 @@
                 font-size: 0.65rem;
             }
         }
+
+        .modal-header {
+            background: linear-gradient(90deg, #343a40, #212529);
+            color: white;
+            border-top-left-radius: 8px;
+            border-top-right-radius: 8px;
+            padding: 0.75rem 1.25rem;
+            font-weight: 500;
+        }
+
+        /* New Styles for Combined Modal */
+        .modal-tab-content {
+            display: none;
+        }
+
+        .modal-tab-content.active {
+            display: block;
+        }
+
+        .modal-nav-tabs .nav-link {
+            transition: all 0.3s ease;
+        }
+
+        .modal-nav-tabs .nav-link.active {
+            background: linear-gradient(45deg, #007bff, #0056b3);
+            color: white;
+            border-color: #007bff;
+        }
+
+        .modal-nav-tabs .nav-link:hover {
+            background: linear-gradient(45deg, #e9ecef, #dee2e6);
+        }
+
+        .delete-button {
+            background: linear-gradient(45deg, #dc3545, #a71d2a);
+            border: none;
+            color: white;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .delete-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(220, 53, 69, 0.3);
+            background: linear-gradient(45deg, #c82333, #8c1a24);
+        }
     </style>
 
     <!-- Notifikasi -->
@@ -388,6 +415,9 @@
                 <div class="card-body">
                     <form id="filterForm" method="GET" action="{{ route('stock_page') }}"
                         class="d-flex flex-wrap align-items-end gap-3">
+                        <input type="hidden" name="mode" id="modeInput" value="{{ request('mode', 'accounting') }}">
+                        <input type="hidden" name="applied_cost_id" id="appliedCostInput"
+                            value="{{ request('applied_cost_id') }}">
                         <div class="flex-shrink-0">
                             <label for="start_date" class="form-label small">Tanggal Mulai</label>
                             <input type="date" name="start_date" id="start_date" class="form-control"
@@ -402,20 +432,6 @@
                                 min="{{ request('start_date', now()->startOfYear()->toDateString()) }}"
                                 max="{{ now()->toDateString() }}">
                         </div>
-                        <div class="flex-shrink-0" hidden>
-                            <input type="hidden" name="table_filter" id="table_filter"
-                                value="{{ request('table_filter', 'all') }}">
-                            <div class="dropdown me-2">
-                                <button class="btn btn-light dropdown-toggle" type="button" id="tableFilterDropdown"
-                                    data-bs-toggle="dropdown" aria-expanded="false">
-                                    {{ request('table_filter', 'all') == 'all' ? 'Semua Tabel' : (request('table_filter') == 'stocks' ? 'Tabel Stok' : (request('table_filter') == 'transfer_stocks' ? 'Tabel Transfer Stok' : 'Tabel Stok Terpakai')) }}
-                                </button>
-                                <ul class="dropdown-menu" aria-labelledby="tableFilterDropdown">
-                                    <li><a class="dropdown-item" href="#" data-filter="all">Semua Tabel</a></li>
-                                    <li><a class="dropdown-item" href="#" data-filter="stocks">Tabel Stok</a></li>
-                                </ul>
-                            </div>
-                        </div>
                         <div class="d-flex gap-2">
                             <button type="submit" class="btn filter-button" data-bs-toggle="tooltip"
                                 data-bs-placement="top" title="Terapkan filter berdasarkan tanggal">
@@ -427,15 +443,10 @@
                                 <i class="fas fa-file-excel me-1"></i> Ekspor ke Excel
                             </a>
                             @if (App\Http\Controllers\Auth\AuthController::isMaster())
-                                <button type="button" class="btn calculation-button" data-bs-toggle="modal"
-                                    data-bs-target="#loadCalculationModal" data-bs-toggle="tooltip" data-bs-placement="top"
-                                    title="Lakukan perhitungan beban">
-                                    <i class="fas fa-calculator me-1"></i> Perhitungan Beban
-                                </button>
                                 <button type="button" class="btn history-button" data-bs-toggle="modal"
-                                    data-bs-target="#appliedCostHistoryModal" data-bs-toggle="tooltip"
+                                    data-bs-target="#combinedBebanModal" data-mode="history" data-bs-toggle="tooltip"
                                     data-bs-placement="top" title="Lihat riwayat perhitungan beban">
-                                    <i class="fas fa-history me-1"></i> Riwayat Perhitungan
+                                    <i class="fas fa-history me-1"></i> Perhitungan dan Riwayat Beban
                                 </button>
                             @endif
                         </div>
@@ -447,8 +458,7 @@
         <!-- Global Search Filter -->
         <div class="mb-4">
             <div class="input-group">
-                <input type="text" id="globalSearch" class="form-control"
-                    placeholder="Cari nama barang atau ukuran...">
+                <input type="text" id="globalSearch" class="form-control" placeholder="Cari nama barang atau ukuran...">
                 <button class="btn search-button" type="button" id="clearSearch" data-bs-toggle="tooltip"
                     data-bs-placement="top" title="Hapus pencarian">Hapus</button>
             </div>
@@ -533,22 +543,22 @@
                                             <td>{{ $stock->opening_qty ?? 0 }}</td>
                                             <td class="hpp-column">
                                                 Rp. {{ number_format($stock->opening_hpp ?? 0, 2, ',', '.') }}
-                                                <div class="hpp-plus-indicator"></div>
+                                                <div class="hpp-plus-indicator" hidden></div>
                                             </td>
                                             <td>{{ $stock->incoming_qty ?? 0 }}</td>
                                             <td class="hpp-column">
                                                 Rp. {{ number_format($stock->incoming_hpp ?? 0, 2, ',', '.') }}
-                                                <div class="hpp-plus-indicator"></div>
+                                                <div class="hpp-plus-indicator" hidden></div>
                                             </td>
                                             <td>{{ $stock->outgoing_qty ?? 0 }}</td>
                                             <td class="hpp-column">
-                                                Rp. {{ number_format($stock->outgoing_hpp ?? 0, 2, ',', '.') }}
-                                                <div class="hpp-plus-indicator"></div>
+                                                Rp. {{ number_format($stock->outgoing_hpp ?? 0, 2, '.', '.') }}
+                                                <div class="hpp-plus-indicator" hidden></div>
                                             </td>
                                             <td>{{ $stock->final_stock_qty ?? 0 }}</td>
                                             <td class="hpp-column">
                                                 Rp. {{ number_format($stock->final_hpp ?? 0, 2, ',', '.') }}
-                                                <div class="hpp-plus-indicator"></div>
+                                                <div class="hpp-plus-indicator" hidden></div>
                                             </td>
                                             <td>
                                                 @if ($stock->id)
@@ -762,216 +772,213 @@
             @endforeach
         @endforeach
 
-        <!-- Modal Perhitungan Beban -->
-        <div class="modal fade" id="loadCalculationModal" tabindex="-1" aria-labelledby="loadCalculationModalLabel"
+        <!-- Combined Beban Modal -->
+        <div class="modal fade" id="combinedBebanModal" tabindex="-1" aria-labelledby="combinedBebanModalLabel"
             aria-hidden="true">
-            <div class="modal-dialog modal-lg">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="loadCalculationModalLabel">Perhitungan Beban</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                    <form id="loadCalculationForm" action="{{ route('applied_cost.store') }}" method="POST">
-                        @csrf
-                        <div class="modal-body">
-                            <div id="errorMessage" class="alert alert-danger" style="display: none;"></div>
-                            <div id="bebanInputs">
-                                <div class="input-group mb-2 beban-row">
-                                    <span class="input-group-text">Beban 1</span>
-                                    <input type="text"
-                                        class="form-control @error('beban_description.*') is-invalid @enderror"
-                                        name="beban_description[]" placeholder="Deskripsi Beban (e.g., Beban Operasional)"
-                                        required>
-                                    <input type="number"
-                                        class="form-control @error('beban_nominal.*') is-invalid @enderror"
-                                        name="beban_nominal[]" placeholder="Nominal (Rp)" step="0.01" min="0"
-                                        required>
-                                    <button type="button" class="btn btn-outline-danger remove-row"
-                                        style="display: none;">Hapus</button>
-                                    @error('beban_description.*')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                    @error('beban_nominal.*')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
-                            </div>
-                            <button type="button" class="btn btn-primary mb-3" id="addBebanRow"
-                                data-bs-toggle="tooltip" data-bs-placement="top" title="Tambah baris beban baru">Tambah
-                                Beban</button>
-                            <div class="row">
-                                <div class="col-md-8"></div>
-                                <div class="col-md-4">
-                                    <label class="form-label fw-bold">Total Akumulasi:</label>
-                                    <input type="text" class="form-control bg-light" id="totalAkumulasi" readonly
-                                        value="Rp 0">
-                                    <input type="hidden" name="total" id="totalHidden" value="0">
-                                </div>
-                            </div>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-                            <button type="submit" class="btn btn-primary">Hitung & Simpan</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-
-        <!-- Applied Cost History Modal -->
-        <div class="modal fade" id="appliedCostHistoryModal" tabindex="-1"
-            aria-labelledby="appliedCostHistoryModalLabel" aria-hidden="true">
             <div class="modal-dialog modal-xl">
                 <div class="modal-content">
-                    <div class="modal-header bg-warning text-dark">
-                        <h5 class="modal-title" id="appliedCostHistoryModalLabel">
-                            <i class="fas fa-history me-2"></i> Riwayat Perhitungan Beban
-                        </h5>
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="combinedBebanModalLabel">Perhitungan Beban</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
-                        @if ($currentMode == 'management')
-                            <div class="row mb-3" id="appliedCostModeSelection">
-                                <div class="col-12">
-                                    <div class="alert alert-info">
-                                        <i class="fas fa-info-circle me-2"></i>
-                                        <strong>Mode Manajemen Aktif:</strong> Pilih riwayat perhitungan beban untuk
-                                        diterapkan
-                                        pada perhitungan HPP.
+                        <!-- Tabs for Form and History -->
+                        <ul class="nav nav-tabs modal-nav-tabs mb-3" id="bebanTabs" role="tablist">
+                            <li class="nav-item">
+                                <a class="nav-link active" id="form-tab" data-bs-toggle="tab" href="#form-content"
+                                    role="tab" aria-controls="form-content" aria-selected="true"
+                                    data-bs-toggle="tooltip" title="Tambah atau edit perhitungan beban">
+                                    <i class="fas fa-calculator me-1"></i> Form Perhitungan
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" id="history-tab" data-bs-toggle="tab" href="#history-content"
+                                    role="tab" aria-controls="history-content" aria-selected="false"
+                                    data-bs-toggle="tooltip" title="Lihat riwayat perhitungan beban">
+                                    <i class="fas fa-history me-1"></i> Riwayat Perhitungan
+                                </a>
+                            </li>
+                        </ul>
+
+                        <div class="tab-content">
+                            <!-- Form Tab Content -->
+                            <div class="tab-pane modal-tab-content fade show active" id="form-content" role="tabpanel"
+                                aria-labelledby="form-tab">
+                                <form id="loadCalculationForm" action="{{ route('applied_cost.store') }}"
+                                    method="POST">
+                                    @csrf
+                                    <input type="hidden" name="_method" id="formMethod" value="POST">
+                                    <input type="hidden" name="id" id="appliedCostId">
+                                    <div id="errorMessage" class="alert alert-danger" style="display: none;"></div>
+                                    <div id="bebanInputs">
+                                        <div class="input-group mb-2 beban-row">
+                                            <span class="input-group-text">Beban 1</span>
+                                            <input type="text"
+                                                class="form-control @error('beban_description.*') is-invalid @enderror"
+                                                name="beban_description[]"
+                                                placeholder="Deskripsi Beban (e.g., Beban Operasional)" required>
+                                            <input type="number"
+                                                class="form-control @error('beban_nominal.*') is-invalid @enderror"
+                                                name="beban_nominal[]" placeholder="Nominal (Rp)" step="0.01"
+                                                min="0" required>
+                                            <button type="button" class="btn btn-outline-danger remove-row"
+                                                style="display: none;">Hapus</button>
+                                            @error('beban_description.*')
+                                                <div class="invalid-feedback">{{ $message }}</div>
+                                            @enderror
+                                            @error('beban_nominal.*')
+                                                <div class="invalid-feedback">{{ $message }}</div>
+                                            @enderror
+                                        </div>
                                     </div>
-                                    <div class="d-flex gap-2 align-items-center">
-                                        <label class="form-label mb-0">Pilih Riwayat yang Digunakan:</label>
-                                        <select class="form-select w-auto" id="selectedAppliedCostId"
-                                            name="applied_cost_id">
-                                            <option value="">Pilih Riwayat...</option>
-                                            @foreach ($appliedCostHistory as $cost)
-                                                <option value="{{ $cost->id }}"
-                                                    {{ $selectedAppliedCostId == $cost->id ? 'selected' : '' }}>
-                                                    #{{ $cost->id }} - Rp.
-                                                    {{ number_format($cost->total_nominal, 2, ',', '.') }}
-                                                    ({{ $cost->created_at->format('d M Y H:i') }})
-                                                </option>
-                                            @endforeach
-                                        </select>
-                                        <button type="button" class="btn btn-sm btn-success" id="applySelectedCost"
-                                            data-bs-toggle="tooltip" data-bs-placement="top"
-                                            title="Terapkan riwayat beban yang dipilih">
-                                            <i class="fas fa-check me-1"></i> Terapkan
-                                        </button>
-                                        <button type="button" class="btn btn-sm btn-secondary" id="clearSelectedCost"
-                                            data-bs-toggle="tooltip" data-bs-placement="top"
-                                            title="Hapus pilihan riwayat beban">
-                                            <i class="fas fa-times me-1"></i> Reset
-                                        </button>
+                                    <button type="button" class="btn btn-primary mb-3" id="addBebanRow"
+                                        data-bs-toggle="tooltip" data-bs-placement="top"
+                                        title="Tambah baris beban baru">Tambah Beban</button>
+                                    <div class="row">
+                                        <div class="col-md-8"></div>
+                                        <div class="col-md-4">
+                                            <label class="form-label fw-bold">Total Akumulasi:</label>
+                                            <input type="text" class="form-control bg-light" id="totalAkumulasi"
+                                                readonly value="Rp 0">
+                                            <input type="hidden" name="total" id="totalHidden" value="0">
+                                        </div>
                                     </div>
+                                    <div class="mt-3">
+                                        <button type="submit" class="btn btn-primary" id="submitBebanBtn"
+                                            data-bs-toggle="tooltip" title="Simpan perhitungan beban">Hitung &
+                                            Simpan</button>
+                                        <button type="button" class="btn btn-secondary" id="cancelEditBtn"
+                                            style="display: none;" data-bs-toggle="tooltip"
+                                            title="Batalkan pengeditan">Batal Edit</button>
+                                    </div>
+                                </form>
+                            </div>
+
+                            <!-- History Tab Content -->
+                            <div class="tab-pane modal-tab-content fade" id="history-content" role="tabpanel"
+                                aria-labelledby="history-tab">
+                                @if ($currentMode == 'management')
+                                    <div class="row mb-3" id="appliedCostModeSelection">
+                                        <div class="col-12">
+                                            <div class="alert alert-info">
+                                                <i class="fas fa-info-circle me-2"></i>
+                                                <strong>Mode Manajemen Aktif:</strong> Pilih riwayat perhitungan
+                                                beban untuk diterapkan pada perhitungan HPP.
+                                            </div>
+                                            <div class="d-flex gap-2 align-items-center">
+                                                <label class="form-label mb-0">Pilih Riwayat yang Digunakan:</label>
+                                                <select class="form-select w-auto" id="selectedAppliedCostId"
+                                                    name="applied_cost_id">
+                                                    <option value="">Pilih Riwayat...</option>
+                                                    @foreach ($appliedCostHistory as $cost)
+                                                        <option value="{{ $cost->id }}"
+                                                            {{ $selectedAppliedCostId == $cost->id ? 'selected' : '' }}>
+                                                            #{{ $cost->id }} - Rp.
+                                                            {{ number_format($cost->total_nominal, 2, ',', '.') }}
+                                                            ({{ $cost->created_at->format('d M Y H:i') }})
+                                                        </option>
+                                                    @endforeach
+                                                </select>
+                                                <button type="button" class="btn btn-sm btn-success"
+                                                    id="applySelectedCost" data-bs-toggle="tooltip"
+                                                    data-bs-placement="top" title="Terapkan riwayat beban yang dipilih">
+                                                    <i class="fas fa-check me-1"></i> Terapkan
+                                                </button>
+                                                <button type="button" class="btn btn-sm btn-secondary"
+                                                    id="clearSelectedCost" data-bs-toggle="tooltip"
+                                                    data-bs-placement="top" title="Hapus pilihan riwayat beban">
+                                                    <i class="fas fa-times me-1"></i> Reset
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                @endif
+
+                                <!-- History Table -->
+                                <div class="table-responsive">
+                                    <table class="table table-striped table-hover" id="appliedCostHistoryTable">
+                                        <thead class="table-dark text-center">
+                                            <tr>
+                                                <th width="5%">
+                                                    <input type="radio" name="appliedCostSelection" value=""
+                                                        id="noCostSelection" checked>
+                                                </th>
+                                                <th width="15%">Tanggal</th>
+                                                <th width="15%">Total Nominal</th>
+                                                <th width="35%">Detail Beban</th>
+                                                <th width="10%">Status</th>
+                                                <th width="15%">Aksi</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="historyTableBody">
+                                            @if ($appliedCostHistory->isEmpty())
+                                                <tr>
+                                                    <td colspan="7" class="text-center text-muted py-4">
+                                                        <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
+                                                        Tidak ada riwayat perhitungan beban
+                                                    </td>
+                                                </tr>
+                                            @else
+                                                @foreach ($appliedCostHistory as $item)
+                                                    <tr data-date="{{ $item->created_at->toDateString() }}"
+                                                        data-description="{{ collect($item->details)->pluck('description')->implode(' ') }}"
+                                                        data-cost-id="{{ $item->id }}"
+                                                        data-details="{{ json_encode($item->details) }}"
+                                                        data-total-nominal="{{ $item->total_nominal }}">
+                                                        <td>
+                                                            <input type="radio" name="appliedCostSelection"
+                                                                value="{{ $item->id }}"
+                                                                {{ $selectedAppliedCostId == $item->id ? 'checked' : '' }}>
+                                                        </td>
+                                                        <td class="text-center">
+                                                            {{ $item->created_at->format('d M Y H:i') }}</td>
+                                                        <td class="text-center"><strong class="text-success">Rp.
+                                                                {{ number_format($item->total_nominal, 2, ',', '.') }}</strong>
+                                                        </td>
+                                                        <td>
+                                                            <div class="applied-cost-detail">
+                                                                @foreach ($item->details as $detail)
+                                                                    <div class="applied-cost-item">
+                                                                        <span>{{ $detail->description }}</span>
+                                                                        <span class="text-success">Rp.
+                                                                            {{ number_format($detail->nominal, 2, ',', '.') }}</span>
+                                                                    </div>
+                                                                @endforeach
+                                                            </div>
+                                                        </td>
+                                                        <td class="text-center">
+                                                            <span
+                                                                class="badge status-badge {{ $selectedAppliedCostId == $item->id ? 'bg-success' : 'bg-secondary' }}">
+                                                                {{ $selectedAppliedCostId == $item->id ? 'Aktif' : 'Tidak Aktif' }}
+                                                            </span>
+                                                        </td>
+                                                        <td class="text-center">
+                                                            <button type="button"
+                                                                class="btn btn-sm btn-outline-primary edit-cost-btn"
+                                                                data-cost-id="{{ $item->id }}"
+                                                                data-bs-toggle="tooltip" data-bs-placement="top"
+                                                                title="Edit perhitungan beban">
+                                                                <i class="fas fa-edit"></i>
+                                                            </button>
+                                                            <button type="button"
+                                                                class="btn btn-sm btn-outline-danger delete-cost-btn"
+                                                                data-cost-id="{{ $item->id }}"
+                                                                data-bs-toggle="tooltip" data-bs-placement="top"
+                                                                title="Hapus perhitungan beban">
+                                                                <i class="fas fa-trash"></i>
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                @endforeach
+                                            @endif
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
-                        @endif
-
-                        <!-- Search and Filter -->
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <input type="text" class="form-control" id="historySearch"
-                                    placeholder="Cari berdasarkan tanggal atau deskripsi...">
-                            </div>
-                            <div class="col-md-3">
-                                <select class="form-select" id="historyDateFilter">
-                                    <option value="">Semua Tanggal</option>
-                                    <option value="today">Hari Ini</option>
-                                    <option value="week">Minggu Ini</option>
-                                    <option value="month">Bulan Ini</option>
-                                </select>
-                            </div>
-                            <div class="col-md-3">
-                                <button type="button" class="btn btn-outline-primary w-100" id="refreshHistory"
-                                    data-bs-toggle="tooltip" data-bs-placement="top" title="Segarkan daftar riwayat">
-                                    <i class="fas fa-sync-alt me-1"></i> Refresh
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- History Table -->
-                        <div class="table-responsive">
-                            <table class="table table-striped table-hover" id="appliedCostHistoryTable">
-                                <thead class="table-dark">
-                                    <tr>
-                                        <th width="5%">
-                                            <input type="radio" name="appliedCostSelection" value=""
-                                                id="noCostSelection" checked>
-                                        </th>
-                                        <th width="10%">ID</th>
-                                        <th width="15%">Tanggal</th>
-                                        <th width="15%">Total Nominal</th>
-                                        <th width="40%">Detail Beban</th>
-                                        <th width="10%">Status</th>
-                                        <th width="5%">Aksi</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="historyTableBody">
-                                    @if ($appliedCostHistory->isEmpty())
-                                        <tr>
-                                            <td colspan="7" class="text-center text-muted py-4">
-                                                <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
-                                                Tidak ada riwayat perhitungan beban
-                                            </td>
-                                        </tr>
-                                    @else
-                                        @foreach ($appliedCostHistory as $item)
-                                            <tr data-date="{{ $item->created_at->toDateString() }}"
-                                                data-description="{{ collect($item->details)->pluck('description')->implode(' ') }}">
-                                                <td>
-                                                    <input type="radio" name="appliedCostSelection"
-                                                        value="{{ $item->id }}"
-                                                        {{ $selectedAppliedCostId == $item->id ? 'checked' : '' }}>
-                                                </td>
-                                                <td><strong>#{{ $item->id }}</strong></td>
-                                                <td>{{ $item->created_at->format('d M Y H:i') }}</td>
-                                                <td><strong class="text-success">Rp.
-                                                        {{ number_format($item->total_nominal, 2, ',', '.') }}</strong>
-                                                </td>
-                                                <td>
-                                                    <div class="applied-cost-detail">
-                                                        @foreach ($item->details as $detail)
-                                                            <div class="applied-cost-item">
-                                                                <span>{{ $detail->description }}</span>
-                                                                <span class="text-success">Rp.
-                                                                    {{ number_format($detail->nominal, 2, ',', '.') }}</span>
-                                                            </div>
-                                                        @endforeach
-                                                    </div>
-                                                </td>
-                                                <td>
-                                                    <span
-                                                        class="badge status-badge {{ $selectedAppliedCostId == $item->id ? 'bg-success' : 'bg-secondary' }}">
-                                                        {{ $selectedAppliedCostId == $item->id ? 'Aktif' : 'Tidak Aktif' }}
-                                                    </span>
-                                                </td>
-                                                <td>
-                                                    <button type="button"
-                                                        class="btn btn-sm btn-outline-primary view-detail-btn"
-                                                        data-cost-id="{{ $item->id }}" data-bs-toggle="tooltip"
-                                                        data-bs-placement="top" title="Lihat detail beban">
-                                                        <i class="fas fa-eye"></i>
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        @endforeach
-                                    @endif
-                                </tbody>
-                            </table>
-                        </div>
-
-                        <!-- No Pagination -->
-                        <div class="alert alert-info mt-3">
-                            Total Riwayat: {{ $appliedCostHistory->count() }}
                         </div>
                     </div>
                     <div class="modal-footer">
                         <div class="d-flex justify-content-between w-100">
-                            <div>
-                                <span class="text-muted" id="historyCount">Total: {{ $appliedCostHistory->count() }}
-                                    riwayat</span>
-                            </div>
                             <div>
                                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
                             </div>
@@ -987,12 +994,10 @@
                 // Data resep dan riwayat beban dari controller
                 const appliedCostHistory = @json($appliedCostHistory->items() ?? []);
                 let currentSelectedCostId = '{{ $selectedAppliedCostId ?? '' }}';
+                let isInitializing = true; // Flag to prevent auto-submit during initialization
 
                 // Define variables with null checks
                 const form = document.getElementById('filterForm');
-                const tableFilterInput = document.getElementById('table_filter');
-                const dropdownButton = document.getElementById('tableFilterDropdown');
-                const tableSections = document.querySelectorAll('.table-section');
                 const globalSearch = document.getElementById('globalSearch');
                 const clearSearch = document.getElementById('clearSearch');
                 const searchCount = document.getElementById('searchCount');
@@ -1006,14 +1011,14 @@
                 const managementMode = document.getElementById('management-mode');
                 const modeIndicator = document.getElementById('mode-indicator');
                 const tableContainer = document.querySelector('[data-table="stocks"]');
-                const appliedCostHistoryModal = document.getElementById('appliedCostHistoryModal');
+                const combinedBebanModal = document.getElementById('combinedBebanModal');
                 const applySelectedCostBtn = document.getElementById('applySelectedCost');
                 const clearSelectedCostBtn = document.getElementById('clearSelectedCost');
-                const historySearch = document.getElementById('historySearch');
-                const historyDateFilter = document.getElementById('historyDateFilter');
-                const refreshHistoryBtn = document.getElementById('refreshHistory');
                 const historyCount = document.getElementById('historyCount');
                 const selectedAppliedCostId = document.getElementById('selectedAppliedCostId');
+                const submitBebanBtn = document.getElementById('submitBebanBtn');
+                const cancelEditBtn = document.getElementById('cancelEditBtn');
+                const appliedCostIdInput = document.getElementById('appliedCostId');
 
                 // Initialize tooltips
                 const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
@@ -1058,11 +1063,11 @@
                         const newRow = document.createElement('div');
                         newRow.className = 'input-group mb-2 beban-row';
                         newRow.innerHTML = `
-                        <span class="input-group-text">Beban ${rowCount}</span>
-                        <input type="text" class="form-control" name="beban_description[]" placeholder="Deskripsi Beban" required>
-                        <input type="number" class="form-control" name="beban_nominal[]" placeholder="Nominal (Rp)" step="0.01" min="0" required>
-                        <button type="button" class="btn btn-outline-danger remove-row">Hapus</button>
-                    `;
+                <span class="input-group-text">Beban ${rowCount}</span>
+                <input type="text" class="form-control" name="beban_description[]" placeholder="Deskripsi Beban" required>
+                <input type="number" class="form-control" name="beban_nominal[]" placeholder="Nominal (Rp)" step="0.01" min="0" required>
+                <button type="button" class="btn btn-outline-danger remove-row">Hapus</button>
+            `;
                         bebanInputs.appendChild(newRow);
                         updateRemoveButtons();
                         updateTotal();
@@ -1141,227 +1146,410 @@
                     });
                 }
 
-                // Auto-select first applied cost
-                function autoSelectFirstCost() {
-                    if (!appliedCostHistoryModal || !selectedAppliedCostId) return;
-                    const firstCost = appliedCostHistory[0];
-                    if (firstCost) {
-                        currentSelectedCostId = firstCost.id;
-                        selectedAppliedCostId.value = firstCost.id;
-                        const radio = document.querySelector(
-                            `input[name="appliedCostSelection"][value="${firstCost.id}"]`);
-                        if (radio) radio.checked = true;
-                        document.querySelectorAll('#historyTableBody tr').forEach(row => {
-                            const badge = row.querySelector('.status-badge');
-                            const rowRadio = row.querySelector('input[name="appliedCostSelection"]');
-                            if (badge && rowRadio && rowRadio.value === firstCost.id) {
+                // Function to update status badges
+                function updateStatusBadges(selectedCostId) {
+                    document.querySelectorAll('#historyTableBody tr').forEach(row => {
+                        const badge = row.querySelector('.status-badge');
+                        const rowCostId = row.dataset.costId;
+                        if (badge) {
+                            if (rowCostId === selectedCostId) {
                                 badge.textContent = 'Aktif';
                                 badge.classList.remove('bg-secondary');
                                 badge.classList.add('bg-success');
-                            } else if (badge) {
+                            } else {
                                 badge.textContent = 'Tidak Aktif';
                                 badge.classList.remove('bg-success');
                                 badge.classList.add('bg-secondary');
                             }
-                        });
-                        updateHPPColumns(parseFloat(firstCost.total_nominal || 0));
-                        if (form && tableFilterInput) {
-                            form.action = '{{ route('stock_page') }}?start_date=' + document.getElementById(
-                                    'start_date').value +
-                                '&end_date=' + document.getElementById('end_date').value +
-                                '&table_filter=' + tableFilterInput.value +
-                                '&mode=management&applied_cost_id=' + firstCost.id;
-                            form.submit();
                         }
-                    } else {
-                        alert('Tidak ada riwayat perhitungan beban untuk mode manajemen.');
-                        updateHPPColumns(0);
+                    });
+                }
+
+                function autoSelectFirstCost() {
+                    if (!form) {
+                        console.error('Form not found, cannot proceed with autoSelectFirstCost');
+                        return;
+                    }
+
+                    if (!appliedCostHistory || appliedCostHistory.length === 0) {
+                        console.warn('No applied cost history available');
+                        return;
+                    }
+
+                    const firstCost = appliedCostHistory[0];
+                    if (firstCost) {
+                        currentSelectedCostId = firstCost.id.toString();
+
+                        // Update selectedAppliedCostId if it exists
+                        if (selectedAppliedCostId) {
+                            selectedAppliedCostId.value = firstCost.id;
+                        }
+
+                        // Update radio button if it exists
+                        const radio = document.querySelector(
+                            `input[name="appliedCostSelection"][value="${firstCost.id}"]`);
+                        if (radio) {
+                            radio.checked = true;
+                        }
+
+                        // Update badges
+                        updateStatusBadges(firstCost.id.toString());
+
+                        updateHPPColumns(parseFloat(firstCost.total_nominal || 0));
+
+                        // Update URL parameters instead of form action
+                        const startDate = document.getElementById('start_date').value;
+                        const endDate = document.getElementById('end_date').value;
+                        const newUrl =
+                            `{{ route('stock_page') }}?start_date=${startDate}&end_date=${endDate}&table_filter=&mode=management&applied_cost_id=${firstCost.id}`;
+
+                        // Use replaceState to avoid triggering a page refresh
+                        window.history.replaceState({}, '', newUrl);
                     }
                 }
 
-                // Applied Cost Modal Logic
-                if (appliedCostHistoryModal) {
-                    appliedCostHistoryModal.addEventListener('shown.bs.modal', function() {
-                        const isManagementMode = managementMode && managementMode.checked;
-                        const modeSelection = document.getElementById('appliedCostModeSelection');
-                        if (modeSelection) {
-                            modeSelection.style.display = isManagementMode ? 'block' : 'none';
+                // Combined Modal Logic
+                if (combinedBebanModal) {
+                    combinedBebanModal.addEventListener('shown.bs.modal', function(e) {
+                        const mode = e.relatedTarget ? e.relatedTarget.dataset.mode || 'form' : 'form';
+                        const formTab = document.getElementById('form-tab');
+                        const historyTab = document.getElementById('history-tab');
+                        const formContent = document.getElementById('form-content');
+                        const historyContent = document.getElementById('history-content');
+                        const modalTitle = document.getElementById('combinedBebanModalLabel');
+
+                        if (mode === 'form') {
+                            formTab.classList.add('active');
+                            historyTab.classList.remove('active');
+                            formContent.classList.add('show', 'active');
+                            historyContent.classList.remove('show', 'active');
+                            modalTitle.textContent = 'Perhitungan Beban';
+                            resetForm();
+                        } else {
+                            historyTab.classList.add('active');
+                            formTab.classList.remove('active');
+                            historyContent.classList.add('show', 'active');
+                            formContent.classList.remove('show', 'active');
+                            modalTitle.textContent = 'Riwayat Perhitungan Beban';
+                            const isManagementMode = managementMode && managementMode.checked;
+                            const modeSelection = document.getElementById('appliedCostModeSelection');
+                            if (modeSelection) {
+                                modeSelection.style.display = isManagementMode ? 'block' : 'none';
+                            }
                         }
                     });
 
-                    if (historySearch) {
-                        historySearch.addEventListener('input', debounce(filterHistory, 300));
+                    // Reset form function
+                    function resetForm() {
+                        if (loadCalculationForm && bebanInputs) {
+                            loadCalculationForm.action = '{{ route('applied_cost.store') }}';
+                            bebanInputs.innerHTML = `
+                    <div class="input-group mb-2 beban-row">
+                        <span class="input-group-text">Beban 1</span>
+                        <input type="text" class="form-control" name="beban_description[]" placeholder="Deskripsi Beban (e.g., Beban Operasional)" required>
+                        <input type="number" class="form-control" name="beban_nominal[]" placeholder="Nominal (Rp)" step="0.01" min="0" required>
+                        <button type="button" class="btn btn-outline-danger remove-row" style="display: none;">Hapus</button>
+                    </div>
+                `;
+                            totalAkumulasi.value = 'Rp 0';
+                            totalHidden.value = '0';
+                            appliedCostIdInput.value = '';
+                            submitBebanBtn.textContent = 'Hitung & Simpan';
+                            cancelEditBtn.style.display = 'none';
+                            updateTotal();
+                        }
                     }
 
-                    if (historyDateFilter) {
-                        historyDateFilter.addEventListener('change', filterHistory);
+                    // Populate form for editing
+                    function populateFormForEdit(costId) {
+                        const row = document.querySelector(`#historyTableBody tr[data-cost-id="${costId}"]`);
+                        if (!row) return;
+
+                        const details = JSON.parse(row.dataset.details || '[]');
+                        const totalNominal = parseFloat(row.dataset.totalNominal || 0);
+
+                        // Switch to form tab
+                        const formTab = document.getElementById('form-tab');
+                        const historyTab = document.getElementById('history-tab');
+                        const formContent = document.getElementById('form-content');
+                        const historyContent = document.getElementById('history-content');
+                        const modalTitle = document.getElementById('combinedBebanModalLabel');
+
+                        formTab.classList.add('active');
+                        historyTab.classList.remove('active');
+                        formContent.classList.add('show', 'active');
+                        historyContent.classList.remove('show', 'active');
+                        modalTitle.textContent = 'Edit Perhitungan Beban';
+
+                        // Populate form
+                        loadCalculationForm.action = '{{ route('applied_cost.update') }}';
+                        appliedCostIdInput.value = costId;
+                        bebanInputs.innerHTML = '';
+                        details.forEach((detail, index) => {
+                            const row = document.createElement('div');
+                            row.className = 'input-group mb-2 beban-row';
+                            row.innerHTML = `
+                    <span class="input-group-text">Beban ${index + 1}</span>
+                    <input type="text" class="form-control" name="beban_description[]" value="${detail.description}" required>
+                    <input type="number" class="form-control" name="beban_nominal[]" value="${detail.nominal}" step="0.01" min="0" required>
+                    <button type="button" class="btn btn-outline-danger remove-row" style="${index === 0 ? 'display: none;' : ''}">Hapus</button>
+                `;
+                            bebanInputs.appendChild(row);
+                        });
+                        totalAkumulasi.value = formatCurrency(totalNominal);
+                        totalHidden.value = totalNominal;
+                        submitBebanBtn.textContent = 'Simpan Perubahan';
+                        cancelEditBtn.style.display = 'inline-block';
                     }
 
-                    if (refreshHistoryBtn) {
-                        refreshHistoryBtn.addEventListener('click', function() {
-                            if (historySearch) historySearch.value = '';
-                            if (historyDateFilter) historyDateFilter.value = '';
-                            filterHistory();
+                    // Handle edit button click
+                    document.querySelectorAll('.edit-cost-btn').forEach(button => {
+                        button.addEventListener('click', function() {
+                            const costId = this.dataset.costId;
+                            populateFormForEdit(costId);
+                        });
+                    });
+
+                    // Handle delete button click
+                    document.querySelectorAll('.delete-cost-btn').forEach(button => {
+                        button.addEventListener('click', function() {
+                            const costId = this.dataset.costId;
+                            const historyContent = document.getElementById('history-content');
+
+                            // Create or get the confirmation modal
+                            let confirmModal = document.getElementById('deleteConfirmModal');
+                            if (!confirmModal) {
+                                confirmModal = document.createElement('div');
+                                confirmModal.id = 'deleteConfirmModal';
+                                confirmModal.className = 'modal fade';
+                                confirmModal.tabIndex = -1;
+                                confirmModal.setAttribute('aria-labelledby', 'deleteConfirmModalLabel');
+                                confirmModal.setAttribute('aria-hidden', 'true');
+                                confirmModal.innerHTML = `
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="deleteConfirmModalLabel">Konfirmasi Penghapusan</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            Apakah Anda yakin ingin menghapus perhitungan beban ini? Tindakan ini tidak dapat dibatalkan.
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                            <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Hapus</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+                                document.body.appendChild(confirmModal);
+                            }
+
+                            // Show the modal
+                            const modalInstance = new bootstrap.Modal(confirmModal);
+                            modalInstance.show();
+
+                            // Handle confirm delete
+                            const confirmDeleteBtn = confirmModal.querySelector('#confirmDeleteBtn');
+                            confirmDeleteBtn.onclick = function() {
+                                modalInstance.hide();
+
+                                // Remove any existing alert to avoid duplicates
+                                const existingAlert = historyContent.querySelector('.alert');
+                                if (existingAlert) {
+                                    existingAlert.remove();
+                                }
+
+                                fetch('{{ route('applied_cost.delete', ['id' => ':id']) }}'
+                                        .replace(':id', costId), {
+                                            method: 'DELETE',
+                                            headers: {
+                                                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                                'Accept': 'application/json'
+                                            }
+                                        })
+                                    .then(response => response.json())
+                                    .then(data => {
+                                        // Create a dismissible Bootstrap alert
+                                        const alert = document.createElement('div');
+                                        alert.className =
+                                            `alert ${data.success ? 'alert-success' : 'alert-danger'} alert-dismissible fade show`;
+                                        alert.role = 'alert';
+                                        alert.innerHTML = `
+                    ${data.success ? 'Perhitungan beban berhasil dihapus.' : 'Gagal menghapus perhitungan beban: ' + (data.message || 'Kesalahan tidak diketahui')}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                `;
+
+                                        // Prepend the alert to the history-content div
+                                        historyContent.prepend(alert);
+
+                                        // Auto-dismiss the alert after 5 seconds
+                                        setTimeout(() => {
+                                            alert.classList.remove('show');
+                                            setTimeout(() => alert.remove(),
+                                                150); // Remove after fade-out
+                                        }, 5000);
+
+                                        if (data.success) {
+                                            const row = document.querySelector(
+                                                `#historyTableBody tr[data-cost-id="${costId}"]`
+                                            );
+                                            if (row) row.remove();
+                                            updateHistoryCount();
+                                            if (currentSelectedCostId == costId) {
+                                                currentSelectedCostId = '';
+                                                if (selectedAppliedCostId) selectedAppliedCostId
+                                                    .value = '';
+                                                updateHPPColumns(0);
+
+                                                // Switch back to accounting mode
+                                                if (accountingMode) {
+                                                    accountingMode.checked = true;
+                                                    updateMode('accounting');
+                                                }
+                                            }
+                                        }
+                                    })
+                                    .catch(error => {
+                                        console.error('Error deleting applied cost:', error);
+
+                                        // Create an error alert
+                                        const alert = document.createElement('div');
+                                        alert.className =
+                                            'alert alert-danger alert-dismissible fade show';
+                                        alert.role = 'alert';
+                                        alert.innerHTML = `
+                    Terjadi kesalahan saat menghapus perhitungan beban.
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                `;
+
+                                        // Prepend the alert to the history-content div
+                                        historyContent.prepend(alert);
+
+                                        // Auto-dismiss the alert after 5 seconds
+                                        setTimeout(() => {
+                                            alert.classList.remove('show');
+                                            setTimeout(() => alert.remove(),
+                                                150); // Remove after fade-out
+                                        }, 5000);
+                                    });
+                            };
+                        });
+                    });
+
+                    // Handle cancel edit
+                    if (cancelEditBtn) {
+                        cancelEditBtn.addEventListener('click', function() {
+                            resetForm();
+                            const formTab = document.getElementById('form-tab');
+                            const historyTab = document.getElementById('history-tab');
+                            const formContent = document.getElementById('form-content');
+                            const historyContent = document.getElementById('history-content');
+                            const modalTitle = document.getElementById('combinedBebanModalLabel');
+
+                            historyTab.classList.add('active');
+                            formTab.classList.remove('active');
+                            historyContent.classList.add('show', 'active');
+                            formContent.classList.remove('show', 'active');
+                            modalTitle.textContent = 'Riwayat Perhitungan Beban';
                         });
                     }
 
+                    // Update history count
+                    function updateHistoryCount() {
+                        const visibleRows = document.querySelectorAll(
+                            '#historyTableBody tr:not([style*="display: none"])');
+                        if (historyCount) {
+                            historyCount.textContent = `Total: ${visibleRows.length} riwayat`;
+                        }
+                    }
+
+                    // Handle apply selected cost button
                     if (applySelectedCostBtn) {
                         applySelectedCostBtn.addEventListener('click', function() {
                             if (!selectedAppliedCostId || !selectedAppliedCostId.value) {
                                 alert('Silakan pilih riwayat perhitungan beban terlebih dahulu.');
                                 return;
                             }
+
                             const selectedId = selectedAppliedCostId.value;
                             currentSelectedCostId = selectedId;
+
+                            // Update radio button
+                            const radio = document.querySelector(
+                                `input[name="appliedCostSelection"][value="${selectedId}"]`);
+                            if (radio) {
+                                radio.checked = true;
+                            }
+
+                            // Update status badges
+                            updateStatusBadges(selectedId);
+
                             const selectedCost = appliedCostHistory.find(cost => cost.id == selectedId);
                             if (selectedCost) {
                                 updateHPPColumns(parseFloat(selectedCost.total_nominal || 0));
                             }
-                            if (form && tableFilterInput) {
-                                form.action = '{{ route('stock_page') }}?start_date=' + document
-                                    .getElementById('start_date').value +
-                                    '&end_date=' + document.getElementById('end_date').value +
-                                    '&table_filter=' + tableFilterInput.value +
-                                    '&mode=management&applied_cost_id=' + selectedId;
-                                form.submit();
-                            }
+
+                            // Update form and submit
+                            const startDate = document.getElementById('start_date').value;
+                            const endDate = document.getElementById('end_date').value;
+
+                            // Update hidden input values
+                            document.getElementById('modeInput').value = 'management';
+                            document.getElementById('appliedCostInput').value = selectedId;
+
+                            // Submit the form
+                            form.submit();
                         });
                     }
 
+                    // Handle clear selected cost button
                     if (clearSelectedCostBtn) {
                         clearSelectedCostBtn.addEventListener('click', function() {
                             currentSelectedCostId = '';
                             if (selectedAppliedCostId) selectedAppliedCostId.value = '';
-                            const radios = document.querySelectorAll('input[name="appliedCostSelection"]');
-                            radios.forEach(radio => radio.checked = radio.value === '');
-                            document.querySelectorAll('#historyTableBody tr').forEach(row => {
-                                const badge = row.querySelector('.status-badge');
-                                if (badge) {
-                                    badge.textContent = 'Tidak Aktif';
-                                    badge.classList.remove('bg-success');
-                                    badge.classList.add('bg-secondary');
-                                }
-                            });
-                            updateHPPColumns(0);
-                            if (form && tableFilterInput) {
-                                form.action = '{{ route('stock_page') }}?start_date=' + document
-                                    .getElementById('start_date').value +
-                                    '&end_date=' + document.getElementById('end_date').value +
-                                    '&table_filter=' + tableFilterInput.value +
-                                    '&mode=accounting';
-                                form.submit();
+
+                            // Clear radio selection
+                            const noCostRadio = document.getElementById('noCostSelection');
+                            if (noCostRadio) {
+                                noCostRadio.checked = true;
                             }
+
+                            // Update all badges to inactive
+                            updateStatusBadges('');
+
+                            updateHPPColumns(0);
+
+                            // Update form and submit
+                            document.getElementById('modeInput').value = 'accounting';
+                            document.getElementById('appliedCostInput').value = '';
+
+                            // Switch to accounting mode
+                            if (accountingMode) {
+                                accountingMode.checked = true;
+                            }
+
+                            form.submit();
                         });
                     }
 
-                    document.querySelectorAll('.view-detail-btn').forEach(button => {
-                        button.addEventListener('click', function() {
-                            const costId = this.dataset.costId;
-                            const row = document.querySelector(
-                                `#historyTableBody tr:has(input[value="${costId}"])`);
-                            if (row) {
-                                const detailDiv = row.querySelector('.applied-cost-detail');
-                                if (detailDiv) {
-                                    detailDiv.style.display = detailDiv.style.display === 'none' ?
-                                        'block' : 'none';
-                                }
-                            }
-                        });
-                    });
-
+                    // Handle radio button changes for applied cost selection
                     document.querySelectorAll('input[name="appliedCostSelection"]').forEach(radio => {
                         radio.addEventListener('change', function() {
-                            const selectedId = this.value;
-                            if (selectedAppliedCostId) selectedAppliedCostId.value = selectedId;
-                            document.querySelectorAll('#historyTableBody tr').forEach(row => {
-                                const badge = row.querySelector('.status-badge');
-                                const rowRadio = row.querySelector(
-                                    'input[name="appliedCostSelection"]');
-                                if (badge && rowRadio && rowRadio.value === selectedId &&
-                                    rowRadio.checked) {
-                                    badge.textContent = 'Aktif';
-                                    badge.classList.remove('bg-secondary');
-                                    badge.classList.add('bg-success');
-                                } else if (badge) {
-                                    badge.textContent = 'Tidak Aktif';
-                                    badge.classList.remove('bg-success');
-                                    badge.classList.add('bg-secondary');
+                            if (this.checked) {
+                                const selectedId = this.value;
+                                if (selectedAppliedCostId) {
+                                    selectedAppliedCostId.value = selectedId;
                                 }
-                            });
-                            const selectedCost = appliedCostHistory.find(cost => cost.id == selectedId);
-                            if (selectedCost) {
-                                updateHPPColumns(parseFloat(selectedCost.total_nominal || 0));
+                                updateStatusBadges(selectedId);
                             }
                         });
                     });
-
-                    function filterHistory() {
-                        const searchValue = (historySearch ? historySearch.value.trim().toLowerCase() : '');
-                        const dateFilter = (historyDateFilter ? historyDateFilter.value : '');
-                        const rows = document.querySelectorAll('#historyTableBody tr:not([data-date=""])');
-                        let visibleCount = 0;
-
-                        rows.forEach(row => {
-                            const dateStr = row.dataset.date;
-                            const description = (row.dataset.description || '').toLowerCase();
-                            const date = new Date(dateStr);
-                            const now = new Date();
-                            let showRow = true;
-
-                            if (searchValue && !description.includes(searchValue)) {
-                                showRow = false;
-                            }
-
-                            if (dateFilter === 'today') {
-                                showRow = showRow && date.toDateString() === now.toDateString();
-                            } else if (dateFilter === 'week') {
-                                showRow = showRow && date >= new Date(now.setDate(now.getDate() - 7));
-                            } else if (dateFilter === 'month') {
-                                showRow = showRow && date >= new Date(now.setMonth(now.getMonth() - 1));
-                            }
-
-                            row.style.display = showRow ? '' : 'none';
-                            if (showRow) visibleCount++;
-                        });
-
-                        if (historyCount) {
-                            historyCount.textContent = `Total: ${visibleCount} riwayat`;
-                        }
-                    }
                 }
-
-                // Table visibility
-                function updateTableVisibility(filter) {
-                    if (!tableSections || !dropdownButton || !tableFilterInput) return;
-                    tableSections.forEach(section => {
-                        section.classList.toggle('hidden', filter !== 'all' && filter !== section.dataset
-                            .table);
-                    });
-                    applyGlobalFilter();
-                }
-
-                if (tableFilterInput && dropdownButton) {
-                    const initialFilter = tableFilterInput.value || 'all';
-                    updateTableVisibility(initialFilter);
-                    dropdownButton.textContent = {
-                        'all': 'Semua Tabel',
-                        'stocks': 'Tabel Stok',
-                        'transfer_stocks': 'Tabel Transfer Stok',
-                        'used_stocks': 'Tabel Stok Terpakai'
-                    } [initialFilter] || 'Semua Tabel';
-                }
-
-                document.querySelectorAll('.dropdown-item[data-filter]').forEach(item => {
-                    item.addEventListener('click', function(e) {
-                        e.preventDefault();
-                        const filterValue = this.dataset.filter;
-                        if (tableFilterInput) tableFilterInput.value = filterValue;
-                        if (dropdownButton) dropdownButton.textContent = this.textContent;
-                        updateTableVisibility(filterValue);
-                    });
-                });
 
                 // Global Filter
+                const tableSections = document.querySelectorAll('.table-section');
+
                 function applyGlobalFilter() {
                     if (!globalSearch || !searchCount) return;
                     const searchValue = globalSearch.value.trim().toLowerCase();
@@ -1446,74 +1634,118 @@
                     applyGlobalFilter();
                 });
 
-                // Mode switch
+                // Mode switch - FIXED VERSION
                 function updateMode(mode) {
-                    if (!modeIndicator || !tableContainer) return;
+                    console.log('updateMode called with:', mode);
+
+                    if (!modeIndicator || !tableContainer) {
+                        console.warn('Required elements for mode update not found');
+                        return;
+                    }
+
                     const indicatorSpan = modeIndicator.querySelector('span');
+                    if (!indicatorSpan) {
+                        console.warn('Mode indicator span not found');
+                        return;
+                    }
+
                     if (mode === 'accounting') {
                         indicatorSpan.textContent = 'Akuntansi';
                         indicatorSpan.className = 'fw-bold text-primary';
                         tableContainer.classList.remove('management-mode');
-                        document.querySelectorAll('.hpp-column').forEach(col => col.style.display = '');
-                        const emptyRow = document.querySelector('td[colspan="12"]');
-                        if (emptyRow) emptyRow.setAttribute('colspan', '12');
                         updateHPPColumns(0);
                     } else if (mode === 'management') {
                         indicatorSpan.textContent = 'Manajemen';
                         indicatorSpan.className = 'fw-bold text-success';
                         tableContainer.classList.add('management-mode');
-                        document.querySelectorAll('.hpp-column').forEach(col => col.style.display = '');
-                        const emptyRow = document.querySelector('td[colspan="12"]');
-                        if (emptyRow) emptyRow.setAttribute('colspan', '12');
-                        autoSelectFirstCost();
-                    }
-                    localStorage.setItem('stockViewMode', mode);
-                    window.dispatchEvent(new CustomEvent('stockModeChanged', {
-                        detail: {
-                            mode
+
+                        // Only auto-select first cost if no cost is currently selected
+                        if (!currentSelectedCostId && appliedCostHistory && appliedCostHistory.length > 0) {
+                            autoSelectFirstCost();
+                        } else if (currentSelectedCostId) {
+                            // Apply the currently selected cost
+                            const selectedCost = appliedCostHistory.find(cost => cost.id == currentSelectedCostId);
+                            if (selectedCost) {
+                                updateHPPColumns(parseFloat(selectedCost.total_nominal || 0));
+                            }
                         }
-                    }));
+                    }
+
+                    localStorage.setItem('stockViewMode', mode);
+                }
+
+                // FIXED: Mode change event listeners - prevent auto-submit during initialization
+                if (managementMode) {
+                    managementMode.addEventListener('change', function() {
+                        if (this.checked && !isInitializing) {
+                            updateMode('management');
+
+                            // Update hidden inputs
+                            document.getElementById('modeInput').value = 'management';
+
+                            // Only submit if we're not initializing
+                            const startDate = document.getElementById('start_date').value;
+                            const endDate = document.getElementById('end_date').value;
+
+                            // Build URL with current parameters
+                            let url =
+                                `{{ route('stock_page') }}?start_date=${startDate}&end_date=${endDate}&mode=management`;
+
+                            // Add applied_cost_id if one is selected
+                            if (currentSelectedCostId) {
+                                url += `&applied_cost_id=${currentSelectedCostId}`;
+                                document.getElementById('appliedCostInput').value = currentSelectedCostId;
+                            }
+
+                            form.action = url;
+                            form.submit();
+                        }
+                    });
                 }
 
                 if (accountingMode) {
                     accountingMode.addEventListener('change', function() {
-                        if (this.checked) {
+                        if (this.checked && !isInitializing) {
                             updateMode('accounting');
-                            if (form && tableFilterInput) {
-                                form.action = '{{ route('stock_page') }}?start_date=' + document
-                                    .getElementById('start_date').value +
-                                    '&end_date=' + document.getElementById('end_date').value +
-                                    '&table_filter=' + tableFilterInput.value +
-                                    '&mode=accounting';
-                                form.submit();
-                            }
+
+                            // Update hidden inputs
+                            document.getElementById('modeInput').value = 'accounting';
+                            document.getElementById('appliedCostInput').value = '';
+
+                            const startDate = document.getElementById('start_date').value;
+                            const endDate = document.getElementById('end_date').value;
+
+                            form.action =
+                                `{{ route('stock_page') }}?start_date=${startDate}&end_date=${endDate}&mode=accounting`;
+                            form.submit();
                         }
                     });
                 }
 
-                if (managementMode) {
-                    managementMode.addEventListener('change', function() {
-                        if (this.checked) {
-                            updateMode('management');
-                        }
-                    });
-                }
+                // Initialize mode based on current state
+                const currentMode = '{{ $currentMode ?? 'accounting' }}';
 
-                const savedMode = localStorage.getItem('stockViewMode') || 'accounting';
-                if (savedMode === 'management' && managementMode) {
+                if (currentMode === 'management' && managementMode) {
                     managementMode.checked = true;
                     updateMode('management');
+
+                    // Update status badges based on current selection
+                    if (currentSelectedCostId) {
+                        updateStatusBadges(currentSelectedCostId);
+                        const selectedCost = appliedCostHistory.find(cost => cost.id == currentSelectedCostId);
+                        if (selectedCost) {
+                            updateHPPColumns(parseFloat(selectedCost.total_nominal || 0));
+                        }
+                    }
                 } else if (accountingMode) {
                     accountingMode.checked = true;
                     updateMode('accounting');
                 }
 
-                if (managementMode && managementMode.checked && currentSelectedCostId) {
-                    const selectedCost = appliedCostHistory.find(cost => cost.id == currentSelectedCostId);
-                    if (selectedCost) {
-                        updateHPPColumns(parseFloat(selectedCost.total_nominal || 0));
-                    }
-                }
+                // Set initialization flag to false after initial setup
+                setTimeout(() => {
+                    isInitializing = false;
+                }, 100);
 
                 function debounce(func, wait) {
                     let timeout;

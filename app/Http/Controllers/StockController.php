@@ -33,57 +33,85 @@ class StockController extends Controller
     public function stock_page(Request $request)
     {
         try {
-            // Get request data
             $requestData = $request->all();
 
-            // Check if applied cost should be applied (management mode)
-            $mode = $request->get('mode', 'accounting');
+            // Better mode detection - check both query param and form data
+            $mode = $request->input('mode', 'accounting');
+
+            // Debug logging to see what's being received
+            Log::info('Mode detection debug', [
+                'request_mode' => $request->input('mode'),
+                'query_mode' => $request->query('mode'),
+                'all_params' => $request->all(),
+                'final_mode' => $mode
+            ]);
+
             $appliedCostId = $request->get('applied_cost_id', null);
 
-            // Add mode and applied cost to request data
-            $requestData['mode'] = $mode;
-            $requestData['applied_cost_id'] = $appliedCostId;
+            // Verify applied cost if provided
+            if ($mode === 'management' && $appliedCostId) {
+                $query = AppliedCost::where('id', $appliedCostId);
+                if (Auth::guard('master')->check()) {
+                    $query->where('master_id', Auth::guard('master')->id());
+                }
+                if (!$query->exists()) {
+                    Log::warning('Applied cost not found', ['applied_cost_id' => $appliedCostId]);
+                    $appliedCostId = null;
+                    $requestData['applied_cost_id'] = null;
+                }
+            }
 
-            // Use the enhanced method if applied cost is requested
+            // If management mode is selected but no applied cost is found, auto-select first available
+            if ($mode === 'management' && !$appliedCostId) {
+                $user = Auth::guard('master')->check() ? Auth::guard('master')->user() : Auth::user();
+                $masterId = $user ? $user->id : null;
+
+                $firstAppliedCost = AppliedCost::where('master_id', $masterId)
+                    ->orderBy('created_at', 'desc')
+                    ->first();
+
+                if ($firstAppliedCost) {
+                    $appliedCostId = $firstAppliedCost->id;
+                    $requestData['applied_cost_id'] = $appliedCostId;
+                    Log::info('Auto-selected first applied cost', ['applied_cost_id' => $appliedCostId]);
+                } else {
+                    Log::warning('Management mode selected but no applied costs available');
+                    // Could either fall back to accounting mode or show a message
+                    $mode = 'accounting';
+                }
+            }
+
+            // Prepare stock data
             if ($mode === 'management' && $appliedCostId) {
                 $data = $this->stockService->prepareStockDataWithAppliedCost($requestData);
             } else {
                 $data = $this->stockService->prepareStockData($requestData);
             }
 
-            // Add mode and applied cost info to view data
             $data['currentMode'] = $mode;
             $data['selectedAppliedCostId'] = $appliedCostId;
 
-            // Get applied cost history for the current master user with pagination
-            $masterId = Auth::guard('master')->id();
-            if ($masterId) {
-                $data['appliedCostHistory'] = AppliedCost::with('details')
-                    ->where('master_id', $masterId)
-                    ->orderBy('created_at', 'desc')
-                    ->paginate(10); // Paginasi untuk performa
-                $data['hasExistingAppliedCost'] = AppliedCost::where('master_id', $masterId)->exists();
-            } else {
-                // Untuk admin, izinkan akses ke applied cost history tanpa filter master_id
-                $data['appliedCostHistory'] = AppliedCost::with('details')
-                    ->orderBy('created_at', 'desc')
-                    ->paginate(10); // Paginasi untuk performa
-                $data['hasExistingAppliedCost'] = AppliedCost::exists();
-            }
+            // Get applied cost history
+            $user = Auth::guard('master')->check() ? Auth::guard('master')->user() : Auth::user();
+            $masterId = $user ? $user->id : null;
+            $data['appliedCostHistory'] = AppliedCost::with('details')
+                ->where('master_id', $masterId)
+                ->orderBy('created_at', 'desc')
+                ->paginate(10);
+            $data['edit_cost_id'] = $request->input('edit_cost_id', null);
+            $data['hasExistingAppliedCost'] = AppliedCost::where('master_id', $masterId)->exists();
 
-            // Tambahkan pengecekan untuk stockData
             if (empty($data['stockData'])) {
                 $data['stockData'] = [];
                 Log::warning('No stock data available', ['request' => $requestData]);
             }
 
-            // Log data yang dikirim ke view untuk debugging
             Log::info('Stock page data prepared', [
                 'mode' => $mode,
                 'appliedCostId' => $appliedCostId,
                 'stockDataCount' => count($data['stockData']),
                 'appliedCostHistoryCount' => $data['appliedCostHistory']->count(),
-                'userType' => $masterId ? 'master' : 'admin',
+                'userType' => Auth::guard('master')->check() ? 'master' : 'admin',
             ]);
 
             return view('stock.stock_page', $data);
@@ -109,10 +137,8 @@ class StockController extends Controller
             // Verifikasi applied cost
             $query = AppliedCost::where('id', $appliedCostId);
             if ($masterId) {
-                // Untuk master, batasi ke applied cost milik mereka
                 $query->where('master_id', $masterId);
             }
-            // Untuk admin, izinkan akses ke semua applied cost
             $appliedCost = $query->first();
 
             if (!$appliedCost) {
