@@ -421,6 +421,41 @@
             transform: translate(-50%, -50%);
             z-index: 1000;
         }
+
+        /* Card Gradient Headers */
+        .card-header.bg-success {
+            background: linear-gradient(45deg, #28a745, #1e7e34) !important;
+        }
+
+        .card-header.bg-danger {
+            background: linear-gradient(45deg, #dc3545, #a71d2a) !important;
+        }
+
+        .card-header.hpp-header {
+            background: linear-gradient(90deg, #343a40, #212529) !important;
+            color: white;
+        }
+
+        /* Gradient for Inner Cards */
+        .card.bg-info {
+            background: linear-gradient(45deg, #17a2b8, #117a8b) !important;
+            color: white;
+        }
+
+        .card.bg-success {
+            background: linear-gradient(45deg, #28a745, #1e7e34) !important;
+            color: white;
+        }
+
+        .card.bg-warning {
+            background: linear-gradient(45deg, #ffc107, #e0a800) !important;
+            color: white;
+        }
+
+        .card.bg-danger {
+            background: linear-gradient(45deg, #dc3545, #a71d2a) !important;
+            color: white;
+        }
     </style>
 
     <!-- Notifikasi -->
@@ -659,7 +694,7 @@
                                     <!-- HPP Calculation Breakdown -->
                                     <div class="mb-4">
                                         <div class="card border-primary">
-                                            <div class="card-header bg-primary text-white">
+                                            <div class="card-header hpp-header">
                                                 <h6 class="mb-0"><i class="fas fa-calculator me-2"></i>Rincian
                                                     Perhitungan HPP</h6>
                                             </div>
@@ -843,7 +878,7 @@
                                         <div class="row align-items-end">
                                             <div class="col-md-6">
                                                 <label for="modal_filter_{{ $tableName }}_{{ $stock->id }}"
-                                                    class="form-label required">Tampilkan Transaksi</label>
+                                                    class="form-label required">Tanggal Transaksi</label>
                                                 <select id="modal_filter_{{ $tableName }}_{{ $stock->id }}"
                                                     class="form-select modal-filter" data-stock-id="{{ $stock->id }}"
                                                     data-bs-toggle="tooltip"
