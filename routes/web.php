@@ -59,11 +59,6 @@ Route::middleware(['auth:admin,master'])->group(function () {
     Route::prefix('stock')->group(function () {
         Route::get('/', [StockController::class, 'stock_page'])->name('stock_page');
         Route::get('/export', [StockController::class, 'export'])->name('stock.export');
-        Route::get('/transfer/print', [StockController::class, 'printTransferForm'])->name('stock.transfer.print');
-        Route::post('/recipe/store', [StockController::class, 'storeRecipe'])->name('recipe.store');
-        Route::get('/recipe/{id}/ingredients', [StockController::class, 'getRecipeIngredients'])->name('recipe.ingredients');
-        Route::put('/recipe/{id}', [StockController::class, 'updateRecipe'])->name('recipe.update');
-        Route::delete('/recipe/{id}', [StockController::class, 'deleteRecipe'])->name('recipe.delete');
     });
 
     // Applied Cost Routes
@@ -122,7 +117,6 @@ Route::middleware(['auth:admin,master'])->group(function () {
     // Company Routes
     Route::prefix('company')->group(function () {
         Route::get('/', [CompanyController::class, 'company_page'])->name('company_page');
-        Route::get('/edit', [CompanyController::class, 'edit'])->name('company.edit');
         Route::post('/update', [CompanyController::class, 'update'])->name('company.update');
     });
 });

@@ -9,7 +9,7 @@
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
                     aria-label="Tutup"></button>
             </div>
-            <form id="voucherForm" method="POST" action="/voucher_form" enctype="multipart/form-data">
+            <form id="voucherForm" method="POST" action="{{ route('voucher_form') }}" enctype="multipart/form-data">
                 @csrf
                 <div class="modal-body">
                     <div class="container-fluid">

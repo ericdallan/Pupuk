@@ -382,6 +382,45 @@
             box-shadow: 0 5px 15px rgba(220, 53, 69, 0.3);
             background: linear-gradient(45deg, #c82333, #8c1a24);
         }
+
+        .modal-xl {
+            max-width: 90%;
+        }
+
+        .transaction-row {
+            transition: all 0.3s ease;
+        }
+
+        .transaction-row:hover {
+            background-color: #f8f9fa;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .pagination-sm .page-link {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.875rem;
+        }
+
+        .badge {
+            font-size: 0.75rem;
+        }
+
+        .card {
+            transition: transform 0.2s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+        }
+
+        .loading-indicator {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1000;
+        }
     </style>
 
     <!-- Notifikasi -->
@@ -602,38 +641,198 @@
                 @if ($stock->id)
                     <div class="modal fade" id="detailModal_{{ $tableName }}_{{ $stock->id }}" tabindex="-1"
                         aria-labelledby="detailModalLabel_{{ $tableName }}_{{ $stock->id }}" aria-hidden="true">
-                        <div class="modal-dialog modal-lg">
+                        <div class="modal-dialog modal-xl">
                             <div class="modal-content" data-table-name="{{ $tableName }}">
                                 <div class="modal-header">
                                     <h5 class="modal-title"
                                         id="detailModalLabel_{{ $tableName }}_{{ $stock->id }}">
                                         Detail Transaksi untuk {{ htmlspecialchars($stock->item ?? 'Unknown Item') }}
+                                        @if ($stock->size)
+                                            - Size: {{ $stock->size }}
+                                        @endif
                                         ({{ $tableName }})
                                     </h5>
                                     <button type="button" class="btn-close" data-bs-dismiss="modal"
                                         aria-label="Close"></button>
                                 </div>
                                 <div class="modal-body">
+                                    <!-- HPP Calculation Breakdown -->
+                                    <div class="mb-4">
+                                        <div class="card border-primary">
+                                            <div class="card-header bg-primary text-white">
+                                                <h6 class="mb-0"><i class="fas fa-calculator me-2"></i>Rincian
+                                                    Perhitungan HPP</h6>
+                                            </div>
+                                            <div class="card-body">
+                                                <div class="row">
+                                                    <div class="col-md-3">
+                                                        <div class="card bg-info text-white h-100">
+                                                            <div class="card-body text-center">
+                                                                <h6 class="card-title">HPP Awal</h6>
+                                                                <p class="card-text fs-5 fw-bold">
+                                                                    {{ number_format($stock->opening_hpp ?? 0, 2, ',', '.') }}
+                                                                </p>
+                                                                <small>Qty: {{ $stock->opening_qty ?? 0 }}</small>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <div class="card bg-success text-white h-100">
+                                                            <div class="card-body text-center">
+                                                                <h6 class="card-title">HPP Masuk</h6>
+                                                                <p class="card-text fs-5 fw-bold">
+                                                                    {{ number_format($stock->incoming_hpp ?? 0, 2, ',', '.') }}
+                                                                </p>
+                                                                <small>Qty: {{ $stock->incoming_qty ?? 0 }}</small>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <div class="card bg-warning text-white h-100">
+                                                            <div class="card-body text-center">
+                                                                <h6 class="card-title">HPP Keluar</h6>
+                                                                <p class="card-text fs-5 fw-bold">
+                                                                    {{ number_format($stock->outgoing_hpp ?? 0, 2, ',', '.') }}
+                                                                </p>
+                                                                <small>Qty: {{ $stock->outgoing_qty ?? 0 }}</small>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <div class="card bg-danger text-white h-100">
+                                                            <div class="card-body text-center">
+                                                                <h6 class="card-title">HPP Akhir</h6>
+                                                                <p class="card-text fs-5 fw-bold">
+                                                                    {{ number_format($stock->final_hpp ?? 0, 2, ',', '.') }}
+                                                                </p>
+                                                                <small>Qty: {{ $stock->final_stock_qty ?? 0 }}</small>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- HPP Calculation Formula -->
+                                                <div class="mt-3 p-3 bg-light rounded">
+                                                    <small class="text-muted">
+                                                        <strong>Rumus Perhitungan:</strong><br>
+                                                        HPP Akhir = ((HPP Awal × Qty Awal) + (HPP Masuk × Qty Masuk)) ÷ (Qty
+                                                        Awal + Qty Masuk)
+                                                    </small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
                                     <!-- Summary Section -->
                                     @if (isset($stock->transactions) && !empty($stock->transactions))
                                         <div class="mb-4 p-3 bg-light rounded shadow-sm">
-                                            <h6 class="fw-bold">Ringkasan Transaksi</h6>
+                                            <h6 class="fw-bold"><i class="fas fa-chart-line me-2"></i>Ringkasan Transaksi
+                                            </h6>
                                             <div class="row">
-                                                <div class="col-md-4">
+                                                <div class="col-md-3">
                                                     <small class="text-muted">Total Kuantitas</small>
-                                                    <p class="mb-0 fw-bold">
+                                                    <p class="mb-0 fw-bold text-primary">
                                                         {{ collect($stock->transactions)->sum('quantity') ?? (collect($stock->transactions)->sum('transaction_quantity') ?? 0) }}
                                                     </p>
                                                 </div>
-                                                <div class="col-md-4">
+                                                <div class="col-md-3">
                                                     <small class="text-muted">Total Nominal</small>
-                                                    <p class="mb-0 fw-bold">
+                                                    <p class="mb-0 fw-bold text-success">
+                                                        Rp
                                                         {{ number_format(collect($stock->transactions)->sum('nominal') ?? 0, 2, ',', '.') }}
                                                     </p>
                                                 </div>
-                                                <div class="col-md-4">
+                                                <div class="col-md-3">
                                                     <small class="text-muted">Jumlah Transaksi</small>
-                                                    <p class="mb-0 fw-bold">{{ count($stock->transactions) }}</p>
+                                                    <p class="mb-0 fw-bold text-info">{{ count($stock->transactions) }}
+                                                    </p>
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <small class="text-muted">Rata-rata HPP</small>
+                                                    <p class="mb-0 fw-bold text-warning">
+                                                        Rp {{ number_format($stock->average_pb_hpp ?? 0, 2, ',', '.') }}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    @endif
+
+                                    <!-- Transaction Type Summary -->
+                                    @if (isset($stock->transactions) && !empty($stock->transactions))
+                                        @php
+                                            $transactions = collect($stock->transactions);
+                                            $pembelianTypes = ['PB', 'PYB', 'RPJ'];
+                                            $penjualanTypes = ['PJ', 'PYK', 'RPB'];
+
+                                            $pembelianTransactions = $transactions->whereIn(
+                                                'voucher_type',
+                                                $pembelianTypes,
+                                            );
+                                            $penjualanTransactions = $transactions->whereIn(
+                                                'voucher_type',
+                                                $penjualanTypes,
+                                            );
+                                        @endphp
+
+                                        <div class="mb-4">
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <div class="card border-success">
+                                                        <div class="card-header bg-success text-white">
+                                                            <h6 class="mb-0"><i
+                                                                    class="fas fa-arrow-down me-2"></i>Transaksi Masuk</h6>
+                                                        </div>
+                                                        <div class="card-body">
+                                                            <div class="row">
+                                                                <div class="col-6">
+                                                                    <small class="text-muted">Total Qty</small>
+                                                                    <p class="fw-bold text-success mb-0">
+                                                                        {{ $pembelianTransactions->sum('quantity') }}
+                                                                    </p>
+                                                                </div>
+                                                                <div class="col-6">
+                                                                    <small class="text-muted">Total Nominal</small>
+                                                                    <p class="fw-bold text-success mb-0">
+                                                                        Rp
+                                                                        {{ number_format($pembelianTransactions->sum('nominal'), 2, ',', '.') }}
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+                                                            <small class="text-muted">
+                                                                {{ $pembelianTransactions->count() }} transaksi
+                                                                (PB: Pembelian, PYB: Penyesuaian +, RPJ: Retur Penjualan)
+                                                            </small>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <div class="card border-danger">
+                                                        <div class="card-header bg-danger text-white">
+                                                            <h6 class="mb-0"><i
+                                                                    class="fas fa-arrow-up me-2"></i>Transaksi Keluar</h6>
+                                                        </div>
+                                                        <div class="card-body">
+                                                            <div class="row">
+                                                                <div class="col-6">
+                                                                    <small class="text-muted">Total Qty</small>
+                                                                    <p class="fw-bold text-danger mb-0">
+                                                                        {{ $penjualanTransactions->sum('quantity') }}
+                                                                    </p>
+                                                                </div>
+                                                                <div class="col-6">
+                                                                    <small class="text-muted">Total Nominal</small>
+                                                                    <p class="fw-bold text-danger mb-0">
+                                                                        Rp
+                                                                        {{ number_format($penjualanTransactions->sum('nominal'), 2, ',', '.') }}
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+                                                            <small class="text-muted">
+                                                                {{ $penjualanTransactions->count() }} transaksi
+                                                                (PJ: Penjualan, PYK: Penyesuaian -, RPB: Retur Pembelian)
+                                                            </small>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -641,25 +840,40 @@
 
                                     <!-- Filter Section -->
                                     <div class="mb-3">
-                                        <label for="modal_filter_{{ $tableName }}_{{ $stock->id }}"
-                                            class="form-label required">Tampilkan Transaksi</label>
-                                        <select id="modal_filter_{{ $tableName }}_{{ $stock->id }}"
-                                            class="form-select modal-filter" data-stock-id="{{ $stock->id }}"
-                                            data-bs-toggle="tooltip"
-                                            title="Pilih rentang waktu untuk menampilkan transaksi">
-                                            <option value="all"
-                                                {{ request('filter', 'all') == 'all' ? 'selected' : '' }}>
-                                                Semua Transaksi
-                                            </option>
-                                            <option value="7_days"
-                                                {{ request('filter', 'all') == '7_days' ? 'selected' : '' }}>
-                                                7 Hari Terakhir
-                                            </option>
-                                            <option value="1_month"
-                                                {{ request('filter', 'all') == '1_month' ? 'selected' : '' }}>
-                                                1 Bulan Terakhir
-                                            </option>
-                                        </select>
+                                        <div class="row align-items-end">
+                                            <div class="col-md-6">
+                                                <label for="modal_filter_{{ $tableName }}_{{ $stock->id }}"
+                                                    class="form-label required">Tampilkan Transaksi</label>
+                                                <select id="modal_filter_{{ $tableName }}_{{ $stock->id }}"
+                                                    class="form-select modal-filter" data-stock-id="{{ $stock->id }}"
+                                                    data-bs-toggle="tooltip"
+                                                    title="Pilih rentang waktu untuk menampilkan transaksi">
+                                                    <option value="all"
+                                                        {{ request('filter', 'all') == 'all' ? 'selected' : '' }}>
+                                                        Semua Transaksi
+                                                    </option>
+                                                    <option value="7_days"
+                                                        {{ request('filter', 'all') == '7_days' ? 'selected' : '' }}>
+                                                        7 Hari Terakhir
+                                                    </option>
+                                                    <option value="1_month"
+                                                        {{ request('filter', 'all') == '1_month' ? 'selected' : '' }}>
+                                                        1 Bulan Terakhir
+                                                    </option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label for="modal_type_filter_{{ $tableName }}_{{ $stock->id }}"
+                                                    class="form-label">Filter Tipe Transaksi</label>
+                                                <select id="modal_type_filter_{{ $tableName }}_{{ $stock->id }}"
+                                                    class="form-select modal-type-filter"
+                                                    data-stock-id="{{ $stock->id }}">
+                                                    <option value="all">Semua Tipe</option>
+                                                    <option value="masuk">Transaksi Masuk</option>
+                                                    <option value="keluar">Transaksi Keluar</option>
+                                                </select>
+                                            </div>
+                                        </div>
                                     </div>
 
                                     <!-- Transaction Table -->
@@ -667,85 +881,131 @@
                                         <table class="table table-striped table-bordered table-hover text-center">
                                             <thead class="table-dark">
                                                 <tr>
-                                                    <th data-bs-toggle="tooltip" title="Nomor urut transaksi">No
-                                                    </th>
+                                                    <th data-bs-toggle="tooltip" title="Nomor urut transaksi">No</th>
                                                     <th data-bs-toggle="tooltip" title="Nama item yang ditransaksikan">
                                                         Nama Item</th>
-                                                    <th data-bs-toggle="tooltip" title="Nomor voucher terkait">No
-                                                        Voucher</th>
-                                                    <th data-bs-toggle="tooltip"
-                                                        title="Jenis transaksi (Penjualan, Pembelian, dll)">Tipe
-                                                        Transaksi</th>
+                                                    <th data-bs-toggle="tooltip" title="Nomor voucher terkait">No Voucher
+                                                    </th>
+                                                    <th data-bs-toggle="tooltip" title="Jenis transaksi">Tipe Transaksi
+                                                    </th>
+                                                    <th data-bs-toggle="tooltip" title="Kategori transaksi">Kategori</th>
                                                     <th data-bs-toggle="tooltip" title="Jumlah item yang ditransaksikan">
                                                         Kuantitas</th>
-                                                    <th data-bs-toggle="tooltip" title="Nilai nominal transaksi">
-                                                        Nominal</th>
-                                                    <th data-bs-toggle="tooltip" title="Tanggal transaksi">Tanggal
+                                                    <th data-bs-toggle="tooltip" title="Nilai nominal transaksi">Nominal
                                                     </th>
+                                                    <th data-bs-toggle="tooltip" title="Tanggal transaksi">Tanggal</th>
                                                 </tr>
                                             </thead>
-                                            <tbody>
+                                            <tbody id="modal_transactions_tbody_{{ $tableName }}_{{ $stock->id }}">
                                                 @if (isset($stock->transactions) && !empty($stock->transactions))
-                                                    @foreach ($stock->transactions as $transaction)
-                                                        @if (!str_starts_with($transaction->description ?? '', 'HPP '))
-                                                            <tr data-transaction-date="{{ $transaction->created_at }}">
-                                                                <td>{{ $loop->iteration }}</td>
-                                                                <td>{{ htmlspecialchars($transaction->description ?? 'No Description') }}
-                                                                </td>
-                                                                <td>
-                                                                    @if ($transaction->voucher_id && $transaction->voucher_number !== 'N/A')
-                                                                        <a href="{{ route('voucher_detail', $transaction->voucher_id) }}"
-                                                                            class="text-decoration-none text-primary"
-                                                                            data-bs-toggle="tooltip"
-                                                                            title="Lihat detail voucher">
-                                                                            {{ htmlspecialchars($transaction->voucher_number) }}
-                                                                        </a>
-                                                                    @else
-                                                                        {{ htmlspecialchars($transaction->voucher_number ?? 'No Voucher') }}
-                                                                    @endif
-                                                                </td>
-                                                                <td>
-                                                                    @switch($transaction->voucher_type)
-                                                                        @case('PJ')
-                                                                            Penjualan
-                                                                        @break
+                                                    @php
+                                                        $filteredTransactions = collect($stock->transactions)->filter(
+                                                            function ($transaction) {
+                                                                return !str_starts_with(
+                                                                    $transaction->description ?? '',
+                                                                    'HPP ',
+                                                                );
+                                                            },
+                                                        );
+                                                    @endphp
+                                                    @foreach ($filteredTransactions as $transaction)
+                                                        @php
+                                                            $pembelianTypes = ['PB', 'PYB', 'RPJ'];
+                                                            $penjualanTypes = ['PJ', 'PYK', 'RPB'];
+                                                            $isIncoming = in_array(
+                                                                $transaction->voucher_type,
+                                                                $pembelianTypes,
+                                                            );
+                                                            $categoryClass = $isIncoming ? 'success' : 'danger';
+                                                            $categoryText = $isIncoming ? 'Masuk' : 'Keluar';
+                                                            $categoryIcon = $isIncoming ? 'arrow-down' : 'arrow-up';
+                                                        @endphp
+                                                        <tr data-transaction-date="{{ $transaction->created_at }}"
+                                                            data-transaction-type="{{ $isIncoming ? 'masuk' : 'keluar' }}"
+                                                            class="transaction-row">
+                                                            <td>{{ $loop->iteration }}</td>
+                                                            <td>{{ htmlspecialchars($transaction->description ?? 'No Description') }}
+                                                            </td>
+                                                            <td>
+                                                                @if ($transaction->voucher_id && $transaction->voucher_number !== 'N/A')
+                                                                    <a href="{{ route('voucher_detail', $transaction->voucher_id) }}"
+                                                                        class="text-decoration-none text-primary"
+                                                                        data-bs-toggle="tooltip"
+                                                                        title="Lihat detail voucher">
+                                                                        {{ htmlspecialchars($transaction->voucher_number) }}
+                                                                    </a>
+                                                                @else
+                                                                    {{ htmlspecialchars($transaction->voucher_number ?? 'No Voucher') }}
+                                                                @endif
+                                                            </td>
+                                                            <td>
+                                                                @switch($transaction->voucher_type)
+                                                                    @case('PJ')
+                                                                        Penjualan
+                                                                    @break
 
-                                                                        @case('PB')
-                                                                            Pembelian
-                                                                        @break
+                                                                    @case('PB')
+                                                                        Pembelian
+                                                                    @break
 
-                                                                        @case('PYK')
-                                                                            Penyesuaian Berkurang
-                                                                        @break
+                                                                    @case('PYK')
+                                                                        Penyesuaian Berkurang
+                                                                    @break
 
-                                                                        @case('PYB')
-                                                                            Penyesuaian Bertambah
-                                                                        @break
+                                                                    @case('PYB')
+                                                                        Penyesuaian Bertambah
+                                                                    @break
 
-                                                                        @case('RPB')
-                                                                            Retur Pembelian
-                                                                        @break
+                                                                    @case('RPB')
+                                                                        Retur Pembelian
+                                                                    @break
 
-                                                                        @case('RPJ')
-                                                                            Retur Penjualan
-                                                                        @break
+                                                                    @case('RPJ')
+                                                                        Retur Penjualan
+                                                                    @break
 
-                                                                        @default
-                                                                            {{ htmlspecialchars($transaction->voucher_type ?? 'Unknown') }}
-                                                                    @endswitch
-                                                                </td>
-                                                                <td>{{ $transaction->quantity ?? ($transaction->transaction_quantity ?? 0) }}
-                                                                </td>
-                                                                <td>{{ number_format($transaction->nominal ?? 0, 2, ',', '.') }}
-                                                                </td>
-                                                                <td>{{ \Carbon\Carbon::parse($transaction->created_at ?? now())->format('d-m-Y') }}
-                                                                </td>
-                                                            </tr>
-                                                        @endif
+                                                                    @default
+                                                                        {{ htmlspecialchars($transaction->voucher_type ?? 'Unknown') }}
+                                                                @endswitch
+                                                            </td>
+                                                            <td>
+                                                                <span
+                                                                    class="badge bg-{{ $categoryClass }} d-inline-flex align-items-center">
+                                                                    <i class="fas fa-{{ $categoryIcon }} me-1"></i>
+                                                                    {{ $categoryText }}
+                                                                </span>
+                                                            </td>
+                                                            <td class="fw-bold">
+                                                                {{ $transaction->quantity ?? ($transaction->transaction_quantity ?? 0) }}
+                                                            </td>
+                                                            <td class="fw-bold text-{{ $categoryClass }}">
+                                                                Rp
+                                                                {{ number_format($transaction->nominal ?? 0, 2, ',', '.') }}
+                                                            </td>
+                                                            <td>@php
+                                                                $date = \Carbon\Carbon::parse(
+                                                                    $transaction->created_at ?? now(),
+                                                                );
+                                                                $dayName = $date->locale('id')->dayName;
+                                                                $monthName = $date->locale('id')->monthName;
+                                                                $formattedDate =
+                                                                    $dayName .
+                                                                    ', ' .
+                                                                    $date->day .
+                                                                    ' ' .
+                                                                    $monthName .
+                                                                    ' ' .
+                                                                    $date->year .
+                                                                    ' ' .
+                                                                    $date->format('H:i');
+                                                            @endphp
+                                                                {{ $formattedDate }}
+                                                            </td>
+                                                        </tr>
                                                     @endforeach
                                                 @else
                                                     <tr>
-                                                        <td colspan="7" class="text-center">
+                                                        <td colspan="8" class="text-center">
                                                             <div class="alert alert-info mb-0">Tidak ada transaksi terkait
                                                                 untuk barang ini.</div>
                                                         </td>
@@ -754,6 +1014,29 @@
                                             </tbody>
                                         </table>
                                     </div>
+
+                                    <!-- Pagination Controls -->
+                                    <div class="d-flex justify-content-between align-items-center mt-3">
+                                        <div class="pagination-info">
+                                            <small class="text-muted">
+                                                Menampilkan <span
+                                                    id="current_page_{{ $tableName }}_{{ $stock->id }}">1</span>
+                                                dari <span
+                                                    id="total_pages_{{ $tableName }}_{{ $stock->id }}">1</span>
+                                                halaman
+                                                (<span
+                                                    id="total_records_{{ $tableName }}_{{ $stock->id }}">0</span>
+                                                total transaksi)
+                                            </small>
+                                        </div>
+                                        <nav>
+                                            <ul class="pagination pagination-sm mb-0"
+                                                id="modal_pagination_{{ $tableName }}_{{ $stock->id }}">
+                                                <!-- Pagination will be generated by JavaScript -->
+                                            </ul>
+                                        </nav>
+                                    </div>
+
                                     <!-- Loading Indicator -->
                                     <div class="loading-indicator d-none text-center my-3">
                                         <div class="spinner-border text-primary" role="status">
@@ -764,10 +1047,173 @@
                                 <div class="modal-footer">
                                     <button type="button" class="btn cancel-button" data-bs-dismiss="modal"
                                         data-bs-toggle="tooltip" title="Tutup jendela">Tutup</button>
+                                    <button type="button" class="btn btn-primary"
+                                        onclick="exportModalTransactions('{{ $tableName }}', {{ $stock->id }})"
+                                        data-bs-toggle="tooltip" title="Export data transaksi ke Excel">
+                                        <i class="fas fa-download me-1"></i>Export
+                                    </button>
                                 </div>
                             </div>
                         </div>
                     </div>
+
+                    <!-- JavaScript untuk Pagination dan Filtering -->
+                    <script>
+                        document.addEventListener('DOMContentLoaded', function() {
+                            const modalId = 'detailModal_{{ $tableName }}_{{ $stock->id }}';
+                            const stockId = '{{ $stock->id }}';
+                            const tableName = '{{ $tableName }}';
+
+                            let currentPage = 1;
+                            const itemsPerPage = 10;
+                            let allTransactions = [];
+                            let filteredTransactions = [];
+
+                            // Initialize transactions data
+                            function initializeTransactions() {
+                                const tbody = document.querySelector(`#modal_transactions_tbody_${tableName}_${stockId}`);
+                                const rows = tbody.querySelectorAll('.transaction-row');
+
+                                allTransactions = Array.from(rows).map(row => ({
+                                    element: row,
+                                    date: row.dataset.transactionDate,
+                                    type: row.dataset.transactionType
+                                }));
+
+                                filteredTransactions = [...allTransactions];
+                                updatePagination();
+                                showPage(1);
+                            }
+
+                            // Filter functions
+                            function applyFilters() {
+                                const dateFilter = document.querySelector(`#modal_filter_${tableName}_${stockId}`).value;
+                                const typeFilter = document.querySelector(`#modal_type_filter_${tableName}_${stockId}`).value;
+
+                                filteredTransactions = allTransactions.filter(transaction => {
+                                    let passDateFilter = true;
+                                    let passTypeFilter = true;
+
+                                    // Date filter
+                                    if (dateFilter !== 'all') {
+                                        const transactionDate = new Date(transaction.date);
+                                        const now = new Date();
+
+                                        switch (dateFilter) {
+                                            case '7_days':
+                                                const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                                                passDateFilter = transactionDate >= sevenDaysAgo;
+                                                break;
+                                            case '1_month':
+                                                const oneMonthAgo = new Date(now.getFullYear(), now.getMonth() - 1, now
+                                                    .getDate());
+                                                passDateFilter = transactionDate >= oneMonthAgo;
+                                                break;
+                                        }
+                                    }
+
+                                    // Type filter
+                                    if (typeFilter !== 'all') {
+                                        passTypeFilter = transaction.type === typeFilter;
+                                    }
+
+                                    return passDateFilter && passTypeFilter;
+                                });
+
+                                updatePagination();
+                                showPage(1);
+                            }
+
+                            // Pagination functions
+                            function updatePagination() {
+                                const totalPages = Math.ceil(filteredTransactions.length / itemsPerPage);
+                                document.querySelector(`#total_pages_${tableName}_${stockId}`).textContent = totalPages;
+                                document.querySelector(`#total_records_${tableName}_${stockId}`).textContent = filteredTransactions
+                                    .length;
+
+                                generatePaginationButtons(totalPages);
+                            }
+
+                            function generatePaginationButtons(totalPages) {
+                                const pagination = document.querySelector(`#modal_pagination_${tableName}_${stockId}`);
+                                pagination.innerHTML = '';
+
+                                // Previous button
+                                const prevLi = document.createElement('li');
+                                prevLi.className = `page-item ${currentPage === 1 ? 'disabled' : ''}`;
+                                prevLi.innerHTML =
+                                    `<a class="page-link" href="#" onclick="changePage(${currentPage - 1})">Previous</a>`;
+                                pagination.appendChild(prevLi);
+
+                                // Page numbers
+                                const startPage = Math.max(1, currentPage - 2);
+                                const endPage = Math.min(totalPages, currentPage + 2);
+
+                                for (let i = startPage; i <= endPage; i++) {
+                                    const li = document.createElement('li');
+                                    li.className = `page-item ${i === currentPage ? 'active' : ''}`;
+                                    li.innerHTML = `<a class="page-link" href="#" onclick="changePage(${i})">${i}</a>`;
+                                    pagination.appendChild(li);
+                                }
+
+                                // Next button
+                                const nextLi = document.createElement('li');
+                                nextLi.className = `page-item ${currentPage === totalPages ? 'disabled' : ''}`;
+                                nextLi.innerHTML =
+                                    `<a class="page-link" href="#" onclick="changePage(${currentPage + 1})">Next</a>`;
+                                pagination.appendChild(nextLi);
+                            }
+
+                            function showPage(page) {
+                                currentPage = page;
+                                document.querySelector(`#current_page_${tableName}_${stockId}`).textContent = page;
+
+                                // Hide all transactions
+                                allTransactions.forEach(transaction => {
+                                    transaction.element.style.display = 'none';
+                                });
+
+                                // Show transactions for current page
+                                const startIndex = (page - 1) * itemsPerPage;
+                                const endIndex = startIndex + itemsPerPage;
+                                const transactionsToShow = filteredTransactions.slice(startIndex, endIndex);
+
+                                transactionsToShow.forEach((transaction, index) => {
+                                    transaction.element.style.display = '';
+                                    // Update row numbers
+                                    const numberCell = transaction.element.querySelector('td:first-child');
+                                    numberCell.textContent = startIndex + index + 1;
+                                });
+
+                                updatePagination();
+                            }
+
+                            // Global function for page changes
+                            window.changePage = function(page) {
+                                const totalPages = Math.ceil(filteredTransactions.length / itemsPerPage);
+                                if (page >= 1 && page <= totalPages) {
+                                    showPage(page);
+                                }
+                            };
+
+                            // Event listeners
+                            document.querySelector(`#modal_filter_${tableName}_${stockId}`).addEventListener('change',
+                                applyFilters);
+                            document.querySelector(`#modal_type_filter_${tableName}_${stockId}`).addEventListener('change',
+                                applyFilters);
+
+                            // Initialize when modal is shown
+                            document.querySelector(`#${modalId}`).addEventListener('shown.bs.modal', function() {
+                                initializeTransactions();
+                            });
+                        });
+
+                        // Export function
+                        function exportModalTransactions(tableName, stockId) {
+                            // You can implement export functionality here
+                            alert('Export functionality can be implemented here');
+                        }
+                    </script>
                 @endif
             @endforeach
         @endforeach
