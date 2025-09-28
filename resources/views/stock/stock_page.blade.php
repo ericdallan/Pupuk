@@ -1047,11 +1047,6 @@
                                 <div class="modal-footer">
                                     <button type="button" class="btn cancel-button" data-bs-dismiss="modal"
                                         data-bs-toggle="tooltip" title="Tutup jendela">Tutup</button>
-                                    <button type="button" class="btn btn-primary"
-                                        onclick="exportModalTransactions('{{ $tableName }}', {{ $stock->id }})"
-                                        data-bs-toggle="tooltip" title="Export data transaksi ke Excel">
-                                        <i class="fas fa-download me-1"></i>Export
-                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -1207,12 +1202,6 @@
                                 initializeTransactions();
                             });
                         });
-
-                        // Export function
-                        function exportModalTransactions(tableName, stockId) {
-                            // You can implement export functionality here
-                            alert('Export functionality can be implemented here');
-                        }
                     </script>
                 @endif
             @endforeach
